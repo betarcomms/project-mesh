@@ -30,15 +30,15 @@ Legend: ✅ Done · 🚧 In progress · ⬜ Not started
 | Metadata: link-identifier rotation | `CRYPTOGRAPHY.md` §7.1 | ⬜ | — | belongs at native radio-driver layer |
 | Metadata: envelope size bucketing | `CRYPTOGRAPHY.md` §7.2 | ⬜ | — | |
 | Sphinx onion routing (optional) | `CRYPTOGRAPHY.md` §7.3 | ⬜ | — | Phase 2 per roadmap |
-| Encryption at rest (SQLCipher) | `CRYPTOGRAPHY.md` §8 | ⬜ | — | `engine.rs` store is in-memory only so far |
+| Encryption at rest | `CRYPTOGRAPHY.md` §8 | ✅ | `core/src/persistence.rs` | **deviation from doc, flagged:** `redb` (pure-Rust) + our ChaCha20Poly1305 AEAD, not literally SQLCipher — `rusqlite`'s SQLCipher backend needs OpenSSL compiled from source, which failed repeatedly on this project's Windows dev box even with MSVC + Strawberry Perl (see `PROGRESS.md`). Same security property (AEAD encryption at rest, tamper-evident), different engine. 4 tests + 2 FFI-layer tests. Revisit real SQLCipher if a working OpenSSL build environment (e.g. Android NDK's) becomes available |
 | Duress / panic-wipe | `CRYPTOGRAPHY.md` §8 | ⬜ | — | |
 | Envelope wire format | `ROUTING-PROTOCOL.md` | ✅ | `core/src/envelope.rs` | 6 tests; content-derived ID, not sender-trusted |
-| Store-carry-forward engine (dedup, TTL, priority eviction) | `ROUTING-PROTOCOL.md` §7 | ✅ | `core/src/engine.rs` | 7 tests; in-memory reference implementation |
+| Store-carry-forward engine (dedup, TTL, priority eviction) | `ROUTING-PROTOCOL.md` §7 | ✅ | `core/src/engine.rs` | 7 tests; in-memory index only — not yet wired to `persistence.rs` for durability across app restarts, see below |
 | Bloom-filter summary vectors | `ROUTING-PROTOCOL.md` §7.1 | ⬜ | — | exact-`HashSet` stand-in in place (`Store::summary_ids`), documented as such |
 | Rate limiting / client puzzle | `ROUTING-PROTOCOL.md` §7.2 | ⬜ | — | |
 | Radio abstraction trait | `ARCHITECTURE.md` §3 | ✅ | `core/src/transport.rs` | trait boundary only, no implementation |
-| UniFFI bindings | `ARCHITECTURE.md` §6 | ✅ | `core/src/ffi.rs` | identity, Noise handshake (`FfiHandshake`), ratchet session (`FfiSession`), store (`FfiStore`), envelope pack/unpack all exported + tested (6 FFI-layer tests); Kotlin bindings generated (`core/generated/`, copied to `android/`, 3,014 lines). Not exported yet: MLS, channels, onion routing, transport callback interfaces |
-| SQLCipher persistence layer | `ARCHITECTURE.md` §5 | ⬜ | — | |
+| UniFFI bindings | `ARCHITECTURE.md` §6 | ✅ | `core/src/ffi.rs` | identity, Noise handshake (`FfiHandshake`), ratchet session (`FfiSession`), in-memory store (`FfiStore`), encrypted persistent store (`FfiEncryptedStore`), envelope pack/unpack all exported + tested (8 FFI-layer tests); Kotlin bindings generated (`core/generated/`, copied to `android/`, 3,397 lines). Not exported yet: MLS, channels, onion routing, transport callback interfaces |
+| `Store` ↔ `EncryptedStore` integration | `ARCHITECTURE.md` §5 | ⬜ | — | today they're two independent components (in-memory dedup/eviction index vs. durable encrypted KV); a node process restart currently loses the in-memory `Store`'s state even though `EncryptedStore` still has the bytes on disk |
 
 ### Native app
 

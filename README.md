@@ -9,7 +9,7 @@
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
 [![Phase](https://img.shields.io/badge/phase-1%20of%204-blue)](docs/ROADMAP.md)
-[![Core tests](https://img.shields.io/badge/core%20tests-35%20passing-brightgreen)](core/)
+[![Core tests](https://img.shields.io/badge/core%20tests-42%20passing-brightgreen)](core/)
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPLv3%20(proposed)-lightgrey)](docs/GOVERNANCE.md)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
@@ -76,9 +76,12 @@ every contributor is expected to follow.
 **Design / pre-alpha, Phase 1 in progress.** The research and technical specification are
 complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) is underway: identity,
 Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, envelope wire
-format, an in-memory store-carry-forward engine, and a UniFFI surface covering all of the above
-are implemented and unit-tested (**35 tests passing**). An Android app skeleton calls into the
-generated Kotlin bindings but hasn't been built or run (no Android SDK/NDK in this dev
+format, an in-memory store-carry-forward engine, an encrypted-at-rest envelope store, and a
+UniFFI surface covering all of the above are implemented and unit-tested
+(**42 tests passing**). Encryption-at-rest uses `redb` + AEAD rather than the design docs'
+SQLCipher — a deliberate, documented substitution after SQLCipher's OpenSSL dependency proved
+unbuildable in this dev environment (see `docs/PROGRESS.md`). An Android app skeleton calls into
+the generated Kotlin bindings but hasn't been built or run (no Android SDK/NDK in this dev
 environment). Nothing here has been independently security-audited — see
 [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for the exact, current,
 component-by-component picture, and [`docs/PROGRESS.md`](docs/PROGRESS.md) for the dated log of
@@ -98,6 +101,7 @@ mesh/
 │       ├── envelope.rs         — wire format, content-derived envelope IDs
 │       ├── engine.rs           — store-carry-forward, dedup, TTL, priority eviction
 │       ├── transport.rs        — radio abstraction trait (no driver yet)
+│       ├── persistence.rs      — encrypted-at-rest envelope store (redb + AEAD)
 │       └── ffi.rs              — UniFFI-exported surface for Android/iOS
 └── android/                    — Android app skeleton (Kotlin/Compose), in progress
 ```

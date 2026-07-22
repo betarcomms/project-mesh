@@ -22,6 +22,7 @@ rand_core = { version = "0.6", features = ["getrandom"] }
 zeroize = { version = "1", features = ["derive"] }
 thiserror = "1"
 uniffi = { version = "0.28", features = ["cli"] }
+redb = "4"
 
 [dev-dependencies]
 proptest = "1"

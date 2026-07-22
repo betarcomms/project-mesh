@@ -125,3 +125,50 @@ Newest entry at the bottom (chronological), each dated.
   `MeshTransport`/`MeshTransportSink` callback interfaces (those need an actual native driver to
   call against — premature to design the callback shape before one exists), SQLCipher
   persistence. See `IMPLEMENTATION-STATUS.md`.
+
+## 2026-07-23 — Persistence: SQLCipher blocked, switched to redb + AEAD
+
+- **Attempted real SQLCipher first, hit a genuine environment wall.** This dev machine had no C
+  compiler at all (checked `cl.exe`, `link.exe`, Visual Studio Installer, `clang`, `gcc` — all
+  absent), so `rusqlite`'s bundled SQLCipher (which compiles C) couldn't even attempt a build.
+  User installed Visual Studio Build Tools (`winget install Microsoft.VisualStudio.2022.BuildTools`
+  with the VCTools workload) — installer reported exit code 1, but inspection showed MSVC
+  (`cl.exe`, `link.exe`) and the Windows 10 SDK were in fact present and working (the "failure"
+  was a no-op modify/upgrade quirk, not a real failure).
+- With MSVC confirmed working, `rusqlite`'s `bundled-sqlcipher-vendored-openssl` feature got
+  further but failed inside OpenSSL's own vendored build: first on a missing Perl CPAN module
+  (`Locale::Maketext::Simple`, MSYS's bundled Perl lacks it), then — after installing Strawberry
+  Perl (`winget install StrawberryPerl.StrawberryPerl`) and the missing `Text::Template` module
+  via `cpanm` — on OpenSSL's `.c.in` code-generator step reporting required generated files as
+  "missing" (a known-fragile part of building OpenSSL 3.x from source on Windows). Three attempts
+  in, this was a genuine rabbit hole rather than one more quick fix.
+- **Decision (user's call, given the choice between one more OpenSSL attempt, a prebuilt-OpenSSL
+  path, or switching engines):** stop fighting OpenSSL's source build. Use `redb` (a pure-Rust
+  embedded KV store, no C compiler needed at all) plus this crate's own ChaCha20Poly1305 for
+  encryption at rest. This is a **stated deviation from the design docs**, not a silent one —
+  `docs/CRYPTOGRAPHY.md` §8 and `docs/ARCHITECTURE.md` §5 both specify SQLCipher; the deviation
+  is called out in both those docs' companion status row and in code comments
+  (`core/src/persistence.rs`), with the exact path back to real SQLCipher noted (revisit once a
+  build environment with a working OpenSSL toolchain — e.g. Android NDK's own — is available).
+- **What was built:**
+  - `crypto::aead_seal` / `crypto::aead_open` — a *many-uses* AEAD pair (random 12-byte nonce
+    prepended to ciphertext), distinct from the existing `aead_seal_once`/`aead_open_once` (whose
+    fixed-zero-nonce is only safe for genuinely one-time ratchet/channel keys). 1 new test.
+  - `core/src/persistence.rs` — `EncryptedStore`, a `redb`-backed table keyed by envelope ID,
+    each record AEAD-sealed under a caller-supplied 32-byte master key with the envelope ID bound
+    in as associated data. `put`/`get`/`remove`/`len`/`all_ids`. 4 tests: roundtrip, wrong-key
+    rejection, remove/len/all_ids, and persistence across a real close-and-reopen of the file.
+  - `ffi.rs`: `FfiEncryptedStore` — `open`/`put`/`get_hex`/`remove_hex`/`len`/`all_ids_hex`.
+    2 new FFI-layer tests (roundtrip, wrong-key-fails-via-FFI).
+- 42 tests passing (7 new: 1 in `crypto/mod.rs`, 4 in `persistence.rs`, 2 in `ffi.rs`).
+- Regenerated Kotlin bindings: 3,014 → 3,397 lines (`FfiEncryptedStore` present). Copied into
+  `android/`.
+- **Known gap, stated plainly:** `Store` (the in-memory dedup/TTL/priority engine) and
+  `EncryptedStore` (the durable encrypted KV store) are not wired together yet — they're two
+  independent components today. A process restart currently loses `Store`'s in-memory state even
+  though the envelope bytes are safely on disk in `EncryptedStore`. Integrating them (so accepted
+  envelopes are durably persisted and reloaded into the in-memory index on startup) is the
+  natural next increment here.
+- Where the master key itself comes from (Android Keystore / iOS Secure Enclave, per
+  `docs/CRYPTOGRAPHY.md` §8) is still entirely unimplemented — `FfiEncryptedStore::open` accepts
+  the key as a plain argument. That's real native-layer work, not something this crate can do.

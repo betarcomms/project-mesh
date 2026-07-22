@@ -3,15 +3,16 @@
 //! This is the FFI boundary the Android/iOS native layers bind to via generated Kotlin/Swift.
 //! Everything else in this crate is plain Rust, used directly by tests and by this module.
 //!
-//! **Status:** identity, the Noise `XX` handshake, the Double Ratchet session, and the
-//! store-carry-forward engine are exported. Envelopes cross the boundary as opaque wire bytes
-//! (`envelope_pack` / `envelope_unpack`) rather than a rich typed object, matching
-//! `docs/ARCHITECTURE.md` §1's "dumb byte pipe" native layer. Not exported yet: MLS groups,
-//! channels, onion routing, persistence, and the `MeshTransport`/`MeshTransportSink` callback
-//! interfaces (those need native drivers to call against, which don't exist yet). Tracked in
-//! `docs/IMPLEMENTATION-STATUS.md`.
+//! **Status:** identity, the Noise `XX` handshake, the Double Ratchet session, the
+//! store-carry-forward engine, and the encrypted-at-rest envelope store are exported.
+//! Envelopes cross the boundary as opaque wire bytes (`envelope_pack` / `envelope_unpack`)
+//! rather than a rich typed object, matching `docs/ARCHITECTURE.md` §1's "dumb byte pipe"
+//! native layer. Not exported yet: MLS groups, channels, onion routing, and the
+//! `MeshTransport`/`MeshTransportSink` callback interfaces (those need native drivers to call
+//! against, which don't exist yet). Tracked in `docs/IMPLEMENTATION-STATUS.md`.
 
 use std::collections::HashSet;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use snow::HandshakeState;
@@ -22,6 +23,7 @@ use crate::engine::{Accept, Store};
 use crate::envelope::{Addressing, Envelope, EnvelopeId, Priority};
 use crate::error::MeshError;
 use crate::identity::Identity as CoreIdentity;
+use crate::persistence::EncryptedStore;
 
 /// Error type crossing the FFI boundary. Deliberately separate from [`crate::error::MeshError`]
 /// (which uses `&'static str` fields, not natively FFI-safe) — this module is exactly where
@@ -327,6 +329,56 @@ impl FfiStore {
     }
 }
 
+/// Durable, encrypted-at-rest envelope storage (`docs/CRYPTOGRAPHY.md` §8). See the module-level
+/// doc comment on [`crate::persistence`] for why this is `redb`, not literally SQLCipher.
+/// `master_key` must come from the platform keystore (Android Keystore / iOS Secure Enclave) —
+/// that native-layer sourcing is not implemented; this object just accepts the key as given.
+#[derive(uniffi::Object)]
+pub struct FfiEncryptedStore {
+    inner: EncryptedStore,
+}
+
+#[uniffi::export]
+impl FfiEncryptedStore {
+    #[uniffi::constructor]
+    pub fn open(path: String, master_key: Vec<u8>) -> Result<Arc<Self>, FfiError> {
+        if master_key.len() != 32 {
+            return Err(FfiError::Malformed("master_key must be 32 bytes".into()));
+        }
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&master_key);
+        let inner = EncryptedStore::open(Path::new(&path), key)?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// Store wire-format envelope bytes, encrypted at rest.
+    pub fn put(&self, envelope_bytes: Vec<u8>) -> Result<(), FfiError> {
+        let env = Envelope::from_bytes(&envelope_bytes)?;
+        self.inner.put(&env)?;
+        Ok(())
+    }
+
+    /// Fetch and decrypt an envelope by hex ID, returning its wire bytes.
+    pub fn get_hex(&self, id_hex: String) -> Result<Option<Vec<u8>>, FfiError> {
+        let id = hex_to_id(&id_hex).ok_or_else(|| FfiError::Malformed("invalid id hex".into()))?;
+        Ok(self.inner.get(&id)?.map(|e| e.to_bytes()))
+    }
+
+    pub fn remove_hex(&self, id_hex: String) -> Result<(), FfiError> {
+        let id = hex_to_id(&id_hex).ok_or_else(|| FfiError::Malformed("invalid id hex".into()))?;
+        self.inner.remove(&id)?;
+        Ok(())
+    }
+
+    pub fn len(&self) -> Result<u32, FfiError> {
+        Ok(self.inner.len()? as u32)
+    }
+
+    pub fn all_ids_hex(&self) -> Result<Vec<String>, FfiError> {
+        Ok(self.inner.all_ids()?.into_iter().map(|id| id.to_hex()).collect())
+    }
+}
+
 fn hex_to_id(hex: &str) -> Option<EnvelopeId> {
     if hex.len() != 64 {
         return None;
@@ -506,5 +558,51 @@ mod tests {
         let a_id = envelope_unpack(a).unwrap().id_hex;
         let missing = store.missing_from_hex(vec![a_id]);
         assert_eq!(missing.len(), 1);
+    }
+
+    fn temp_db_path(name: &str) -> String {
+        let mut path = std::env::temp_dir();
+        path.push(format!("mesh-core-ffi-test-{name}-{}.redb", std::process::id()));
+        path.to_string_lossy().into_owned()
+    }
+
+    #[test]
+    fn encrypted_store_put_get_via_ffi() {
+        let path = temp_db_path("ffi-roundtrip");
+        let _ = std::fs::remove_file(&path);
+        let store = FfiEncryptedStore::open(path.clone(), vec![7u8; 32]).unwrap();
+
+        let bytes = envelope_pack(0, None, 2, 8, 9_999_999_999, b"payload".to_vec()).unwrap();
+        let id_hex = envelope_unpack(bytes.clone()).unwrap().id_hex;
+
+        store.put(bytes.clone()).unwrap();
+        assert_eq!(store.len().unwrap(), 1);
+
+        let fetched = store.get_hex(id_hex.clone()).unwrap().unwrap();
+        assert_eq!(fetched, bytes);
+
+        store.remove_hex(id_hex.clone()).unwrap();
+        assert_eq!(store.len().unwrap(), 0);
+        assert!(store.get_hex(id_hex).unwrap().is_none());
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn encrypted_store_wrong_key_via_ffi() {
+        let path = temp_db_path("ffi-wrongkey");
+        let _ = std::fs::remove_file(&path);
+        let bytes = envelope_pack(0, None, 2, 8, 9_999_999_999, b"secret".to_vec()).unwrap();
+        let id_hex = envelope_unpack(bytes.clone()).unwrap().id_hex;
+
+        {
+            let store = FfiEncryptedStore::open(path.clone(), vec![1u8; 32]).unwrap();
+            store.put(bytes).unwrap();
+        }
+
+        let reopened = FfiEncryptedStore::open(path.clone(), vec![2u8; 32]).unwrap();
+        assert!(reopened.get_hex(id_hex).is_err());
+
+        let _ = std::fs::remove_file(&path);
     }
 }
