@@ -1,6 +1,6 @@
 # Application Features
 
-Companion to `WHITEPAPER.md` §9. Project MESH is a civic-resilience **platform**, not only a
+Companion to `WHITEPAPER.md` §9. Project Mesh is a civic-resilience **platform**, not only a
 messenger. Every feature runs on the single mesh substrate (`ROUTING-PROTOCOL.md`) and uses the
 same cryptography (`CRYPTOGRAPHY.md`).
 

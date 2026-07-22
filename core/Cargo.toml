@@ -3,7 +3,7 @@ name = "mesh-core"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Project MESH shared Rust core: identity, cryptography, envelopes, store-carry-forward routing"
+description = "Project Mesh shared Rust core: identity, cryptography, envelopes, store-carry-forward routing"
 
 [lib]
 name = "mesh_core"
@@ -21,6 +21,11 @@ sha2 = "0.10"
 rand_core = { version = "0.6", features = ["getrandom"] }
 zeroize = { version = "1", features = ["derive"] }
 thiserror = "1"
+uniffi = { version = "0.28", features = ["cli"] }
 
 [dev-dependencies]
 proptest = "1"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"

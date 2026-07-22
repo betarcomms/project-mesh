@@ -62,7 +62,7 @@ Noise is chosen for being compact, formally analysed, and misuse-resistant on co
 
 ### 4.2 Asynchronous (never simultaneously in range): prekeys
 
-Because MESH is store-and-forward, two parties may never be online together. Using the
+Because Mesh is store-and-forward, two parties may never be online together. Using the
 recipient's published **signed prekey** and a **one-time prekey** (an X3DH-style bootstrap), a
 sender can establish a forward-secret session and seal a first message that the recipient can
 open later — without an interactive handshake.
@@ -79,7 +79,7 @@ Every direct/group session runs the **Signal Double Ratchet**:
   longer lets the attacker read new messages — the session self-heals;
 - out-of-order and lost messages are handled with skipped-message keys (bounded).
 
-> Note: ProtestChat's alpha explicitly had **not** implemented a Double Ratchet. Project MESH
+> Note: ProtestChat's alpha explicitly had **not** implemented a Double Ratchet. Project Mesh
 > treats it as foundational, because store-and-forward networks have long message lifetimes and
 > higher key-exposure windows, making forward secrecy more important, not less.
 
@@ -105,7 +105,7 @@ Every direct/group session runs the **Signal Double Ratchet**:
 
 *(Research-driven addition — see `RESEARCH-FINDINGS.md` §2.)* "Most secure in 2026" means
 defending against **"harvest-now, decrypt-later"**: an adversary who records ciphertext today to
-decrypt with a future quantum computer. Because MESH is store-and-forward and envelopes can live
+decrypt with a future quantum computer. Because Mesh is store-and-forward and envelopes can live
 a long time, this matters here more than for a real-time chat app.
 
 - **Handshake:** add **PQXDH** — Signal's post-quantum extension of X3DH — which runs a

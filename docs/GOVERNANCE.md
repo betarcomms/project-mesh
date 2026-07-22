@@ -6,7 +6,7 @@ Companion to `WHITEPAPER.md` §12.
 
 ## 1. Stewardship
 
-Project MESH is stewarded by **Konko Maji** as a transparent, research-and-open-source
+Project Mesh is stewarded by **Konko Maji** as a transparent, research-and-open-source
 initiative with a **public mission centred on disaster resilience and rural connectivity**. The
 recommended legal form is a **non-profit** structure (e.g. a Section-8 company or a registered
 society/trust in India) with named, accountable stewardship. A neutral, mission-clear non-profit

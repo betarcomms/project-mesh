@@ -11,7 +11,7 @@ Companion to `WHITEPAPER.md` §13.
 
 ## 1. The doctrine in one line
 
-**Project MESH is genuine disaster-resilience and rural-connectivity civic infrastructure. That
+**Project Mesh is genuine disaster-resilience and rural-connectivity civic infrastructure. That
 is its true primary purpose, its public identity, and its legal footing. Its resilience during
 network shutdowns is an emergent property of good engineering — never a marketed feature.**
 
@@ -54,7 +54,7 @@ These are engineering choices that *also* reduce legal exposure:
   identity information** to avail telecommunication services. **If** this is later applied to
   internet/OTT services (whether OTT/E2EE apps fall under the Act is currently **legally
   ambiguous** — a Minister's Dec 2023 verbal exclusion is not binding), it could pressure
-  anonymous communication. MESH's design (no identity to furnish at all) sits awkwardly against a
+  anonymous communication. Mesh's design (no identity to furnish at all) sits awkwardly against a
   future anti-anonymity reading; this is flagged for counsel, not resolved.
 
 ## 4. Alignment with recognized interests
@@ -99,7 +99,7 @@ These are engineering choices that *also* reduce legal exposure:
 - **Emblems and Names (Prevention of Improper Use) Act, 1950** — restricts names implying
   government patronage or misusing "India"/"Bharat"; a reason to avoid names colliding with
   government programmes (e.g. "BharatNet") in addition to the confusion such names cause.
-- **Spectrum for LoRa** — Project MESH uses **licence-free** bands (BLE/Wi-Fi at 2.4 GHz; LoRa at
+- **Spectrum for LoRa** — Project Mesh uses **licence-free** bands (BLE/Wi-Fi at 2.4 GHz; LoRa at
   **IN865, 865–868 MHz** per GSR 853(E), 2021), but type-approval and spectrum compliance for LoRa
   deployment is the deployer's responsibility (`HARDWARE-LORA.md`).
 

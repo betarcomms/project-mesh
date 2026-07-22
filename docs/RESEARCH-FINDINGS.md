@@ -1,6 +1,6 @@
 # Research Findings and Verification Report
 
-**Deep multi-source research + adversarial verification for Project MESH.**
+**Deep multi-source research + adversarial verification for Project Mesh.**
 Method: fan-out web search across 7 angles → source fetch → claim extraction (114 claims) →
 3-vote adversarial verification (74 of 75 verdicts confirmed against primary sources; 1 minor
 wording nuance refuted). Confidence levels and sources are noted per finding. Dates reflect
@@ -30,7 +30,7 @@ sources current to early–mid 2026.
 
 ### Reticulum (RNS + LXMF) — the most important reference
 - **Confirmed (high):** a cryptography-based networking stack running across **LoRa, packet
-  radio, WiFi/Ethernet, serial, I2P** — heterogeneous by design, matching MESH's multi-transport
+  radio, WiFi/Ethernet, serial, I2P** — heterogeneous by design, matching Mesh's multi-transport
   goal. Crypto: **X25519** ECDH, **Ed25519** signatures, **AES-256-CBC** (PKCS7), **HMAC-SHA256**,
   **HKDF**. Works on very low-bandwidth links (>~5 bit/s, 500-byte MTU). Provides **initiator
   anonymity** — packets omit the source address, so the sender reveals no identity. Encrypted
@@ -44,7 +44,7 @@ sources current to early–mid 2026.
   - **Bluetooth is via RNode/serial**, not a native phone-to-phone BLE mesh transport.
 - **Recommendation:** treat Reticulum as a **primary design reference and interop target**
   (especially its initiator-anonymity wire design and LoRa transport), but **do not adopt it as
-  MESH's sole protocol foundation** given the spec + governance risk. Watch the Rust
+  Mesh's sole protocol foundation** given the spec + governance risk. Watch the Rust
   reimplementation (`reticulum-rs`) — if it matures, revisit.
 
 ### Security lessons from broken apps (all high confidence)
@@ -84,7 +84,7 @@ sources current to early–mid 2026.
   Curve25519, HKDF-SHA256, AES-256. It is **fundamentally two-party.**
 - **Groups:** **switch to MLS (RFC 9420, Jul 2023).** MLS gives async group key establishment with
   FS **and** PCS and **logarithmic** key-update cost via **TreeKEM** — vs Double-Ratchet/sender-key
-  group schemes whose update cost grows **~O(N²)**. MESH's original "seal one copy per member"
+  group schemes whose update cost grows **~O(N²)**. Mesh's original "seal one copy per member"
   (O(N)) is acceptable only for tiny groups; **MLS is the correct choice for anything larger.**
 - **Post-quantum:** add **PQXDH** (Signal's PQ extension of X3DH; **ML-KEM/Kyber-1024** in
   production) to the handshake. It stops **"harvest-now, decrypt-later"** passive quantum attacks
@@ -180,7 +180,7 @@ corroborated across multiple independent outlets.
   necessary, proportionate, time-bound, reasoned, published, and reviewable**; **indefinite
   shutdowns are unconstitutional.** Still the governing precedent.
 
-**Implication for MESH (reasoned, not adjudicated):** a **server-less, operator-less,
+**Implication for Mesh (reasoned, not adjudicated):** a **server-less, operator-less,
 account-less** app has **no first-originator to produce** and does not run as a "significant
 social media intermediary" in the ordinary case — so Rule 4(2) has nothing to attach to. **But**
 the **Telecom Act 2023 §29 anti-anonymity duty** and the **unresolved OTT/E2EE scope** are new
@@ -232,7 +232,7 @@ Prioritized, with the fix applied or recommended:
    nuance documented.
 6. **[Fixed] Stale shutdown law.** 2017 rules → **2024 Suspension Rules under Telecom Act 2023**;
    added **§29 anti-anonymity** and **OTT/E2EE scope** risks.
-7. **[Open] TOFU without verification is a known break vector** (Bridgefy 2022). MESH already
+7. **[Open] TOFU without verification is a known break vector** (Bridgefy 2022). Mesh already
    mandates in-person QR/safety-string verification — keep it **mandatory and prominent**, never
    silent TOFU.
 8. **[Open] "libsignal/Noise is enough" fallacy.** Integration bugs (TOCTOU, compress-then-encrypt)

@@ -36,14 +36,15 @@ Legend: ✅ Done · 🚧 In progress · ⬜ Not started
 | Bloom-filter summary vectors | `ROUTING-PROTOCOL.md` §7.1 | ⬜ | — | exact-`HashSet` stand-in in place (`Store::summary_ids`), documented as such |
 | Rate limiting / client puzzle | `ROUTING-PROTOCOL.md` §7.2 | ⬜ | — | |
 | Radio abstraction trait | `ARCHITECTURE.md` §3 | ✅ | `core/src/transport.rs` | trait boundary only, no implementation |
-| UniFFI bindings | `ARCHITECTURE.md` §6 | 🚧 | `core/src/ffi.rs` | identity slice only so far |
+| UniFFI bindings | `ARCHITECTURE.md` §6 | 🚧 | `core/src/ffi.rs` | identity slice exported + tested; Kotlin bindings generated (`core/generated/`, copied to `android/`); handshake/ratchet/store not exported yet |
 | SQLCipher persistence layer | `ARCHITECTURE.md` §5 | ⬜ | — | |
 
 ### Native app
 
 | Component | Design doc | Status | Code | Notes |
 |---|---|---|---|---|
-| Android app shell (Gradle/Kotlin/Compose) | `ARCHITECTURE.md` §2 | 🚧 | `android/` | skeleton; **not buildable on this machine** — no Android SDK/NDK installed, unverified end-to-end |
+| Android app shell (Gradle/Kotlin/Compose) | `ARCHITECTURE.md` §2 | 🚧 | `android/` | Gradle project + manifest + Compose `MainActivity` calling generated bindings; **not buildable on this machine** — no Android SDK/NDK/Gradle installed, unverified end-to-end |
+| `mesh-core` cross-compiled for Android (`.so`) | `ARCHITECTURE.md` §6 | ⬜ | — | needs Android NDK + `cargo-ndk`; see `android/app/src/main/jniLibs/README.md` |
 | BLE GATT driver | `TRANSPORT.md` §2 | ⬜ | — | |
 | Foreground service / OEM battery-whitelist UX | `TRANSPORT.md` §6 | ⬜ | — | |
 | Wi-Fi Direct / Aware driver | `TRANSPORT.md` §4 | ⬜ | — | |

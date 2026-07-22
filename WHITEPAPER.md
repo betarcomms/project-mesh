@@ -1,4 +1,4 @@
-# Project MESH: A Decentralized Off-Grid Communication and Civic-Resilience Network for India
+# Project Mesh: A Decentralized Off-Grid Communication and Civic-Resilience Network for India
 
 **A technical white paper**
 
@@ -15,9 +15,9 @@ absent cellular and fibre coverage (Ladakh, the North-East, the Sundarbans, Hima
 tribal belts); during natural disasters that physically destroy telecommunication
 infrastructure (floods, cyclones, earthquakes); and during administrative shutdowns of
 telecommunication services. All three failures share a single cause — dependence on
-centralized, infrastructure-bound networks. This paper presents **Project MESH**, a
+centralized, infrastructure-bound networks. This paper presents **Project Mesh**, a
 decentralized, server-less, end-to-end encrypted communication and civic-coordination platform
-designed for the Indian context. Project MESH forms an ad-hoc **delay-tolerant mesh network**
+designed for the Indian context. Project Mesh forms an ad-hoc **delay-tolerant mesh network**
 directly between users' phones over Bluetooth Low Energy and Wi-Fi, and, in a later phase,
 across a backbone of low-cost long-range **LoRa** radio nodes operating in India's licence-free
 865–868 MHz band. It requires no cell tower, no internet service provider, no central server,
@@ -96,7 +96,7 @@ when that infrastructure is absent, destroyed, or disabled.
 
 ### 1.2 The approach
 
-Project MESH removes the assumption. Instead of routing messages through a tower and a server,
+Project Mesh removes the assumption. Instead of routing messages through a tower and a server,
 it treats every participating device as a node that stores, carries, and forwards messages on
 behalf of the network. Two phones within radio range exchange messages directly; a message
 addressed to someone out of range is carried by intermediate devices until it reaches its
@@ -122,7 +122,7 @@ This paper contributes:
 
 ### 1.4 What this project is not
 
-Project MESH is not a tool built to defeat any government, and it is not marketed as one. It is
+Project Mesh is not a tool built to defeat any government, and it is not marketed as one. It is
 disaster and rural-connectivity infrastructure whose resilience is uniform: it does not know or
 care *why* the network is unavailable. This positioning is both sincere and load-bearing; it is
 elaborated in §13 and `docs/LEGAL.md`, and all contributors are asked to honour it.
@@ -138,7 +138,7 @@ The intellectual foundations are **delay-tolerant networking** (Fall, 2003) and
 schemes relevant here include **Epidemic routing** (Vahdat & Becker, 2000), **Spray-and-Wait**
 (Spyropoulos et al., 2005), and **PRoPHET** (Lindgren et al.). These trade bandwidth and
 storage for delivery probability in networks with no stable end-to-end path — exactly the
-regime Project MESH operates in.
+regime Project Mesh operates in.
 
 ### 2.2 Consumer mesh messaging apps
 
@@ -167,7 +167,7 @@ Several consumer applications have attempted phone-to-phone mesh messaging:
 
 - **Meshtastic** is an open-source project that builds off-grid mesh networks over **LoRa**
   radio using inexpensive ESP32 boards, achieving kilometre-scale range. It supports the Indian
-  **IN865** frequency region. Meshtastic is the primary positive reference for Project MESH's
+  **IN865** frequency region. Meshtastic is the primary positive reference for Project Mesh's
   hardware backbone (Phase 3), though it is a generic communicator rather than an India-focused
   civic platform, and its phone integration is companion-device based.
 
@@ -183,13 +183,13 @@ Several consumer applications have attempted phone-to-phone mesh messaging:
 - **Rust** with **UniFFI** (Mozilla) for a single, memory-safe core shared across native
   Android and iOS front-ends.
 
-### 2.5 Where Project MESH differs
+### 2.5 Where Project Mesh differs
 
 No existing project simultaneously offers: (a) a security-first design, (b) a hybrid
 phone-plus-LoRa transport tuned for Indian geography and the Indian LoRa band, (c) a
 civic-resilience feature set beyond chat (SOS, disaster bulletins, offline maps, resource
 sharing), (d) first-class localization for many Indic languages and low-literacy users on
-low-end devices, and (e) a fully de-Googled distribution. Project MESH targets that
+low-end devices, and (e) a fully de-Googled distribution. Project Mesh targets that
 combination.
 
 ---
@@ -254,7 +254,7 @@ protections.
 
 ## 5. System architecture
 
-Project MESH uses a **shared portable core with thin native front-ends**.
+Project Mesh uses a **shared portable core with thin native front-ends**.
 
 ```
         ┌──────────────────────────────┐   ┌──────────────────────────────┐
@@ -324,7 +324,7 @@ is in [`docs/TRANSPORT.md`](docs/TRANSPORT.md).
 
 - **Bluetooth Low Energy (BLE) GATT** is the universal baseline: it is the only transport that
   can bridge **Android ↔ iOS** directly. Each device acts as both a GATT peripheral
-  (advertising a Project MESH service UUID) and a central (scanning and connecting). Payloads
+  (advertising a Project Mesh service UUID) and a central (scanning and connecting). Payloads
   are fragmented to fit the negotiated MTU and reassembled by the core.
 - **Wi-Fi Direct / Wi-Fi Aware (NAN)** on Android provides much higher throughput for larger
   payloads (e.g. offline map tiles, images) between Android devices.
@@ -338,7 +338,7 @@ Apple restricts background Bluetooth severely, and no application can remove the
 - A backgrounded iOS app **cannot place a custom service UUID in the main advertising packet**;
   the UUID is moved into a special "overflow" area (a hashed bit in a 128-bit bitmask) that is
   only discoverable by a device **explicitly scanning for that specific UUID**. An Android peer
-  that knows the MESH UUID **can** parse this and discover the iOS peripheral — cross-platform
+  that knows the Mesh UUID **can** parse this and discover the iOS peripheral — cross-platform
   background discovery is *possible* but higher-latency. *(Corrected per
   `docs/RESEARCH-FINDINGS.md` §3 — an earlier draft wrongly called it impossible.)*
 - Overflow advertising is **screen-gated**: it transmits only while the iOS device's screen is
@@ -381,7 +381,7 @@ Summary here; wire format and algorithms in
 
 ### 7.1 Model
 
-Project MESH uses **store-carry-forward, epidemic-style dissemination with controls**. Every
+Project Mesh uses **store-carry-forward, epidemic-style dissemination with controls**. Every
 node keeps a bounded store of unexpired, sealed **envelopes** it has seen. When two nodes meet,
 they exchange compact **summary vectors** (Bloom filters / ID digests) of what they hold and
 then transfer only the envelopes the other lacks. This "gossip on contact" approach needs no
@@ -437,7 +437,7 @@ in-person verification. Trust is rooted in human verification, never in a server
 - **Ongoing 1:1 messaging:** the **Signal Double Ratchet**, providing **forward secrecy** (past
   messages stay safe if a current key leaks) and **post-compromise security** (the session
   self-heals after a key compromise). This is the property ProtestChat's alpha explicitly had
-  not yet built; Project MESH treats it as foundational, not optional.
+  not yet built; Project Mesh treats it as foundational, not optional.
 - **Groups:** the Double Ratchet is fundamentally two-party. Sealing one copy per member is O(N)
   and only acceptable for tiny groups; larger groups use **MLS (Messaging Layer Security, RFC
   9420)**, whose TreeKEM gives forward secrecy, post-compromise security, and **logarithmic**
@@ -471,7 +471,7 @@ passphrase and **duress/panic** mechanism for the coercive-seizure scenario.
 
 ## 9. Application features
 
-Project MESH is a **civic platform**, not only a chat app. All features run on the one mesh
+Project Mesh is a **civic platform**, not only a chat app. All features run on the one mesh
 substrate. Full detail in [`docs/FEATURES.md`](docs/FEATURES.md).
 
 - **Emergency SOS.** One-tap, high-priority broadcast of a help request with optional coarse
@@ -576,7 +576,7 @@ doctrine:
 
 ## 14. Evaluation and comparison with prior art
 
-| Property | FireChat | Bridgefy | Briar | ProtestChat | Meshtastic | **Project MESH** |
+| Property | FireChat | Bridgefy | Briar | ProtestChat | Meshtastic | **Project Mesh** |
 |---|---|---|---|---|---|---|
 | Open source | No | Partly | Yes | Yes | Yes | **Yes** |
 | Security-first / audited design | No | No (broken) | Yes | Alpha, no audit | Yes | **Yes (goal)** |
@@ -590,7 +590,7 @@ doctrine:
 | Indic-language, low-literacy UX | No | No | Partial | No | No | **Yes** |
 | Fully de-Googled distribution | No | No | Yes | Partial | Yes | **Yes** |
 
-The comparison is against *stated design goals*; Project MESH is at the design stage, and the
+The comparison is against *stated design goals*; Project Mesh is at the design stage, and the
 "Yes" entries in its column are commitments to be proven by implementation and audit, not
 completed facts.
 
@@ -648,7 +648,7 @@ Shutdown-resilience is present from Phase 1 as an emergent property, never as a 
 ## 17. Conclusion
 
 India's communication failures in coverage gaps, disasters, and shutdowns are one problem
-wearing three faces: dependence on centralized infrastructure. Project MESH answers that
+wearing three faces: dependence on centralized infrastructure. Project Mesh answers that
 problem with a decentralized, server-less, end-to-end encrypted mesh that works phone-to-phone
 today and across a long-range LoRa backbone tomorrow, wrapped in a genuine civic-resilience
 feature set, built for India's languages and devices, distributed free of proprietary

@@ -1,4 +1,4 @@
-//! Project MESH shared Rust core. See `docs/ARCHITECTURE.md`.
+//! Project Mesh shared Rust core. See `docs/ARCHITECTURE.md`.
 //!
 //! All security- and protocol-critical logic lives here, once, shared byte-for-byte across
 //! the Android and iOS front-ends via UniFFI. The native layer is a "dumb byte pipe": no
@@ -13,5 +13,8 @@ pub mod crypto;
 pub mod engine;
 pub mod envelope;
 pub mod error;
+pub mod ffi;
 pub mod identity;
 pub mod transport;
+
+uniffi::setup_scaffolding!();

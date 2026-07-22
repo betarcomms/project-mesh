@@ -8,7 +8,7 @@ testing, not final constants.
 
 ## 1. Model: gossip on contact
 
-Project MESH is a **delay-tolerant network (DTN)**. There is no stable end-to-end path, no
+Project Mesh is a **delay-tolerant network (DTN)**. There is no stable end-to-end path, no
 addressing scheme, and no routing table. Instead:
 
 1. Each node holds a bounded **store** of unexpired **envelopes** it has seen.

@@ -54,13 +54,43 @@ Newest entry at the bottom (chronological), each dated.
   post-quantum handshake, Sphinx onion routing, SQLCipher persistence, UniFFI bindings, any
   native app.
 
-## 2026-07-23 — Docs reorganized; UniFFI + Android skeleton begun
+## 2026-07-23 — Docs reorganized; project renamed; UniFFI + Android skeleton
 
-- Added this file (`PROGRESS.md`) and `IMPLEMENTATION-STATUS.md` so the design docs (what we
-  intend) and the code (what exists) stay distinguishable at a glance, and so every session's
-  work is traceable instead of living only in commit messages.
-- README rewritten to reflect actual current status instead of the Phase-0 "no code yet" state,
-  and to point at both new tracking docs.
-- *(FFI/Android work for this entry continues below as it lands — see commits from this point
-  forward for the authoritative detail; this log entry will be extended, not rewritten, as the
-  session progresses.)*
+- Added `PROGRESS.md` and `IMPLEMENTATION-STATUS.md` so the design docs (what we intend) and the
+  code (what exists) stay distinguishable at a glance, and so every session's work is traceable
+  instead of living only in commit messages.
+- README rewritten: reflects actual build status instead of the Phase-0 "no code yet" state,
+  points at both new tracking docs, adds a repo-layout map and build instructions.
+- **Renamed the project** from "Project MESH" (all-caps) to **"Project Mesh"** everywhere —
+  `WHITEPAPER.md`, every file under `docs/`, and the Rust core's doc comments / crate
+  description. (`Meshtastic` references were untouched — different word, not a substring match
+  of the old branding.)
+- README given a visual pass: badges (status/phase/test-count/licence/platform), emoji section
+  markers, a repo-layout tree. Badges are static (hand-updated), not wired to CI, since no CI
+  exists yet — a dynamic-looking badge that lies would be worse than no badge.
+- **UniFFI bindings, identity slice:** added `core/src/ffi.rs` exporting `FfiIdentity`
+  (`generate`, `fingerprint_hex`, `safety_string`) via `#[uniffi::export]` /
+  `#[derive(uniffi::Object)]`, plus a `uniffi-bindgen` bin target. Built `mesh-core` as a
+  release cdylib and ran `uniffi-bindgen generate --language kotlin` against it — produced a
+  real 1,350-line generated Kotlin binding (`core/generated/`, JNA-based), proving the
+  Rust→Kotlin codegen pipe works end to end. Only the identity module is exported so far;
+  handshake, ratchet sessions, and the store are each a separate FFI design pass (error types,
+  object lifetimes, callback interfaces), not a mechanical re-export. 29 tests passing
+  (2 new, in `ffi.rs`).
+- **Android app skeleton:** Gradle project under `android/` (`settings.gradle.kts`,
+  `build.gradle.kts`, `app/build.gradle.kts` — compileSdk/targetSdk 35, minSdk 26), manifest
+  using the current (API 31+) Bluetooth permission model with legacy (`maxSdkVersion=30`)
+  fallbacks and Android-14-style foreground-service-type declaration, no `INTERNET` permission
+  (deliberate — no server exists to talk to), a `MeshApplication`/`MainActivity` pair, and a
+  Compose screen that calls `FfiIdentity.generate()` and displays the fingerprint. The generated
+  Kotlin bindings were copied into `android/app/src/main/java/uniffi/mesh_core/`.
+  - **Known gap, stated plainly:** this machine has no Android SDK, NDK, or Gradle installed, so
+    the Android project has **not been built or run** — it's source-verified by inspection and
+    against the UniFFI-generated API surface, not by a green build. `mesh-core` has also not
+    been cross-compiled to an Android target yet (`libmesh_core.so` does not exist for any ABI),
+    so even a successful Gradle build would `UnsatisfiedLinkError` at runtime until that's done.
+    See `android/app/src/main/jniLibs/README.md` for the exact follow-up command
+    (`cargo-ndk`).
+- Neither Android nor iOS platform-compliance (current permission models, store policies,
+  export-compliance declarations) has been verified beyond the manifest choices above — there is
+  no app to submit yet. Tracked as open, not assumed.

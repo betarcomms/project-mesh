@@ -1,6 +1,6 @@
 # Transport Layer
 
-Authoritative treatment of Project MESH's physical and link transports. Companion to
+Authoritative treatment of Project Mesh's physical and link transports. Companion to
 `WHITEPAPER.md` §6.
 
 ---
@@ -20,7 +20,7 @@ The core treats all of these as interchangeable links carrying opaque frames.
 
 Every device is simultaneously:
 
-- a **GATT peripheral**, advertising a Project MESH **service UUID** and exposing a
+- a **GATT peripheral**, advertising a Project Mesh **service UUID** and exposing a
   characteristic for frame exchange; and
 - a **GATT central**, scanning for that UUID, connecting to discovered peers, and exchanging
   frames.
@@ -74,14 +74,14 @@ This is the single most important transport constraint and is stated without eup
 - An iOS device with the app **in the foreground** (screen on, app open) is a **full mesh
   participant** and bridges to Android reliably.
 - An iOS device **backgrounded but screen-on** still advertises via the overflow area and **can**
-  be discovered by an Android peer that scans for the known MESH UUID — but with **higher latency
+  be discovered by an Android peer that scans for the known Mesh UUID — but with **higher latency
   and lower reliability**, and it cannot initiate much on its own.
 - An iOS device **backgrounded and screen-off** is effectively **silent** to the mesh.
 - No entitlement, API, or trick removes the throttling, the screen-gating, or the
   overflow-encoding. It is platform policy — the limits are real, just more nuanced than
   "impossible."
 
-### 3.3 How Project MESH designs around it
+### 3.3 How Project Mesh designs around it
 
 - **Relay mode UX.** In gatherings, relief camps, or dead zones, the app guides iOS users to
   keep it open and screen-on ("relay mode"), clearly indicating that the phone is actively

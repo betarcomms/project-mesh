@@ -34,7 +34,7 @@ regulatory constraints.
 - This is **different from EU868 and US915** — a hard constraint. Hardware and firmware must be
   configured to IN865 within 865–868 MHz; using EU/US band plans in India is non-compliant.
 - **Exact limits from the notification:**
-  - **Non-Specific Short Range Devices** (the class MESH user/relay nodes fall in):
+  - **Non-Specific Short Range Devices** (the class Mesh user/relay nodes fall in):
     **25 mW e.r.p.**, **1% duty cycle**, **FHSS**, **max occupied bandwidth 50 kHz for 58 or more
     hop channels**. The duty cycle applies to the entire transmission, not per hop channel.
     (Standard EN 300 220 referenced.)
@@ -57,7 +57,7 @@ A companion node, not a phone:
   Meshtastic hardware (Heltec, RAK, LILYGO T-Beam, etc.).
 - **Antenna:** tuned for 865–868 MHz.
 - **Power:** battery + small solar for unattended operation; low sleep-current firmware.
-- **Phone link:** BLE (or USB-serial) to a paired phone running Project MESH.
+- **Phone link:** BLE (or USB-serial) to a paired phone running Project Mesh.
 - **Optional GPS** on fixed relay nodes for positioning/time (not required on user nodes).
 
 Roles:
@@ -70,7 +70,7 @@ Roles:
 
 ## 4. Phone ↔ node bridging
 
-- The phone pairs with its node over BLE/USB; the Project MESH core treats the node as just
+- The phone pairs with its node over BLE/USB; the Project Mesh core treats the node as just
   another `MeshTransport` (see `ARCHITECTURE.md` §3).
 - Over the LoRa link the core forwards **only small, high-priority classes** (SOS, bulletins,
   short text). Bulk data never touches LoRa.
@@ -82,9 +82,9 @@ Roles:
 
 - **Preferred:** interoperate with / extend the **Meshtastic** firmware and its IN865 support,
   rather than reinventing LoRa PHY/MAC, contributing upstream where useful.
-- Project MESH envelopes are carried as opaque payloads within the LoRa transport; the sealing
+- Project Mesh envelopes are carried as opaque payloads within the LoRa transport; the sealing
   and routing semantics remain those defined in `CRYPTOGRAPHY.md` and `ROUTING-PROTOCOL.md`.
-- A minimal custom firmware profile may be defined for MESH-specific priority handling, staying
+- A minimal custom firmware profile may be defined for Mesh-specific priority handling, staying
   within band limits.
 
 ## 6. Deployment model

@@ -1,6 +1,6 @@
 # Architecture
 
-Detailed system architecture for Project MESH. Companion to `WHITEPAPER.md` §5.
+Detailed system architecture for Project Mesh. Companion to `WHITEPAPER.md` §5.
 
 ---
 

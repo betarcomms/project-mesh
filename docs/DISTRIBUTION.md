@@ -7,7 +7,7 @@ requirement: the app must run where Google's services are absent, blocked, or un
 
 ## 1. No proprietary cloud layer
 
-Project MESH uses **no Google Play Services, no Firebase, and no third-party proprietary
+Project Mesh uses **no Google Play Services, no Firebase, and no third-party proprietary
 cloud**. Concretely:
 
 | Common Google dependency | What we use instead |
