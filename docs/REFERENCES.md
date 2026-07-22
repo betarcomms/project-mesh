@@ -63,9 +63,12 @@ given; otherwise a descriptive pointer is provided. Verify current URLs and edit
 
 - *Anuradha Bhasin v. Union of India*, (2020) 3 SCC 637 (Supreme Court of India) — internet
   access and proportionality of shutdowns.
-- Temporary Suspension of Telecom Services (Public Emergency or Public Safety) Rules, 2017
-  (under the Indian Telegraph Act, 1885).
-- Telecommunications Act, 2023 (and rules as they come into force).
+- Telecommunications (Temporary Suspension of Services) Rules, 2024 (in force 22 Nov 2024, under
+  the Telecommunications Act, 2023) — supersedes the Temporary Suspension of Telecom Services
+  (Public Emergency or Public Safety) Rules, 2017 (Indian Telegraph Act, 1885), which is
+  historical only.
+- Telecommunications Act, 2023 (partial commencement 26 June 2024; §20 suspension/intercept, §29
+  identity duty).
 - Information Technology Act, 2000 (incl. §69A); Information Technology (Intermediary Guidelines
   and Digital Media Ethics Code) Rules, 2021.
 - Unlawful Activities (Prevention) Act, 1967 (UAPA).

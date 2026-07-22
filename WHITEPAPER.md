@@ -80,9 +80,10 @@ on administrative decisions. Three distinct but related failure modes recur:
    coastal networks; Himalayan earthquakes and landslides sever fibre. Communication fails at
    the precise moment it is most needed for rescue and relief.
 
-3. **Administrative shutdowns.** Under the Temporary Suspension of Telecom Services (Public
-   Emergency or Public Safety) Rules, 2017, authorities can order the suspension of telecom
-   services. India has consistently ranked as the country with the highest number of
+3. **Administrative shutdowns.** Under the Telecommunications (Temporary Suspension of Services)
+   Rules, 2024 — in force from 22 November 2024 under the Telecommunications Act, 2023, and
+   superseding the 2017 Temporary Suspension of Telecom Services Rules — authorities can order
+   the suspension of telecom services. India has consistently ranked as the country with the highest number of
    such shutdowns globally (see §13 and References). The Supreme Court of India, in
    *Anuradha Bhasin v. Union of India* (2020), held that indefinite shutdowns are impermissible
    and that access to information via the internet is protected under the constitutional right
@@ -663,5 +664,7 @@ that follows.
 
 A consolidated, linked bibliography — DTN routing, Noise, Double Ratchet, Sphinx/Loopix/Nym, the
 Bridgefy analysis, Briar, Meshtastic, MapLibre/OpenStreetMap, the Indian LoRa band, the
-Temporary Suspension Rules 2017, *Anuradha Bhasin v. Union of India* (2020), shutdown trackers,
-and the IT Rules 2021 — is maintained in [`docs/REFERENCES.md`](docs/REFERENCES.md).
+Telecommunications (Temporary Suspension of Services) Rules 2024 and the Telecommunications Act
+2023 (superseding the 2017 Suspension Rules), *Anuradha Bhasin v. Union of India* (2020),
+shutdown trackers, and the IT Rules 2021 — is maintained in
+[`docs/REFERENCES.md`](docs/REFERENCES.md).
