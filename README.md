@@ -43,6 +43,8 @@ doctrine, which every contributor is expected to follow.
 | Document | What it covers |
 |---|---|
 | [`WHITEPAPER.md`](WHITEPAPER.md) | The full research paper: problem, design, protocol, evaluation |
+| [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) | **Live status** — what's actually built vs. still design-only, per component |
+| [`docs/PROGRESS.md`](docs/PROGRESS.md) | **Running log** — dated, one entry per work session, what happened and why |
 | [`docs/RESEARCH-FINDINGS.md`](docs/RESEARCH-FINDINGS.md) | **Verified research + corrections** (deep multi-source, adversarially checked) — read this for what changed and why |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System layers, Rust core, native UI, module boundaries |
 | [`docs/TRANSPORT.md`](docs/TRANSPORT.md) | BLE mesh, Wi-Fi Direct, LoRa; iOS/Android radio realities |
@@ -60,9 +62,36 @@ doctrine, which every contributor is expected to follow.
 
 ## Status
 
-**Design / pre-alpha.** This repository currently contains the research and technical
-specification. No production code has been written yet. Contributions to the design are
-welcome — see [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md).
+**Design / pre-alpha, Phase 1 in progress.** The research and technical specification are
+complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) has started: identity,
+Noise `XX` handshake, Double Ratchet, envelope wire format, and an in-memory store-carry-forward
+engine are implemented and unit-tested (27 tests passing). UniFFI bindings and an Android app
+skeleton are in progress. Nothing here has been independently security-audited — see
+[`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for the exact, current,
+component-by-component picture, and [`docs/PROGRESS.md`](docs/PROGRESS.md) for the dated log of
+how it got there. Contributions to both the design and the code are welcome — see
+[`docs/GOVERNANCE.md`](docs/GOVERNANCE.md).
+
+## Repository layout
+
+```
+mesh/
+├── WHITEPAPER.md, README.md          — design docs (see table above)
+├── docs/                             — specifications, status, and progress log
+├── core/                             — mesh-core: the shared Rust core (crypto, envelopes,
+│                                        store-carry-forward engine, transport trait, FFI)
+└── android/                          — Android app skeleton (Kotlin/Compose), in progress
+```
+
+## Building the Rust core
+
+```sh
+cargo test    # runs the full mesh-core test suite from the repo root
+```
+
+No Android SDK/NDK is required to build or test `core/` — it's a plain Rust crate. Building the
+Android app additionally requires the Android SDK/NDK (not yet verified in this repo's own dev
+environment; see `docs/IMPLEMENTATION-STATUS.md`).
 
 ## Licence
 
