@@ -8,6 +8,7 @@
 
 pub mod noise;
 pub mod ratchet;
+pub mod session;
 
 use chacha20poly1305::{
     aead::{Aead, KeyInit},

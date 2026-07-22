@@ -25,7 +25,7 @@ pub struct Store {
 
 /// Outcome of offering an envelope to the store — distinguishes *why* something was not
 /// accepted, so callers (and tests) don't have to guess.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, uniffi::Enum)]
 pub enum Accept {
     New,
     Duplicate,

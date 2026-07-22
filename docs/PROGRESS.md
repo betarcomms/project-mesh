@@ -94,3 +94,34 @@ Newest entry at the bottom (chronological), each dated.
 - Neither Android nor iOS platform-compliance (current permission models, store policies,
   export-compliance declarations) has been verified beyond the manifest choices above — there is
   no app to submit yet. Tracked as open, not assumed.
+
+## 2026-07-23 — FFI surface extended: handshake, ratchet session, store
+
+- **Filled a real gap first:** `noise.rs` and `ratchet.rs` were two separately-tested primitives
+  with nothing connecting them. Added `core/src/crypto/session.rs` — after the Noise `XX`
+  handshake completes, its transcript hash (`get_handshake_hash`) seeds the Double Ratchet as
+  the shared secret; the responder generates a fresh ratchet keypair and sends the public half
+  to the initiator as one message, encrypted under the Noise transport cipher (used exactly
+  once, then discarded — ongoing messaging is the ratchet's job). 2 new tests, including one
+  proving two independent handshakes produce cryptographically isolated sessions.
+- **Extended `core/src/ffi.rs`:**
+  - `FfiError` — a boundary-only error type (`#[uniffi(flat_error)]`) translating
+    `MeshError`'s `&'static str` fields (not natively FFI-safe) to owned `String`s.
+  - `FfiHandshake` — drives the Noise `XX` exchange message-by-message
+    (`write_message`/`read_message`/`is_finished`), then `finish_as_initiator` /
+    `finish_as_responder` hand off into a session via the new glue module.
+  - `FfiSession` — wraps a live `DoubleRatchet` (`Mutex` for interior mutability, since UniFFI
+    object methods take `&self`); `encrypt`/`decrypt` with a flattened `FfiHeader`/`FfiSealed`
+    record pair (UniFFI records can't hold fixed-size `[u8; 32]` arrays, only `Vec<u8>`).
+  - `FfiStore` — wraps `Store`; `accept`/`purge_expired`/`len`/`contains_hex`/
+    `summary_ids_hex`/`missing_from_hex`. Envelopes cross as opaque wire bytes
+    (`envelope_pack`/`envelope_unpack` free functions), matching the "dumb byte pipe" native
+    layer — the native side never gets a rich typed envelope object, only bytes plus tags.
+- 35 tests passing (6 new in `ffi.rs`, 2 new in `crypto/session.rs`).
+- Rebuilt the release cdylib and regenerated Kotlin bindings: grew from 1,350 to 3,014 lines
+  (`FfiHandshake`, `FfiSession`, `FfiStore`, `envelopePack`, `envelopeUnpack` all present and
+  correctly typed on the Kotlin side). Copied into `android/app/src/main/java/uniffi/mesh_core/`.
+- Still not exported over FFI: MLS groups, channels, PQXDH, onion routing, the
+  `MeshTransport`/`MeshTransportSink` callback interfaces (those need an actual native driver to
+  call against — premature to design the callback shape before one exists), SQLCipher
+  persistence. See `IMPLEMENTATION-STATUS.md`.

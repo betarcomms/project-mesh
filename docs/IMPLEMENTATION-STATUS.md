@@ -21,7 +21,8 @@ Legend: ✅ Done · 🚧 In progress · ⬜ Not started
 |---|---|---|---|---|
 | Identity (Ed25519 + X25519, fingerprint, safety string) | `CRYPTOGRAPHY.md` §3 | ✅ | `core/src/identity.rs` | 4 tests |
 | Noise `XX` handshake | `CRYPTOGRAPHY.md` §4.1 | ✅ | `core/src/crypto/noise.rs` | 1 test; interactive (both-in-range) case only |
-| Prekey async bootstrap (X3DH-style) | `CRYPTOGRAPHY.md` §4.2 | ⬜ | — | needed for store-and-forward first contact |
+| Noise → Double Ratchet handoff | `CRYPTOGRAPHY.md` §4.1/§5 | ✅ | `core/src/crypto/session.rs` | 2 tests; the glue that was missing — handshake transcript hash seeds the ratchet, responder's fresh ratchet pubkey delivered as one Noise-transport-encrypted message |
+| Prekey async bootstrap (X3DH-style) | `CRYPTOGRAPHY.md` §4.2 | ⬜ | — | needed for store-and-forward first contact (interactive-only today) |
 | Double Ratchet (1:1) | `CRYPTOGRAPHY.md` §5 | ✅ | `core/src/crypto/ratchet.rs` | 6 tests: in-order, out-of-order, forward secrecy, post-compromise self-heal, tamper rejection |
 | MLS groups (RFC 9420) | `CRYPTOGRAPHY.md` §6 | ⬜ | — | small-group per-member-copy fallback also not yet wired |
 | Channels (Argon2id passphrase key) | `CRYPTOGRAPHY.md` §6 | ⬜ | — | |
@@ -36,7 +37,7 @@ Legend: ✅ Done · 🚧 In progress · ⬜ Not started
 | Bloom-filter summary vectors | `ROUTING-PROTOCOL.md` §7.1 | ⬜ | — | exact-`HashSet` stand-in in place (`Store::summary_ids`), documented as such |
 | Rate limiting / client puzzle | `ROUTING-PROTOCOL.md` §7.2 | ⬜ | — | |
 | Radio abstraction trait | `ARCHITECTURE.md` §3 | ✅ | `core/src/transport.rs` | trait boundary only, no implementation |
-| UniFFI bindings | `ARCHITECTURE.md` §6 | 🚧 | `core/src/ffi.rs` | identity slice exported + tested; Kotlin bindings generated (`core/generated/`, copied to `android/`); handshake/ratchet/store not exported yet |
+| UniFFI bindings | `ARCHITECTURE.md` §6 | ✅ | `core/src/ffi.rs` | identity, Noise handshake (`FfiHandshake`), ratchet session (`FfiSession`), store (`FfiStore`), envelope pack/unpack all exported + tested (6 FFI-layer tests); Kotlin bindings generated (`core/generated/`, copied to `android/`, 3,014 lines). Not exported yet: MLS, channels, onion routing, transport callback interfaces |
 | SQLCipher persistence layer | `ARCHITECTURE.md` §5 | ⬜ | — | |
 
 ### Native app

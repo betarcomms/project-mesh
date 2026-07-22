@@ -9,7 +9,7 @@
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
 [![Phase](https://img.shields.io/badge/phase-1%20of%204-blue)](docs/ROADMAP.md)
-[![Core tests](https://img.shields.io/badge/core%20tests-29%20passing-brightgreen)](core/)
+[![Core tests](https://img.shields.io/badge/core%20tests-35%20passing-brightgreen)](core/)
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPLv3%20(proposed)-lightgrey)](docs/GOVERNANCE.md)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
@@ -75,9 +75,11 @@ every contributor is expected to follow.
 
 **Design / pre-alpha, Phase 1 in progress.** The research and technical specification are
 complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) is underway: identity,
-Noise `XX` handshake, Double Ratchet, envelope wire format, an in-memory store-carry-forward
-engine, and a first UniFFI FFI slice are implemented and unit-tested (**29 tests passing**). An
-Android app skeleton is in progress. Nothing here has been independently security-audited — see
+Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, envelope wire
+format, an in-memory store-carry-forward engine, and a UniFFI surface covering all of the above
+are implemented and unit-tested (**35 tests passing**). An Android app skeleton calls into the
+generated Kotlin bindings but hasn't been built or run (no Android SDK/NDK in this dev
+environment). Nothing here has been independently security-audited — see
 [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for the exact, current,
 component-by-component picture, and [`docs/PROGRESS.md`](docs/PROGRESS.md) for the dated log of
 how it got there. Contributions to both the design and the code are welcome — see
