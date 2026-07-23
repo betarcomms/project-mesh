@@ -302,3 +302,39 @@ Newest entry at the bottom (chronological), each dated.
   direct message still requires the caller to run `FfiHandshake`/`FfiSession` first and hand the
   resulting ciphertext to `compose_local` as the envelope's `sealed` payload, which is correct
   layering (`docs/ARCHITECTURE.md` §2) but not yet demonstrated end-to-end in one test.
+
+## 2026-07-23 — Bloom-filter summary vectors
+
+- New `core/src/bloom.rs`: a hand-rolled `BloomFilter` rather than a new dependency, consistent
+  with how this crate has handled other primitives (Double Ratchet, AEAD wrappers) — sized via
+  the standard `m = ceil(-n·ln(p)/ln(2)²)`, `k = round((m/n)·ln(2))` formulas, indices derived by
+  double-hashing a single BLAKE3 digest of the envelope ID (`h1 + i·h2 mod m`) rather than
+  computing `k` independent hashes. 5 tests: inserted items are never reported absent (the one
+  correctness property that actually matters for a Bloom filter), an empty filter reports
+  nothing present, empirical false-positive rate stays within a generous bound of the configured
+  1% target over 5,000 trials, wire-format roundtrip, and malformed-input rejection (undersized
+  bit count, zero hash count, truncated bit array).
+- `engine.rs`: `Store` gained `summary_bloom`/`missing_from_bloom` alongside the existing
+  `summary_ids`/`missing_from` (kept, not replaced — some callers legitimately want an exact
+  diff with no false positives, e.g. tests/simulation). `durable.rs` got matching passthroughs.
+- `relay.rs`: `ContactMessage::Summary` now carries a `BloomFilter` instead of a
+  `HashSet<EnvelopeId>` — this is the actual wire-format win: a real store with hundreds of
+  envelopes previously sent 32 bytes per held ID on every contact; a Bloom filter compresses
+  that to a fixed bit budget. `RelayEngine::on_peer_connected`/`on_frame` switched to
+  `summary_bloom`/`missing_from_bloom`. All 7 existing relay tests (2-node and 3-node simulated
+  mesh, dedup, TTL, no-repeat) needed no logic changes to keep passing — they exercise
+  `RelayEngine`'s behavior, not the wire format directly, so the swap was transparent to them.
+  Two of relay.rs's own tests that constructed `ContactMessage::Summary` directly needed updating
+  to build a `BloomFilter` instead of a `HashSet`.
+- **No FFI surface changed and no Kotlin binding regeneration was needed** — `BloomFilter` is
+  purely internal to the relay wire protocol; `FfiMeshNode`'s exported methods (`on_frame` etc.)
+  already treated `ContactMessage` bytes as opaque, so the swap happened entirely underneath the
+  existing FFI-tested behavior. Confirmed by rerunning `ffi_node.rs`'s end-to-end two-node gossip
+  test unmodified — it still passed.
+- 69 tests passing (7 new: 5 in `bloom.rs`, 2 in `engine.rs`).
+- **Still not implemented:** the doc's "small explicit recent-ID list to bound false positives
+  on hot items" refinement — flagged in `IMPLEMENTATION-STATUS.md`, not silently dropped. A
+  very-recently-composed envelope has a small chance of being skipped by a peer whose Bloom
+  filter happens to false-positive on it that round; it's still delivered on the next contact,
+  which is the same best-effort/probabilistic delivery model `docs/ROUTING-PROTOCOL.md` §7
+  already documents, not a new risk class.

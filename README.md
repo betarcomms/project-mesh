@@ -9,7 +9,7 @@
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
 [![Phase](https://img.shields.io/badge/phase-1%20of%204-blue)](docs/ROADMAP.md)
-[![Core tests](https://img.shields.io/badge/core%20tests-62%20passing-brightgreen)](core/)
+[![Core tests](https://img.shields.io/badge/core%20tests-69%20passing-brightgreen)](core/)
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPLv3%20(proposed)-lightgrey)](docs/GOVERNANCE.md)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
@@ -76,12 +76,14 @@ every contributor is expected to follow.
 **Design / pre-alpha, Phase 1 in progress.** The research and technical specification are
 complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) is underway: identity,
 Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, envelope wire
-format, a store-carry-forward engine that now survives a restart (in-memory index backed by
-encrypted-at-rest storage, wired together via `DurableStore`), a mesh engine loop (gossip-on-
-contact + epidemic relay, transport-agnostic, tested with a simulated multi-node mesh — no
-hardware needed), a UniFFI callback interface for the radio transport boundary, the mesh engine
-wired to that transport end to end (`FfiMeshNode`), and a UniFFI surface covering all of the
-above are implemented and unit-tested (**62 tests passing**). Encryption-at-rest uses `redb` +
+format with a hand-rolled Bloom-filter summary vector (`docs/ROUTING-PROTOCOL.md` §3's compact
+gossip summary, no new dependency), a store-carry-forward engine that now survives a restart
+(in-memory index backed by encrypted-at-rest storage, wired together via `DurableStore`), a mesh
+engine loop (gossip-on-contact + epidemic relay, transport-agnostic, tested with a simulated
+multi-node mesh — no hardware needed), a UniFFI callback interface for the radio transport
+boundary, the mesh engine wired to that transport end to end (`FfiMeshNode`), and a UniFFI
+surface covering all of the above are implemented and unit-tested (**69 tests passing**).
+Encryption-at-rest uses `redb` +
 AEAD rather than the design docs' SQLCipher — a deliberate, documented substitution after
 SQLCipher's OpenSSL dependency proved unbuildable in this dev environment (see
 `docs/PROGRESS.md`). No real BLE/Wi-Fi/LoRa driver exists yet — this dev environment has no
@@ -105,6 +107,7 @@ mesh/
 │       ├── identity.rs         — Ed25519 + X25519 identity, fingerprint
 │       ├── crypto/              — Noise XX handshake, Double Ratchet
 │       ├── envelope.rs         — wire format, content-derived envelope IDs
+│       ├── bloom.rs            — Bloom filter (compact gossip summary vectors)
 │       ├── engine.rs           — in-memory store, dedup, TTL, priority eviction
 │       ├── persistence.rs      — encrypted-at-rest envelope store (redb + AEAD)
 │       ├── durable.rs          — engine.rs + persistence.rs wired together (restart-safe)

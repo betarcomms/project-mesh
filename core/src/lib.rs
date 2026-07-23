@@ -11,6 +11,7 @@
 //! routing — each is a tracked follow-up, not silently assumed done. See
 //! `docs/IMPLEMENTATION-STATUS.md` for the exact current picture.
 
+pub mod bloom;
 pub mod crypto;
 pub mod durable;
 pub mod engine;

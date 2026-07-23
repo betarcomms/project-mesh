@@ -8,7 +8,13 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::bloom::BloomFilter;
 use crate::envelope::{Envelope, EnvelopeId};
+
+/// Target false-positive rate for [`Store::summary_bloom`]. Tunable — see
+/// `docs/ROUTING-PROTOCOL.md` §3 for the tradeoff (smaller = fewer missed sends, bigger wire
+/// summary).
+const SUMMARY_BLOOM_FALSE_POSITIVE_RATE: f64 = 0.01;
 
 struct Entry {
     envelope: Envelope,
@@ -131,15 +137,39 @@ impl Store {
         expired_ids
     }
 
-    /// Compact summary of held envelope IDs, exchanged on contact so peers transfer only what
-    /// the other lacks. A real Bloom filter would shrink this further — the exact-set version
-    /// is the honest, unoptimized reference implementation for now.
+    /// Exact-set summary of held envelope IDs. Simple and correct, but sends 32 bytes per held
+    /// envelope on the wire — [`Store::summary_bloom`] is the compact form actually used by
+    /// [`crate::relay::RelayEngine`]. Kept for callers (tests, simulation) that want an exact
+    /// diff without Bloom false positives.
     pub fn summary_ids(&self) -> HashSet<EnvelopeId> {
         self.entries.keys().copied().collect()
     }
 
-    /// Envelopes this store holds that `peer_summary` does not.
+    /// Compact Bloom-filter summary of held envelope IDs (`docs/ROUTING-PROTOCOL.md` §3),
+    /// exchanged on contact so peers transfer only what the other probably lacks. False
+    /// positives (i.e. this store's ID reads as "probably present" for something a peer
+    /// actually needs) cause a missed send that self-heals on the next contact — see the
+    /// module-level doc comment on [`crate::bloom`] for why that's an acceptable tradeoff here.
+    pub fn summary_bloom(&self) -> BloomFilter {
+        let mut filter = BloomFilter::new(self.entries.len(), SUMMARY_BLOOM_FALSE_POSITIVE_RATE);
+        for id in self.entries.keys() {
+            filter.insert(id);
+        }
+        filter
+    }
+
+    /// Envelopes this store holds that `peer_summary` does not (exact-set version).
     pub fn missing_from<'a>(&'a self, peer_summary: &HashSet<EnvelopeId>) -> Vec<&'a Envelope> {
+        self.entries
+            .values()
+            .filter(|e| !peer_summary.contains(&e.envelope.id))
+            .map(|e| &e.envelope)
+            .collect()
+    }
+
+    /// Envelopes this store holds that `peer_summary` probably does not — the Bloom-filter
+    /// counterpart to [`Store::missing_from`].
+    pub fn missing_from_bloom<'a>(&'a self, peer_summary: &BloomFilter) -> Vec<&'a Envelope> {
         self.entries
             .values()
             .filter(|e| !peer_summary.contains(&e.envelope.id))
@@ -254,6 +284,35 @@ mod tests {
         let missing = store.missing_from(&peer_has);
         assert_eq!(missing.len(), 1);
         assert_eq!(missing[0].id, b.id);
+    }
+
+    #[test]
+    fn missing_from_bloom_reports_gossip_diff() {
+        let mut store = Store::new(10);
+        let a = env(Priority::Normal, 5, 1000, 1);
+        let b = env(Priority::Normal, 5, 1000, 2);
+        store.accept(a.clone(), 0);
+        store.accept(b.clone(), 0);
+
+        let mut peer_filter = crate::bloom::BloomFilter::new(1, 0.01);
+        peer_filter.insert(&a.id);
+
+        let missing = store.missing_from_bloom(&peer_filter);
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0].id, b.id);
+    }
+
+    #[test]
+    fn summary_bloom_contains_every_held_id() {
+        let mut store = Store::new(10);
+        let a = env(Priority::Normal, 5, 1000, 1);
+        let b = env(Priority::Normal, 5, 1000, 2);
+        store.accept(a.clone(), 0);
+        store.accept(b.clone(), 0);
+
+        let summary = store.summary_bloom();
+        assert!(summary.contains(&a.id));
+        assert!(summary.contains(&b.id));
     }
 
     #[test]

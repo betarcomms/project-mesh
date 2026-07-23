@@ -14,16 +14,20 @@
 //!
 //! **Simplification versus `docs/ROUTING-PROTOCOL.md` §3, stated plainly:** the doc describes a
 //! `SUMMARY` → `WANT` → `DATA` three-step exchange (a pull model, presumably for flow control).
-//! This implementation pushes on `SUMMARY` directly (`missing_from` → send), skipping the
-//! explicit `WANT` round-trip, because `Store`'s summary is already an exact set (not yet a
-//! Bloom filter — see `docs/IMPLEMENTATION-STATUS.md`), so there's nothing a `WANT` step would
-//! disambiguate yet. Revisit once Bloom filters (with their false positives) land.
+//! This implementation pushes on `SUMMARY` directly (`missing_from_bloom` → send), skipping the
+//! explicit `WANT` round-trip. The doc's own recommendation — "a small explicit recent-ID list
+//! to bound false positives on hot items" — is not implemented yet (tracked in
+//! `docs/IMPLEMENTATION-STATUS.md`), so a very recently composed envelope has a small chance of
+//! being skipped by a peer whose Bloom filter happened to false-positive on it; it's still
+//! covered on the *next* contact, consistent with the best-effort delivery model
+//! `docs/ROUTING-PROTOCOL.md` §7 already states.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
+use crate::bloom::BloomFilter;
 use crate::durable::DurableStore;
 use crate::engine::{decrement_ttl, Accept};
-use crate::envelope::{Envelope, EnvelopeId};
+use crate::envelope::Envelope;
 use crate::error::{MeshError, Result};
 
 pub const WIRE_VERSION: u8 = 1;
@@ -31,11 +35,10 @@ pub const WIRE_VERSION: u8 = 1;
 /// A message in the contact protocol. Distinct from [`crate::envelope::Envelope`]'s own wire
 /// format — this is the outer framing two nodes speak to each other; `Data` carries one
 /// envelope's wire bytes as its payload.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ContactMessage {
-    /// The compact set of envelope IDs a node holds (`docs/ROUTING-PROTOCOL.md` §2's summary
-    /// vector — exact-set today, not yet a Bloom filter).
-    Summary(HashSet<EnvelopeId>),
+    /// Compact Bloom-filter summary of held envelope IDs (`docs/ROUTING-PROTOCOL.md` §3).
+    Summary(BloomFilter),
     /// One envelope, in transit from a peer that has it to one that (as far as the sender's
     /// last-known summary suggested) doesn't.
     Data(Envelope),
@@ -44,15 +47,7 @@ pub enum ContactMessage {
 impl ContactMessage {
     pub fn to_bytes(&self) -> Vec<u8> {
         let (tag, payload): (u8, Vec<u8>) = match self {
-            ContactMessage::Summary(ids) => {
-                let mut sorted: Vec<&EnvelopeId> = ids.iter().collect();
-                sorted.sort_by_key(|id| id.0);
-                let mut payload = Vec::with_capacity(sorted.len() * 32);
-                for id in sorted {
-                    payload.extend_from_slice(&id.0);
-                }
-                (0, payload)
-            }
+            ContactMessage::Summary(filter) => (0, filter.to_bytes()),
             ContactMessage::Data(envelope) => (1, envelope.to_bytes()),
         };
         let mut buf = Vec::with_capacity(2 + 4 + payload.len());
@@ -77,18 +72,7 @@ impl ContactMessage {
             return Err(MeshError::Malformed("contact message length mismatch"));
         }
         match tag {
-            0 => {
-                if len % 32 != 0 {
-                    return Err(MeshError::Malformed("summary payload not a multiple of 32 bytes"));
-                }
-                let mut ids = HashSet::with_capacity(len / 32);
-                for chunk in payload.chunks_exact(32) {
-                    let mut arr = [0u8; 32];
-                    arr.copy_from_slice(chunk);
-                    ids.insert(EnvelopeId(arr));
-                }
-                Ok(ContactMessage::Summary(ids))
-            }
+            0 => Ok(ContactMessage::Summary(BloomFilter::from_bytes(payload)?)),
             1 => Ok(ContactMessage::Data(Envelope::from_bytes(payload)?)),
             _ => Err(MeshError::Malformed("unknown contact message tag")),
         }
@@ -127,7 +111,7 @@ impl RelayEngine {
     /// (initiating the gossip exchange from our side).
     pub fn on_peer_connected(&mut self, peer: u64) -> Vec<u8> {
         self.peers.insert(peer, PeerState { summary_sent: true });
-        ContactMessage::Summary(self.store.summary_ids()).to_bytes()
+        ContactMessage::Summary(self.store.summary_bloom()).to_bytes()
     }
 
     /// The radio-level link to a peer dropped. Forgets its contact state; any in-flight gossip
@@ -143,7 +127,7 @@ impl RelayEngine {
         let mut outbound = Vec::new();
 
         match message {
-            ContactMessage::Summary(their_ids) => {
+            ContactMessage::Summary(their_filter) => {
                 let already_sent = self
                     .peers
                     .get(&from_peer)
@@ -154,9 +138,9 @@ impl RelayEngine {
                         .entry(from_peer)
                         .or_insert(PeerState { summary_sent: false })
                         .summary_sent = true;
-                    outbound.push((from_peer, ContactMessage::Summary(self.store.summary_ids()).to_bytes()));
+                    outbound.push((from_peer, ContactMessage::Summary(self.store.summary_bloom()).to_bytes()));
                 }
-                for envelope in self.store.missing_from(&their_ids) {
+                for envelope in self.store.missing_from_bloom(&their_filter) {
                     outbound.push((from_peer, ContactMessage::Data(envelope.clone()).to_bytes()));
                 }
             }
@@ -231,10 +215,10 @@ mod tests {
 
     #[test]
     fn contact_message_roundtrip_summary_and_data() {
-        let mut ids = HashSet::new();
-        ids.insert(EnvelopeId([1u8; 32]));
-        ids.insert(EnvelopeId([2u8; 32]));
-        let summary = ContactMessage::Summary(ids.clone());
+        let mut filter = BloomFilter::new(2, 0.01);
+        filter.insert(&crate::envelope::EnvelopeId([1u8; 32]));
+        filter.insert(&crate::envelope::EnvelopeId([2u8; 32]));
+        let summary = ContactMessage::Summary(filter);
         assert_eq!(ContactMessage::from_bytes(&summary.to_bytes()).unwrap(), summary);
 
         let data = ContactMessage::Data(env(Priority::Normal, 8, 9));
@@ -244,7 +228,7 @@ mod tests {
     #[test]
     fn rejects_malformed_contact_message() {
         assert!(ContactMessage::from_bytes(&[]).is_err());
-        assert!(ContactMessage::from_bytes(&[1, 0, 0, 0, 0, 1]).is_err()); // summary len not %32
+        assert!(ContactMessage::from_bytes(&[1, 0, 0, 0, 0, 1]).is_err()); // truncated summary payload
         assert!(ContactMessage::from_bytes(&[9, 0, 0, 0, 0, 0]).is_err()); // wrong version
     }
 

@@ -11,6 +11,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+use crate::bloom::BloomFilter;
 use crate::engine::{Accept, Store};
 use crate::envelope::{Envelope, EnvelopeId};
 use crate::error::Result;
@@ -94,8 +95,16 @@ impl DurableStore {
         self.memory.summary_ids()
     }
 
+    pub fn summary_bloom(&self) -> BloomFilter {
+        self.memory.summary_bloom()
+    }
+
     pub fn missing_from<'a>(&'a self, peer_summary: &HashSet<EnvelopeId>) -> Vec<&'a Envelope> {
         self.memory.missing_from(peer_summary)
+    }
+
+    pub fn missing_from_bloom<'a>(&'a self, peer_summary: &BloomFilter) -> Vec<&'a Envelope> {
+        self.memory.missing_from_bloom(peer_summary)
     }
 }
 
