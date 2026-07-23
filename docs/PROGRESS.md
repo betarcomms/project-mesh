@@ -590,3 +590,41 @@ Newest entry at the bottom (chronological), each dated.
   devices. Recorded honestly in `IMPLEMENTATION-STATUS.md` (🚧, not ✅) rather than claimed done.
 - Second emulator killed; `mesh_test` (emulator-5554) left running with the mesh started, in case
   a follow-up session has a physical device to pair it against.
+
+## 2026-07-24 — X3DH-style prekey bootstrap: store-and-forward first contact now works
+
+- User asked to work through the rest of Phase 1's outstanding list, one item at a time, starting
+  with whatever's most foundational. Prekey bootstrap picked first: without it, two parties who
+  are never simultaneously in range (the entire premise of a DTN mesh) can't establish a session
+  at all — everything built so far (Noise XX, Double Ratchet, MLS) is interactive-only.
+- New `core/src/crypto/prekey.rs`: `SignedPrekey` (X25519 keypair signed by the long-term Ed25519
+  identity key) and `OneTimePrekey` (single-use X25519 keypair), bundled as `PrekeyBundle`.
+  `initiate()` (sender side) verifies the bundle's signature, generates a fresh ephemeral keypair,
+  and computes the X3DH shared secret from 3 or 4 Diffie-Hellman outputs depending on whether a
+  one-time prekey was available. `respond()` (recipient side, once the sender's first message
+  arrives) recomputes the same secret from the recipient's own key material.
+- **Deliberately reused the existing `DoubleRatchet` API rather than extending it**: Bob's signed
+  prekey doubles as the initial ratchet public key Alice ratchets against on her first message
+  (`DoubleRatchet::init_initiator` already accepts an arbitrary `remote_ratchet_pub`), and Bob
+  seeds his own `DoubleRatchet::init_responder` with an independent copy of his signed prekey's
+  scalar (`SignedPrekey::secret_copy`, reconstructing a fresh `StaticSecret` from the raw bytes
+  rather than relying on `Clone`, since the same signed prekey seeds one ratchet per asynchronous
+  initiator until rotated). This is the same trick Signal's own X3DH+Double-Ratchet integration
+  uses — zero changes needed to `ratchet.rs`.
+- Caught and fixed a real mistake before it landed: an early draft of `respond()` had a dead,
+  wrong placeholder DH1 computation left in alongside the correct one (from drafting the mirror
+  computation and not cleaning up the first attempt) — the wrong line was unused (its result was
+  discarded), so it wouldn't have produced an incorrect result, but it was confusing dead code.
+  Removed before running tests, not left "harmless but ugly."
+- 5 new tests: initiator and responder derive matching secrets with a one-time prekey, same
+  without one, different ephemeral keys never produce the same secret twice, a tampered bundle
+  signature is rejected, and a full bootstrap-through-ratchet-messaging round trip (Alice seals a
+  message to an offline Bob using only his published bundle; Bob, "coming online" later, derives
+  the same secret from his own keys and opens it, then ordinary two-way ratchet messaging
+  continues). 91 tests passing (5 new), full suite reconfirmed green, not just the new module.
+- **Not done, stated plainly:** no prekey pool manager (which one-time prekeys have been handed
+  out, when to top up the batch), no bundle transport decision (how a bundle actually reaches a
+  sender — in-person alongside fingerprint verification, or gossiped through the mesh as its own
+  signed envelope class — is `ROUTING-PROTOCOL.md` territory, not decided here), not exported over
+  UniFFI yet (same "design the FFI shape separately" pattern this project has followed for every
+  other module — MLS, transport — rather than a mechanical re-export).

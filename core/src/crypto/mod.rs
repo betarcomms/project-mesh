@@ -7,6 +7,7 @@
 //! tracked as follow-up increments, not silently skipped.
 
 pub mod noise;
+pub mod prekey;
 pub mod ratchet;
 pub mod session;
 
