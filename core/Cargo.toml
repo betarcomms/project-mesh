@@ -26,7 +26,7 @@ redb = "4"
 argon2 = "0.5"
 openmls = "0.8"
 openmls_rust_crypto = "0.5"
-openmls_basic_credential = "0.5"
+openmls_basic_credential = { version = "0.5", features = ["clonable"] }
 openmls_traits = "0.5"
 tls_codec = "0.4"
 ml-kem = "0.3.2"

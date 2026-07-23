@@ -748,3 +748,54 @@ Newest entry at the bottom (chronological), each dated.
   in `sha3`/`keccak`, `hybrid-array`, `module-lattice`, `kem`).
 - **Not done:** not exported over UniFFI yet, no key-rotation/pool management for `PqPrekey`
   (mirrors the same already-acknowledged gap for the classical `SignedPrekey`).
+
+## 2026-07-24 — MLS durable persistence + routing integration
+
+- Researched before writing: `openmls_traits::storage::StorageProvider` (needed to make MLS
+  group state survive a restart) turned out to require **54 methods** covering tree state, epoch
+  secrets, proposals, message secrets, and more — a real trait, not a quick wrapper, and exactly
+  the kind of protocol-state surface `CRYPTOGRAPHY.md` §9 says needs independent review, not a
+  rushed reimplementation under time pressure. Checked whether `openmls_rust_crypto`'s
+  `MemoryStorage` (the in-memory `StorageProvider` impl already in use) could be persisted
+  wholesale instead of reimplementing the trait — its `values` field turned out to be a public
+  `RwLock<HashMap<Vec<u8>, Vec<u8>>>`, and `openmls::group::MlsGroup::load(storage, group_id)`
+  (confirmed by reading the actual `openmls` GitHub source at the `openmls-v0.8.1` tag, not
+  guessing) reconstructs a group's live state purely from what's sitting in that map. So: snapshot
+  the whole map to an AEAD-sealed file after any state-mutating call, and on "restart," pre-seed a
+  fresh `OpenMlsRustCrypto`'s empty map from that file before calling `MlsGroup::load`. Reuses
+  `openmls`'s own already-correct storage-provider implementation instead of reimplementing a
+  50+-method trait — the same "don't hand-roll it, reuse the audited primitive" instinct this
+  project has applied to `redb`, `openmls` itself, `argon2`, and `ml-kem`, applied one layer
+  further in.
+- **Explicitly not covered by this persistence:** the member's own `SignatureKeyPair`/
+  `CredentialWithKey` — those are ordinary in-process Rust values the caller must durably store
+  separately (this crate's own `persistence.rs` pattern, or a platform keystore, are natural
+  fits). New `MlsMember::from_signer_and_credential` reconstructs a member from a previously-held
+  signer+credential paired with a *fresh* provider, modeling exactly what a real restart needs
+  without silently pretending this module solves signer persistence too.
+- `openmls_basic_credential`'s `SignatureKeyPair` needed its `clonable` Cargo feature turned on
+  to support this (it doesn't derive `Clone` by default) — a one-line `Cargo.toml` change, found
+  by reading the crate's actual source rather than assuming.
+- **Routing integration:** `envelope.rs` already had an unused `Addressing::Group([u8; 32])`
+  variant, anticipating exactly this. New `MlsGroupHandle::seal_as_envelope`/`open_from_envelope`
+  wrap `seal`/`open` as real `Envelope`s, with `BLAKE3(group_id)` as the public, routable,
+  membership-revealing-nothing selector. `RelayEngine` needed zero changes — it was already
+  written to treat every envelope's `sealed` payload as opaque, so MLS ciphertext rides the exact
+  same gossip/relay/`DurableStore` path as Direct/Channel/Broadcast traffic, no MLS-specific
+  branching added anywhere in the routing layer.
+- 4 new tests: a real simulated-restart test (group created, one message sent and confirmed
+  received, snapshot written to an actual file on disk, the in-process group handle dropped, a
+  *fresh* member+provider constructed, group reloaded from that file, and a second message sent
+  post-"restart" and confirmed received by the peer who never restarted) — this is the test that
+  actually matters for this feature, not just an in-process serialize/deserialize check. Plus:
+  wrong-master-key fails to open a snapshot, envelope seal/open round trip, and an envelope
+  addressed to a different group is correctly rejected rather than silently mis-decrypted. 117
+  tests passing (4 new), release build reconfirmed with no regressions.
+- **Not done, tracked separately rather than silently dropped:** UniFFI export was originally
+  bundled into this task's description but scoped out — every other module in this project (MLS
+  originally, the transport callback interface) has treated "design the FFI shape" as its own
+  distinct pass rather than a mechanical afterthought, and this pass already covers two
+  substantial, independently-useful pieces (persistence, routing). Also still open: member
+  removal/self-update/external-commit paths, the small-group per-member-copy fallback, and
+  snapshot cadence/atomicity at scale (every call rewrites the whole file — fine for this pass's
+  group sizes, not benchmarked).
