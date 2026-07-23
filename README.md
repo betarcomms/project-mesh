@@ -88,11 +88,11 @@ that transport end to end (`FfiMeshNode`), and a UniFFI surface covering most of
 implemented and unit-tested (**86 tests passing**). Encryption-at-rest uses `redb` +
 AEAD rather than the design docs' SQLCipher — a deliberate, documented substitution after
 SQLCipher's OpenSSL dependency proved unbuildable in this dev environment (see
-`docs/PROGRESS.md`). No real BLE/Wi-Fi/LoRa driver exists yet — this dev environment has no
-Android SDK, Gradle, or even a Kotlin compiler, so that native platform code
-can't be written and verified here at all. An Android app skeleton calls into the generated
-Kotlin bindings but hasn't been built or run. Nothing here has been
-independently security-audited — see
+`docs/PROGRESS.md`). **The Android app now builds for real** — SDK, NDK r27c, and Gradle 8.11.1
+installed, `mesh-core` cross-compiled to real `.so` libraries for arm64-v8a/armeabi-v7a/x86_64,
+`./gradlew assembleDebug` produces a working debug APK. Not yet verified: running it on an
+actual device or emulator (none available in this dev environment), and no real BLE/Wi-Fi/LoRa
+driver exists yet. Nothing here has been independently security-audited — see
 [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for the exact, current,
 component-by-component picture, and [`docs/PROGRESS.md`](docs/PROGRESS.md) for the dated log of
 how it got there. Contributions to both the design and the code are welcome — see
@@ -127,14 +127,20 @@ mesh/
 
 ```sh
 cargo test                       # mesh-core: run the full Rust test suite
-cargo run --bin uniffi-bindgen -- generate --library target/debug/mesh_core.dll \
+cargo run --release --bin uniffi-bindgen -- generate --library target/release/mesh_core.dll \
   --language kotlin --out-dir core/generated                # regenerate Kotlin bindings
+
+# Android (needs Android SDK + NDK r27c + cargo-ndk installed):
+cargo ndk -o android/app/src/main/jniLibs -t arm64-v8a -t armeabi-v7a -t x86_64 \
+  build --release -p mesh-core                               # cross-compile the native lib
+cd android && ./gradlew assembleDebug                        # build the APK
 ```
 
-No Android SDK/NDK is required to build or test `core/` — it's a plain Rust crate. Building and
-running the Android app additionally requires the Android SDK/NDK (not yet available in this
-repo's own dev environment; cross-compiling `mesh-core` to an Android target is an open item —
-see [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md)).
+No Android SDK/NDK is required to build or test `core/` — it's a plain Rust crate. The Android
+app itself builds (`./gradlew assembleDebug` succeeds, native library packaged in) but hasn't
+been run on a device or emulator yet — see
+[`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for exactly what's verified vs.
+not.
 
 ## ⚖️ Licence
 

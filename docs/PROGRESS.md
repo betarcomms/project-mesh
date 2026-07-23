@@ -455,3 +455,65 @@ Newest entry at the bottom (chronological), each dated.
   routing integration (MLS ciphertext doesn't travel as `Envelope`s through `RelayEngine` yet),
   member removal / self-update / external commits (openmls supports these; only add/join/
   application-message paths are exercised so far).
+
+## 2026-07-23 — Android toolchain complete: the app builds, for real
+
+- User installed Android SDK components via Android Studio. Checked what was actually there: SDK
+  at `%LOCALAPPDATA%\Android\Sdk` with build-tools 36.0.0 and platform android-36.1, but **no
+  NDK, no cmdline-tools (so no `sdkmanager`), and no Gradle wrapper jar** (only the
+  `gradle-wrapper.properties` stub from the original skeleton commit). Filled in every missing
+  piece rather than assuming "SDK installed" meant "buildable":
+  - Downloaded Gradle 8.11.1 directly (same version already pinned in
+    `gradle-wrapper.properties`), ran `gradle wrapper --gradle-version 8.11.1` inside `android/`
+    to generate the real `gradlew`/`gradlew.bat`/`gradle-wrapper.jar`.
+  - Downloaded the official Android SDK command-line tools zip, installed into
+    `Sdk/cmdline-tools/latest`, accepted all SDK licenses non-interactively.
+  - Installed NDK r27c and platform android-35 (matching this project's `compileSdk`) via
+    `sdkmanager`.
+  - `rustup target add` for `aarch64-linux-android`, `armv7-linux-androideabi`,
+    `x86_64-linux-android`, `i686-linux-android`; installed `cargo-ndk`.
+- **Real cross-compile, first time:** `cargo ndk -o android/app/src/main/jniLibs -t arm64-v8a
+  -t armeabi-v7a -t x86_64 build --release -p mesh-core` — succeeded, producing real
+  `libmesh_core.so` for each ABI (confirmed via `file`: "ELF 64-bit LSB shared object, ARM
+  aarch64 ... for Android 21, built by NDK r27c"). This is the entire dependency tree —
+  `openmls`, `redb`, everything — compiling for a phone CPU for the first time.
+- **Four real, distinct bugs found and fixed via actual Gradle build failures, not guesswork,**
+  each root-caused from the actual error message rather than trial-and-error:
+  1. `JAVA_HOME` pointed at a JRE (no `javac`) — switched to Android Studio's bundled JBR
+     (`Program Files\Android\Android Studio\jbr`), which is a real JDK 21.
+  2. Kotlin 2.0+ requires the Compose Compiler as its own Gradle plugin, not the old
+     `composeOptions { kotlinCompilerExtensionVersion }` mechanism — added
+     `org.jetbrains.kotlin.plugin.compose` to both `android/build.gradle.kts` and
+     `android/app/build.gradle.kts`, removed the now-invalid `composeOptions` block.
+  3. `local.properties`' `sdk.dir` was written earlier with backslash escaping
+     (`C\:\Users\konko\...`) — Java properties files treat backslash as an escape character, so
+     `\U`, `\A` etc. are invalid escapes and corrupt the path, causing
+     `java.io.IOException: Invalid file path`. Fixed by using forward slashes
+     (`C:/Users/konko/...`), which Java properties files and Windows both accept.
+  4. `AndroidManifest.xml` had `--` inside an XML comment ("... never by default. --" and
+     "not implemented yet -- see ..."), which is invalid XML (the string "--" is not permitted
+     within comments) — the manifest merger failed to even parse the file. Reworded both
+     comments to avoid the double-hyphen.
+  5. `Theme.Material3.DayNight.NoActionBar` (the manifest's `android:theme`) doesn't exist from
+     Compose's `androidx.compose.material3:material3` alone — that's Compose-internal theming,
+     not the classic XML theme resource system. Added `com.google.android.material:material` as
+     a dependency, which provides the actual `Theme.Material3.*` style resources.
+- **`./gradlew assembleDebug` → `BUILD SUCCESSFUL`.** Real signed debug APK (~20 MB) produced at
+  `android/app/build/outputs/apk/debug/app-debug.apk`, with all three native `.so` files
+  packaged inside. Re-ran `cargo test` on `core/` afterward to confirm none of this touched
+  Rust-side correctness — still 86/86.
+- Updated `jniLibs/README.md` and `MainActivity.kt`'s doc comment, both of which previously said
+  "not done" / "will throw `UnsatisfiedLinkError`" — no longer true, corrected rather than left
+  stale.
+- Also true now, worth noting for future sessions: the earlier "no Kotlin compiler at all, can't
+  even syntax-check" constraint that shaped the BLE-driver scoping decision (transport callback
+  interface only, no real Kotlin) **no longer holds** — Gradle's embedded Kotlin compiler
+  successfully compiled real Kotlin as part of this build. Writing the actual BLE GATT driver is
+  newly unblocked at the "does it compile" level; it still cannot be verified against real
+  hardware (no physical Android device or running emulator in this dev environment — an AVD
+  exists as unconfigured tooling, not a running virtual device).
+- **Not done:** actually launching the app — no device connected, no emulator configured/booted
+  (`adb devices` returns empty; `Sdk/emulator` binary present but no AVD created). So while the
+  build is real and verified, runtime behavior (does `FfiIdentity.generate()` actually work when
+  tapped, does the app not crash on launch) is still unverified. That's the natural next check,
+  either via emulator setup or a physical device.

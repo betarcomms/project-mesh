@@ -7,3 +7,5 @@
 /android/build/
 /android/app/build/
 /android/local.properties
+# Cross-compiled native libs: build artifacts, regenerable via cargo-ndk (see jniLibs/README.md)
+/android/app/src/main/jniLibs/*/*.so
