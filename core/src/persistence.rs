@@ -129,6 +129,39 @@ impl EncryptedStore {
             .map_err(|_| MeshError::Malformed("failed to count envelopes"))? as usize)
     }
 
+    /// Panic-wipe (`docs/CRYPTOGRAPHY.md` §8): best-effort secure delete of the entire database
+    /// file. Closes this handle first (`self` is consumed) since an open file can't be deleted
+    /// on some platforms (Windows) while a handle holds it. Overwrites the file's bytes with
+    /// zeros before removing it — belt-and-braces, since what actually makes the ciphertext
+    /// unrecoverable is `master_key` no longer existing anywhere (the caller's job — e.g.
+    /// deleting the Android Keystore alias — not this function's).
+    ///
+    /// **Honest limit:** overwriting bytes at the filesystem level is not a guarantee of
+    /// physical erasure on flash storage/SSDs with wear-leveling, which may retain the original
+    /// physical blocks elsewhere even after this call returns success. This is defense in depth
+    /// on top of key destruction, not a standalone forensic guarantee — the same caveat
+    /// `docs/THREAT-MODEL.md` §2 (A5) already states for the duress/panic-wipe mitigation as a
+    /// whole ("mitigations, not guarantees, against a physical adversary").
+    pub fn wipe(self, path: &std::path::Path) -> Result<()> {
+        drop(self);
+        if let Ok(metadata) = std::fs::metadata(path) {
+            if let Ok(mut file) = std::fs::OpenOptions::new().write(true).open(path) {
+                use std::io::Write;
+                let zeros = [0u8; 64 * 1024];
+                let mut remaining = metadata.len();
+                while remaining > 0 {
+                    let chunk = remaining.min(zeros.len() as u64) as usize;
+                    if file.write_all(&zeros[..chunk]).is_err() {
+                        break; // best-effort: still proceed to remove the file below
+                    }
+                    remaining -= chunk as u64;
+                }
+                let _ = file.sync_all();
+            }
+        }
+        std::fs::remove_file(path).map_err(|_| MeshError::Malformed("failed to remove database file during wipe"))
+    }
+
     pub fn all_ids(&self) -> Result<Vec<EnvelopeId>> {
         let read_txn = self
             .db
@@ -248,5 +281,17 @@ mod tests {
 
         drop(reopened);
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn wipe_deletes_the_database_file() {
+        let path = temp_db_path("wipe");
+        let _ = std::fs::remove_file(&path);
+        let store = EncryptedStore::open(&path, [6u8; 32]).unwrap();
+        store.put(&sample(30)).unwrap();
+        assert!(path.exists());
+
+        store.wipe(&path).unwrap();
+        assert!(!path.exists());
     }
 }

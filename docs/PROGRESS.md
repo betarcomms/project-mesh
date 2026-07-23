@@ -628,3 +628,30 @@ Newest entry at the bottom (chronological), each dated.
   signed envelope class — is `ROUTING-PROTOCOL.md` territory, not decided here), not exported over
   UniFFI yet (same "design the FFI shape separately" pattern this project has followed for every
   other module — MLS, transport — rather than a mechanical re-export).
+
+## 2026-07-24 — Duress/panic-wipe, plus a shared Argon2id passphrase primitive
+
+- Added `EncryptedStore::wipe`/`DurableStore::wipe` (`persistence.rs`/`durable.rs`): consume
+  `self` (closing the database handle first — an open file can't be deleted on Windows while
+  held), overwrite the file's bytes with zeros, then remove it. Documented plainly that this is
+  defense-in-depth, not a forensic guarantee, given flash/SSD wear-leveling — matches
+  `THREAT-MODEL.md`'s existing framing for this mitigation class, not a new claim.
+- **Deliberately did not add a "duress mode" concept to the crate.** Re-reading
+  `CRYPTOGRAPHY.md` §8, a decoy state is just an ordinary `DurableStore` opened at a different
+  path with a different key — nothing about that needs the core to know "this is the duress
+  store" as a distinct thing. The only real missing primitive was turning a duress *passphrase*
+  into a key, which is the same primitive Channels (`CRYPTOGRAPHY.md` §6) needs for its
+  passphrase-derived symmetric key. Built that once, shared: new `core/src/crypto/passphrase.rs`
+  wrapping Argon2id (`argon2` crate — pure Rust, no C toolchain, consistent with why this crate
+  already avoided a C-dependent SQLCipher). Which passphrase maps to which (path, key) pair for
+  "normal" vs "decoy" is left as native-layer/UX policy, not something this crate tracks.
+  Which is a small realization worth recording: the initial Phase-1 todo list treated "duress
+  wipe" and "channels" as separate line items, but the actual crypto work overlapped enough that
+  doing them independently would have meant writing the same Argon2id wrapper twice.
+- 6 new tests: 2 for `wipe` (file actually gone afterward, both `EncryptedStore` and
+  `DurableStore`), 4 for `passphrase::derive_key` (deterministic for the same pair, different
+  passphrases/salts diverge, salts aren't trivially repeated). 97 tests passing (6 new), full
+  suite reconfirmed green.
+- **Not done:** no native-layer UI/flow yet for actually triggering a panic-wipe or setting a
+  duress passphrase — this pass is the crypto/storage primitive only, same pattern as every other
+  core-first increment in this project.

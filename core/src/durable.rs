@@ -106,6 +106,14 @@ impl DurableStore {
     pub fn missing_from_bloom<'a>(&'a self, peer_summary: &BloomFilter) -> Vec<&'a Envelope> {
         self.memory.missing_from_bloom(peer_summary)
     }
+
+    /// Panic-wipe (`docs/CRYPTOGRAPHY.md` §8): drops the in-memory index and delegates to
+    /// [`EncryptedStore::wipe`] for the on-disk secure delete. See that function's doc comment
+    /// for what "secure" does and doesn't guarantee.
+    pub fn wipe(self, path: &Path) -> Result<()> {
+        drop(self.memory);
+        self.disk.wipe(path)
+    }
 }
 
 #[cfg(test)]
@@ -231,5 +239,18 @@ mod tests {
 
         drop(store);
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn wipe_removes_the_database_file() {
+        let path = temp_db_path("wipe");
+        let _ = std::fs::remove_file(&path);
+        let key = [6u8; 32];
+        let mut store = DurableStore::open(&path, key, 10, 0).unwrap();
+        store.accept(env(Priority::Normal, 8, 9_999_999_999, 50), 0).unwrap();
+        assert!(path.exists());
+
+        store.wipe(&path).unwrap();
+        assert!(!path.exists());
     }
 }
