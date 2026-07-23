@@ -4,7 +4,8 @@
 //! Everything else in this crate is plain Rust, used directly by tests and by this module.
 //!
 //! **Status:** identity, the Noise `XX` handshake, the Double Ratchet session, the
-//! store-carry-forward engine, and the encrypted-at-rest envelope store are exported.
+//! store-carry-forward engine (in-memory `FfiStore`, standalone durable `FfiEncryptedStore`,
+//! and the two wired together as `FfiDurableStore` — use that one in a real app) are exported.
 //! Envelopes cross the boundary as opaque wire bytes (`envelope_pack` / `envelope_unpack`)
 //! rather than a rich typed object, matching `docs/ARCHITECTURE.md` §1's "dumb byte pipe"
 //! native layer. Not exported yet: MLS groups, channels, onion routing, and the
@@ -285,11 +286,12 @@ impl FfiStore {
     /// Offer wire-format envelope bytes to the store. `now` is Unix seconds.
     pub fn accept(&self, envelope_bytes: Vec<u8>, now: u64) -> Result<Accept, FfiError> {
         let env = Envelope::from_bytes(&envelope_bytes)?;
-        Ok(self.inner.lock().expect("lock poisoned").accept(env, now))
+        let (outcome, _evicted) = self.inner.lock().expect("lock poisoned").accept(env, now);
+        Ok(outcome)
     }
 
     pub fn purge_expired(&self, now: u64) -> u32 {
-        self.inner.lock().expect("lock poisoned").purge_expired(now) as u32
+        self.inner.lock().expect("lock poisoned").purge_expired(now).len() as u32
     }
 
     pub fn len(&self) -> u32 {
@@ -376,6 +378,80 @@ impl FfiEncryptedStore {
 
     pub fn all_ids_hex(&self) -> Result<Vec<String>, FfiError> {
         Ok(self.inner.all_ids()?.into_iter().map(|id| id.to_hex()).collect())
+    }
+}
+
+/// The store a real app should actually use: [`FfiStore`]'s fast in-memory dedup/TTL/priority
+/// index, backed by [`FfiEncryptedStore`]'s durability, wired together by
+/// [`crate::durable::DurableStore`] so accepted envelopes survive a process restart.
+/// `FfiStore`/`FfiEncryptedStore` remain available standalone (e.g. `FfiStore` for
+/// simulation/testing without touching disk).
+#[derive(uniffi::Object)]
+pub struct FfiDurableStore {
+    inner: Mutex<crate::durable::DurableStore>,
+}
+
+#[uniffi::export]
+impl FfiDurableStore {
+    /// Opens (or creates) the encrypted database at `path` and reloads its contents into a
+    /// fresh in-memory index capped at `capacity`. `now` (Unix seconds) is used to prune
+    /// anything expired while the store was closed.
+    #[uniffi::constructor]
+    pub fn open(path: String, master_key: Vec<u8>, capacity: u32, now: u64) -> Result<Arc<Self>, FfiError> {
+        if master_key.len() != 32 {
+            return Err(FfiError::Malformed("master_key must be 32 bytes".into()));
+        }
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&master_key);
+        let inner = crate::durable::DurableStore::open(Path::new(&path), key, capacity as usize, now)?;
+        Ok(Arc::new(Self {
+            inner: Mutex::new(inner),
+        }))
+    }
+
+    /// Offer wire-format envelope bytes to the store. `now` is Unix seconds.
+    pub fn accept(&self, envelope_bytes: Vec<u8>, now: u64) -> Result<Accept, FfiError> {
+        let env = Envelope::from_bytes(&envelope_bytes)?;
+        Ok(self.inner.lock().expect("lock poisoned").accept(env, now)?)
+    }
+
+    pub fn purge_expired(&self, now: u64) -> Result<u32, FfiError> {
+        Ok(self.inner.lock().expect("lock poisoned").purge_expired(now)? as u32)
+    }
+
+    pub fn len(&self) -> u32 {
+        self.inner.lock().expect("lock poisoned").len() as u32
+    }
+
+    pub fn contains_hex(&self, id_hex: String) -> bool {
+        match hex_to_id(&id_hex) {
+            Some(id) => self.inner.lock().expect("lock poisoned").contains(&id),
+            None => false,
+        }
+    }
+
+    /// Compact summary of held envelope IDs (hex-encoded), exchanged on contact.
+    pub fn summary_ids_hex(&self) -> Vec<String> {
+        self.inner
+            .lock()
+            .expect("lock poisoned")
+            .summary_ids()
+            .iter()
+            .map(|id| id.to_hex())
+            .collect()
+    }
+
+    /// Wire bytes of envelopes this store holds that the peer's summary (hex IDs) lacks.
+    pub fn missing_from_hex(&self, peer_summary_hex: Vec<String>) -> Vec<Vec<u8>> {
+        let peer_ids: HashSet<EnvelopeId> =
+            peer_summary_hex.iter().filter_map(|h| hex_to_id(h)).collect();
+        self.inner
+            .lock()
+            .expect("lock poisoned")
+            .missing_from(&peer_ids)
+            .into_iter()
+            .map(|e| e.to_bytes())
+            .collect()
     }
 }
 
@@ -602,6 +678,52 @@ mod tests {
 
         let reopened = FfiEncryptedStore::open(path.clone(), vec![2u8; 32]).unwrap();
         assert!(reopened.get_hex(id_hex).is_err());
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn durable_store_survives_restart_via_ffi() {
+        let path = temp_db_path("ffi-durable");
+        let _ = std::fs::remove_file(&path);
+        let key = vec![9u8; 32];
+        let bytes = envelope_pack(0, None, 2, 8, 9_999_999_999, b"payload".to_vec()).unwrap();
+        let id_hex = envelope_unpack(bytes.clone()).unwrap().id_hex;
+
+        {
+            let store = FfiDurableStore::open(path.clone(), key.clone(), 10, 0).unwrap();
+            assert_eq!(store.accept(bytes.clone(), 0).unwrap(), Accept::New);
+            assert_eq!(store.len(), 1);
+        }
+
+        // Simulates a process restart: fresh FfiDurableStore, same file -- must reload.
+        let reopened = FfiDurableStore::open(path.clone(), key, 10, 0).unwrap();
+        assert_eq!(reopened.len(), 1);
+        assert!(reopened.contains_hex(id_hex));
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn durable_store_eviction_syncs_to_disk_via_ffi() {
+        let path = temp_db_path("ffi-durable-evict");
+        let _ = std::fs::remove_file(&path);
+        let key = vec![10u8; 32];
+        let low = envelope_pack(0, None, 3, 8, 9_999_999_999, b"low".to_vec()).unwrap();
+        let low_id = envelope_unpack(low.clone()).unwrap().id_hex;
+        let sos = envelope_pack(0, None, 0, 8, 9_999_999_999, b"sos".to_vec()).unwrap();
+        let sos_id = envelope_unpack(sos.clone()).unwrap().id_hex;
+
+        {
+            let store = FfiDurableStore::open(path.clone(), key.clone(), 1, 0).unwrap();
+            store.accept(low, 0).unwrap();
+            store.accept(sos, 0).unwrap(); // evicts `low`, capacity is 1
+        }
+
+        let reopened = FfiDurableStore::open(path.clone(), key, 10, 0).unwrap();
+        assert_eq!(reopened.len(), 1);
+        assert!(reopened.contains_hex(sos_id));
+        assert!(!reopened.contains_hex(low_id));
 
         let _ = std::fs::remove_file(&path);
     }

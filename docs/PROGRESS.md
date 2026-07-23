@@ -172,3 +172,34 @@ Newest entry at the bottom (chronological), each dated.
 - Where the master key itself comes from (Android Keystore / iOS Secure Enclave, per
   `docs/CRYPTOGRAPHY.md` §8) is still entirely unimplemented — `FfiEncryptedStore::open` accepts
   the key as a plain argument. That's real native-layer work, not something this crate can do.
+
+## 2026-07-23 — Store and EncryptedStore wired together
+
+- Changed `Store`'s API rather than bolt persistence on around it: `accept` now returns
+  `(Accept, Option<EnvelopeId>)` (the evicted ID, if eviction happened) and `purge_expired`
+  returns `Vec<EnvelopeId>` (was: bare `usize` count) instead of a count. This lets a caller
+  mirror exactly what left the store to disk without re-deriving eviction/expiry logic — the
+  alternative (guessing which IDs disappeared by diffing summary sets before/after) would have
+  been slower and more fragile. Updated `engine.rs`'s own tests and `ffi.rs`'s `FfiStore`
+  wrapper to match.
+- New `core/src/durable.rs`: `DurableStore` pairs an in-memory `Store` (routing decisions) with
+  an `EncryptedStore` (durability) — every mutation goes through `Store` first; this module only
+  mirrors the *result* to disk:
+  - `accept`: persists on `Accept::New`; removes the evicted envelope from disk if one was
+    evicted to make room.
+  - `purge_expired`: removes purged IDs from disk too.
+  - `open`: reloads every envelope from disk into a fresh in-memory index. Anything that comes
+    back `Expired`/`TtlExhausted`/refused-for-capacity during reload is pruned from disk right
+    then, rather than left to accumulate as dead weight across restarts.
+  - 5 tests, each doing a real close-and-reopen of the database file (not just in-process
+    assertions) to prove restart survival, eviction-syncs-to-disk, purge-syncs-to-disk, and
+    stale-on-reload pruning actually work end to end.
+- `ffi.rs`: added `FfiDurableStore` (`open`/`accept`/`purge_expired`/`len`/`contains_hex`/
+  `summary_ids_hex`/`missing_from_hex`) — documented as the one a real app should use.
+  `FfiStore` and `FfiEncryptedStore` stay available standalone (e.g. `FfiStore` alone for
+  simulation/testing without touching disk). 2 new FFI-layer tests, both doing a real
+  process-restart simulation (drop the store, reopen the same file).
+- 49 tests passing (2 new engine-level assertions came free from the signature change; 5 new in
+  `durable.rs`; 2 new in `ffi.rs`).
+- Regenerated Kotlin bindings: 3,397 → 3,822 lines (`FfiDurableStore` present, correctly typed).
+  Copied into `android/`.
