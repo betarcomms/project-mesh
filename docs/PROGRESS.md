@@ -687,3 +687,27 @@ Newest entry at the bottom (chronological), each dated.
 - **Not done:** no helper wiring a sealed `Channel` message directly into
   `Envelope::new(Addressing::Channel(selector), ...)` (mechanical plumbing, not attempted this
   pass), not exported over UniFFI yet.
+
+## 2026-07-24 — Envelope size bucketing
+
+- New `core/src/crypto/padding.rs`: `pad_to_bucket`/`unpad`. Real decision made explicit before
+  writing code: pad the **plaintext**, before AEAD sealing, rather than adding a `size_bucket`
+  field to `Envelope`'s wire format (the field `ROUTING-PROTOCOL.md` §2's conceptual layout
+  diagram shows). Padding pre-encryption means the padding itself is encrypted and the
+  wire-visible effect — every envelope in the same bucket has an equal `sealed.len()`, since AEAD
+  adds a fixed-size tag — happens automatically, with zero changes to `envelope.rs`'s wire format
+  or its hop-stable content-derived ID logic (which the ttl_hops bug earlier this project already
+  showed is easy to get wrong). Lower-risk than a wire-format change for the same routing-layer
+  effect.
+- 6 buckets (64 B – 64 KiB), a reasoned-not-benchmarked progression — same honest caveat this
+  crate already states for rate limits, puzzle difficulty, and Argon2id parameters. Oversized
+  input is a hard `Err`, not silent truncation (silently dropping bytes off a message would be a
+  much worse bug than refusing to send it).
+- 6 tests: roundtrip across several sizes, two different-length messages in the same bucket
+  produce byte-identical output length, crossing a bucket boundary changes output length,
+  oversized input rejected, truncated/malformed padded input rejected on unpad, empty-plaintext
+  edge case. 109 tests passing (6 new).
+- **Not done:** not wired into any actual sealing call site yet (`aead_seal`, `Channel::seal`,
+  ratchet `encrypt` all still take raw plaintext) — this pass is the primitive only; wiring it in
+  everywhere messages get sealed, and deciding whether/how routing-header fields like `Envelope`'s
+  own metadata should also be bucketed, is separate follow-up work.

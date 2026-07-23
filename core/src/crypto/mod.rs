@@ -8,6 +8,7 @@
 
 pub mod channel;
 pub mod noise;
+pub mod padding;
 pub mod passphrase;
 pub mod prekey;
 pub mod ratchet;
