@@ -829,3 +829,48 @@ Newest entry at the bottom (chronological), each dated.
   doesn't undermine whatever the OS is already doing, rather than claiming to control something
   it doesn't.
 - `./gradlew assembleDebug` succeeds clean, no new warnings.
+
+## 2026-07-24 — Foreground relay service + OEM battery-whitelist guidance
+
+- New `MeshRelayService`: a thin foreground service (`FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`,
+  matching the permission already declared in the manifest) that owns no mesh logic itself —
+  just starts/stops the existing shared `MeshCoordinator`. `MainActivity`'s "Start mesh" now
+  calls `ContextCompat.startForegroundService(...)` instead of `coordinator.start()` directly, so
+  the mesh's actual lifetime is tied to the service (and Android's foreground-service exemption
+  from background execution limits), not to whether `MainActivity` happens to be on screen.
+  `MeshScreen`'s displayed running-state now polls `coordinator.isRunning()` rather than tracking
+  a locally-set flag, so the UI stays honest even if the service starts/stops/restarts (`STICKY`)
+  independently of the composable's own lifecycle.
+- **Hit the exact same manifest bug this project hit once before** (`AndroidManifest.xml` §
+  Android toolchain session, `docs/PROGRESS.md` 2026-07-23): `--` inside an XML comment breaks
+  the manifest merger, since `--` isn't permitted inside XML comments at all. Two of the new
+  comments used `--` as a dash separator; caught immediately by the actual build failure
+  (`SAXParseException`, not guesswork) and fixed by rewording, same as last time — worth actually
+  remembering this one going forward given it's now recurred.
+- New `OemBatteryGuidance`: the standard `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` exemption
+  request (generic, works on any Android since API 23) plus a best-effort table of known
+  vendor-specific "autostart"/"protected apps" settings activities for the OEMs
+  `TRANSPORT.md` §6 names by name (Xiaomi/MIUI, Oppo/realme's shared ColorOS lineage, Vivo,
+  Samsung, OnePlus) — tries each candidate component, falls through to the next on
+  `ActivityNotFoundException` (some of these activities get renamed across OS versions), reports
+  honestly if none matched rather than pretending success. **Stated plainly, not left implicit:**
+  these component names are reasoned from public, community-collected values (there is no
+  official OEM API for this) — not verified against every device/OS-version combination, the
+  same "reasoned, not benchmarked" caveat already used elsewhere in this project (rate limits,
+  puzzle difficulty, Argon2id parameters).
+- **Verified the full lifecycle on a real emulator, not just compiled:** installed, granted
+  Bluetooth + `POST_NOTIFICATIONS` permissions, launched, tapped Start mesh — confirmed via
+  `dumpsys activity services` that the service is genuinely foreground
+  (`isForeground=true`, `types=0x00000010` — the correct `CONNECTED_DEVICE` bit) with an
+  `ONGOING_EVENT|NO_CLEAR|FOREGROUND_SERVICE` notification, and via logcat that
+  `BleTransportDriver` actually started advertising inside it. Pressed HOME to background the
+  app: confirmed via `dumpsys` that the process, the foreground service, the notification, and
+  (per logcat) BLE advertising were all still alive — the actual point of this feature. Brought
+  the app back, tapped Stop mesh: confirmed clean teardown (`onDestroy` fired, service no longer
+  listed, no crash). Also confirmed `am stopservice` from the shell is correctly rejected
+  (`Permission Denial ... not exported`) — `android:exported="false"` doing its job, not an
+  oversight.
+- **Not done:** a custom notification icon (uses a placeholder platform drawable —
+  `android.R.drawable.stat_sys_data_bluetooth` — no icon asset exists yet); no independent test
+  of the `START_STICKY` restart path under genuine OS memory pressure (relied on, not verified
+  beyond reading what the flag does).
