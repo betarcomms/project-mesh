@@ -90,9 +90,9 @@ AEAD rather than the design docs' SQLCipher — a deliberate, documented substit
 SQLCipher's OpenSSL dependency proved unbuildable in this dev environment (see
 `docs/PROGRESS.md`). **The Android app now builds for real** — SDK, NDK r27c, and Gradle 8.11.1
 installed, `mesh-core` cross-compiled to real `.so` libraries for arm64-v8a/armeabi-v7a/x86_64,
-`./gradlew assembleDebug` produces a working debug APK. Not yet verified: running it on an
-actual device or emulator (none available in this dev environment), and no real BLE/Wi-Fi/LoRa
-driver exists yet. Nothing here has been independently security-audited — see
+`./gradlew assembleDebug` produces a working debug APK, and it now **runs** — verified on a real
+Android emulator (API 35, x86_64), the identity-generation screen works end to end through the
+Rust core. Not yet verified: a physical device, and no real BLE/Wi-Fi/LoRa driver exists yet. Nothing here has been independently security-audited — see
 [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for the exact, current,
 component-by-component picture, and [`docs/PROGRESS.md`](docs/PROGRESS.md) for the dated log of
 how it got there. Contributions to both the design and the code are welcome — see

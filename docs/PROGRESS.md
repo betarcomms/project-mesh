@@ -517,3 +517,24 @@ Newest entry at the bottom (chronological), each dated.
   build is real and verified, runtime behavior (does `FfiIdentity.generate()` actually work when
   tapped, does the app not crash on launch) is still unverified. That's the natural next check,
   either via emulator setup or a physical device.
+
+## 2026-07-24 — Emulator set up, app actually run for the first time
+
+- Installed the `android-35;google_apis;x86_64` system image via `sdkmanager` (host is
+  AMD/AuthenticAMD with Hyper-V present, so WHPX acceleration is available — Android's emulator
+  supports WHPX on both Intel and AMD hosts). Created AVD `mesh_test` (Pixel 6 profile) via
+  `avdmanager`.
+- Booted headless (`-no-window -no-audio -no-boot-anim -gpu swiftshader_indirect`), confirmed
+  boot via `adb wait-for-device` + polling `getprop sys.boot_completed`.
+- `adb install` the existing debug APK — succeeded. `adb shell am start` launched
+  `MainActivity` — no crash, no `FATAL`/`AndroidRuntime` exception in logcat.
+- **Tapped "Generate identity" for real** (`adb shell input tap`): the screen populated with a
+  real fingerprint and safety string. Confirmed via `libjnidispatch.so` loading in logcat and a
+  screenshot (`adb exec-out screencap`). This is the first time the full round trip — Kotlin UI
+  → JNA → `libmesh_core.so` (cross-compiled Rust) → `FfiIdentity::generate()` (Ed25519/X25519
+  keygen) → back across FFI → Compose UI — has executed anywhere, on any device.
+- Updated `IMPLEMENTATION-STATUS.md` and `README.md` to reflect this — the Android app row no
+  longer says "never run."
+- **Still not done:** physical device testing, and everything past this one screen (see the
+  "Blocks features work" list in `IMPLEMENTATION-STATUS.md` — no transport driver, no other UI,
+  etc.). The emulator (`mesh_test`) is left running for follow-up testing in this session.
