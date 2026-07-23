@@ -17,6 +17,7 @@ pub mod engine;
 pub mod envelope;
 pub mod error;
 pub mod ffi;
+pub mod ffi_transport;
 pub mod identity;
 pub mod persistence;
 pub mod transport;

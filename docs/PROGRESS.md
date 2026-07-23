@@ -203,3 +203,51 @@ Newest entry at the bottom (chronological), each dated.
   `durable.rs`; 2 new in `ffi.rs`).
 - Regenerated Kotlin bindings: 3,397 → 3,822 lines (`FfiDurableStore` present, correctly typed).
   Copied into `android/`.
+
+## 2026-07-23 — Transport callback interface exposed over UniFFI (BLE driver, scoped)
+
+- User asked for the BLE transport driver next. Split that into two genuinely different pieces
+  before writing anything: (1) exposing `transport.rs`'s `MeshTransport`/`MeshTransportSink`
+  trait pair over UniFFI as a callback interface — buildable and testable *here*, no hardware
+  needed; (2) the actual native Kotlin BLE GATT code (`android.bluetooth.*` — scan, advertise,
+  GATT server/client). Checked (2) against this dev environment first: no Android SDK, no
+  Gradle, and — new finding this session — **no Kotlin compiler either** (`kotlinc` absent).
+  That means real BLE code here would be unverifiable even at the level of basic syntax, a step
+  below the earlier SQLCipher situation (which at least had a toolchain path). Asked the user;
+  they chose to scope this session to (1) only, and hold real BLE code until an environment that
+  can actually compile-check Kotlin against `android.jar` exists.
+- New `core/src/ffi_transport.rs`:
+  - `FfiMeshTransport` — a UniFFI *callback interface* (`#[uniffi::export(with_foreign)]`):
+    Kotlin/Swift implements `start`/`stop`/`send`, Rust calls it. This is the harder direction
+    to get right (foreign code implementing a Rust trait, Rust holding `Arc<dyn Trait>` across
+    the FFI boundary) — it compiled and passed on the first attempt, no API-guessing fixups
+    needed this time.
+  - `FfiTransportEvent` — a tagged-union `uniffi::Enum` (`PeerDiscovered`/`PeerConnected`/
+    `Frame`/`PeerLost`) mirroring `MeshTransportSink`'s four callbacks as one type, rather than
+    four methods each taking loosely-related optional fields.
+  - `FfiTransportHub` — holds one `FfiMeshTransport` and an event log. `start`/`stop`/`send`
+    delegate into the native driver (proving Rust → native calls work); `on_peer_discovered`/
+    `on_peer_connected`/`on_frame`/`on_peer_lost` are what a native driver calls when something
+    happens on the radio, logged as `FfiTransportEvent`s; `drain_events` consumes the log.
+  - Tested with `LoopbackTransport`, a mock `FfiMeshTransport` implementation living entirely in
+    Rust test code — proves the callback interface plumbing bidirectionally (Rust drives the
+    mock; the mock's errors propagate back as real `Err`s on the Rust side; logged events come
+    back out correctly typed) without any BLE hardware, Android SDK, or even a Kotlin compiler.
+- **Caught and fixed a real mistake before it shipped:** a private helper method (`push`, used
+  internally by the four `on_*` callbacks to append to the event log) was accidentally placed
+  inside the `#[uniffi::export] impl FfiTransportHub` block — which exports *every* method in
+  that block, so it would have leaked into the Kotlin API as a callable `push(event)` method
+  nobody should call directly. Caught by inspecting the generated Kotlin output
+  (`fun \`push\`(...)` showing up where it shouldn't), not by a compiler error — UniFFI has no
+  way to know a method wasn't meant to be public API. Fixed by moving `push` to a second, plain
+  (non-exported) `impl FfiTransportHub` block. Worth remembering as a pattern: anything that must
+  stay internal cannot share an `impl` block with exported methods.
+- 52 tests passing (3 new, all in `ffi_transport.rs`).
+- Regenerated Kotlin bindings: 3,822 → 4,972 lines (`FfiMeshTransport` as a Kotlin `interface`,
+  `FfiTransportEvent` as a `sealed class` with the four subclasses, `FfiTransportHub` present;
+  `push` correctly absent after the fix). Copied into `android/`.
+- **Explicitly not done:** any real radio driver. `FfiTransportHub` also does not yet parse
+  received frames, hand them to `FfiDurableStore`, or make any relay/forwarding decision — it
+  only logs that an event happened. Wiring transport events into actual mesh behavior (parse →
+  dedup/store → decide what to relay where) is a distinct, larger increment ("the mesh engine
+  loop"), not implied by this one landing.

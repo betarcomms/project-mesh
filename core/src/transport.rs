@@ -5,8 +5,11 @@
 //! per-platform drivers implement [`MeshTransport`] and are a "dumb byte pipe" — no crypto or
 //! routing decisions live there.
 //!
-//! **Status:** trait boundary only. No native driver exists yet; that is the Android BLE work
-//! in `docs/ROADMAP.md` Phase 1, not part of this crate.
+//! **Status:** trait boundary only in this module. [`crate::ffi_transport`] exposes the same
+//! shape over UniFFI (a callback interface, tested with a mock loopback). No native driver
+//! exists yet; that is the Android BLE work in `docs/ROADMAP.md` Phase 1, not part of this
+//! crate, and not verifiable in this project's current dev environment (no Android toolchain —
+//! see `docs/PROGRESS.md`).
 
 use crate::error::Result;
 
@@ -17,7 +20,7 @@ pub struct ServiceId(pub [u8; 16]);
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct PeerHandle(pub u64);
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
 pub enum TransportKind {
     Ble,
     WifiDirect,
