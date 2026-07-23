@@ -111,6 +111,35 @@ impl FfiMeshNode {
         }
     }
 
+    /// Every envelope ID currently held (hex-encoded). A native app has no other way to
+    /// discover *new* inbound envelopes -- there is no event/callback for "something arrived,"
+    /// so a messaging UI polls this, diffs against what it already knows, and fetches anything
+    /// new via [`get_envelope_hex`](Self::get_envelope_hex). Same store `on_frame` already
+    /// writes accepted envelopes into, so nothing here bypasses dedup/TTL/eviction.
+    pub fn all_ids_hex(&self) -> Vec<String> {
+        self.engine
+            .lock()
+            .expect("lock poisoned")
+            .store()
+            .summary_ids()
+            .iter()
+            .map(|id| id.to_hex())
+            .collect()
+    }
+
+    /// Fetch one held envelope's wire bytes by hex ID, for the native layer to
+    /// `envelope_unpack` and act on (route a handshake message, decrypt a ratchet message,
+    /// display a broadcast, etc.). `None` if not held (already evicted/expired, or never held).
+    pub fn get_envelope_hex(&self, id_hex: String) -> Option<Vec<u8>> {
+        let id = crate::ffi::hex_to_id(&id_hex)?;
+        self.engine
+            .lock()
+            .expect("lock poisoned")
+            .store()
+            .get(&id)
+            .map(|e| e.to_bytes())
+    }
+
     /// Tune the client puzzle (`docs/ROUTING-PROTOCOL.md` §4.5). `0` disables it (the default).
     /// See `core/src/puzzle.rs`'s doc comment for why the default difficulty is a reasoned
     /// estimate, not one benchmarked against real target hardware.
@@ -231,6 +260,26 @@ mod tests {
 
         let _ = std::fs::remove_file(&path_a);
         let _ = std::fs::remove_file(&path_b);
+    }
+
+    #[test]
+    fn all_ids_hex_and_get_envelope_hex_expose_held_envelopes() {
+        let path = temp_db_path("node-inbox");
+        let _ = std::fs::remove_file(&path);
+        let transport = RecordingTransport::new();
+        let node = FfiMeshNode::open(path.clone(), vec![11u8; 32], 10, 0, transport).unwrap();
+
+        assert!(node.all_ids_hex().is_empty());
+        assert_eq!(node.get_envelope_hex("0".repeat(64)), None);
+
+        let bytes = sample_envelope(3);
+        node.compose_local(bytes.clone(), 0).unwrap();
+        let id_hex = Envelope::from_bytes(&bytes).unwrap().id.to_hex();
+
+        assert_eq!(node.all_ids_hex(), vec![id_hex.clone()]);
+        assert_eq!(node.get_envelope_hex(id_hex), Some(bytes));
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

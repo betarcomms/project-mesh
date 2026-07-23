@@ -874,3 +874,75 @@ Newest entry at the bottom (chronological), each dated.
   `android.R.drawable.stat_sys_data_bluetooth` — no icon asset exists yet); no independent test
   of the `START_STICKY` restart path under genuine OS memory pressure (relied on, not verified
   beyond reading what the flag does).
+
+## 2026-07-24 — Messaging UI: Direct + Broadcast (Channel/Group deferred, not silently dropped)
+
+- User asked for "Messaging UI (direct/group/channel/broadcast)." Before writing any Kotlin,
+  checked the actual FFI surface against that claim: `Channel` (`crypto/channel.rs`, built and
+  tested weeks — well, hours — earlier this session) and MLS groups (`groups.rs`, persistence +
+  routing landed earlier today) are **both real in Rust and neither is exported over UniFFI**.
+  Building a UI that claims to drive four modes when two of the four calls would fail at the FFI
+  boundary would be actively misleading, not a useful shortcut. Asked the user how to scope it;
+  chose Direct + Broadcast now, Channel/Group UI deferred until their own FFI export passes (task
+  tracked separately, not silently dropped from the list).
+- **Real gap found before any UI code:** `FfiMeshNode` had no way to discover new inbound
+  envelopes at all — `contains_hex` only checks a specific *already-known* ID, and there is no
+  arrival callback. Added `all_ids_hex`/`get_envelope_hex` to `ffi_node.rs` (1 new test), which
+  both Direct and Broadcast need to poll their "inbox." Regenerated Kotlin bindings (5,457 ->
+  5,534 lines) and rebuilt `libmesh_core.so` for all three Android ABIs (arm64-v8a,
+  armeabi-v7a, x86_64) so the shipped native library actually contains everything from today's
+  session, not just what existed when it was last built.
+- **New `messaging/DirectMessaging.kt`** — the one genuinely non-obvious design problem: Noise
+  `XX` deliberately hides static identity keys until partway through the handshake (that's the
+  whole point of `XX`'s identity-hiding property), but `Addressing::Direct`'s envelope target is
+  the *recipient*, not the sender. Without some way to know who a first handshake message came
+  from, a receiver has no way to route it to the right pending-handshake state. Solved with a
+  small app-layer wire format Rust core deliberately doesn't need to know about (keeps
+  `Envelope.sealed` fully opaque, per `docs/ARCHITECTURE.md` §1): `[msg_type: 1 byte]
+  [sender_fingerprint: 32 bytes][payload]`. Also needed a tie-break for the case where both
+  sides `addContact()` each other around the same time (both would otherwise try to be Noise
+  `XX`'s initiator, which the protocol doesn't allow) — reused the exact same
+  lower-value-initiates pattern already built for the BLE dual-role connect race
+  (`ble/BlePeerRegistry.kt`'s `sessionIdIsLower`), just on fingerprints instead of session IDs.
+  Packing `FfiSealed` (a structured `{header, ciphertext}` record) into flat envelope bytes
+  needed its own small manual serialization (`dhPub[32] + pn[4] + n[4] + ciphertext`), mirroring
+  what `Header::to_bytes()` already does inside Rust but isn't exposed for Kotlin-side envelope
+  construction.
+- **New `messaging/BroadcastMessaging.kt`** — much simpler: plain UTF-8 posts, no key material.
+  Flagged plainly that these are **unsigned** — `ROUTING-PROTOCOL.md` §5 specifies Broadcast as
+  "signed, not encrypted," but `FfiIdentity` has no `sign`/`verify` exported over FFI yet, so
+  real authenticity checking is a separate, contained follow-up once that lands, not bundled in
+  silently.
+- **`MeshApplication` gained a stable session identity** (`identity: FfiIdentity by lazy {...}`)
+  shared by `DirectMessenger` for addressing/tie-break. This changed `IdentityScreen`'s behavior:
+  it used to generate a *fresh throwaway* identity every time "Generate identity" was tapped,
+  which would have silently orphaned every contact and session if tapped after messaging started
+  — changed to display the one stable identity instead ("Show my identity"), not regenerate it.
+- **Two real bugs found via actual on-device testing, not just compiling:**
+  1. The root `Column` in `MainActivity` had no `verticalScroll` modifier. With Identity + Mesh +
+     Messaging all stacked in one screen, content now genuinely overflows one page — everything
+     below the fold (the entire Messaging section) was completely unreachable, not just visually
+     cut off. Would have shipped a UI with a dead, unreachable feature if not caught by actually
+     scrolling the emulator screen instead of only checking the first screenshot.
+  2. (Not a code bug, a testing-technique note worth recording) Screenshot coordinates from this
+     tool come back pre-scaled to a smaller preview size (e.g. 900px wide) while the real device
+     is 1080px — every `adb shell input tap` needs the ×1.2 (or whatever the actual ratio is)
+     correction applied, or taps land on the wrong element. Cost several wasted tap/screenshot
+     round trips this session before being applied consistently; worth remembering for next time.
+- **Verified on a real emulator:** posted a broadcast message and watched it actually round-trip
+  through `composeLocal` → durable store → the new polling loop → `envelopeUnpack` → UTF-8 decode
+  → appear in the feed list, proving the whole new FFI-to-UI pipe works, not just that it
+  compiles. Added a Direct contact with a crafted 64-hex-char fingerprint (deliberately chosen so
+  the tie-break math was checkable by hand) and confirmed it correctly stayed `NO_SESSION`
+  rather than misfiring as if a handshake had started — the tie-break logic actually ran and
+  made the right call, live. Opened the contact thread view, no crash. **Not verified:** an
+  actual two-device handshake and message exchange — same host-capacity wall already hit and
+  documented for the BLE driver (this machine cannot run two emulators simultaneously).
+- **Not done, stated plainly:** no persistence for contacts/sessions/messages (all live in
+  process memory, lost on restart — same gap as identity's own non-persistence, not a new one);
+  no QR-code trust establishment (`CRYPTOGRAPHY.md` §3's ideal — this pass only supports pasting
+  a fingerprint hex, safety string is shown for spoken/visual comparison); no prekey/X3DH wiring
+  into the messaging flow (interactive Noise only, needs both parties in a contact window at
+  roughly the same time — the async bootstrap built earlier this session isn't exported over
+  FFI); Channel/Group UI blocked on their own FFI export work, tracked as separate tasks, not
+  silently dropped from this one.
