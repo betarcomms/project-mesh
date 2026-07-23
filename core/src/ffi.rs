@@ -455,7 +455,7 @@ impl FfiDurableStore {
     }
 }
 
-fn hex_to_id(hex: &str) -> Option<EnvelopeId> {
+pub(crate) fn hex_to_id(hex: &str) -> Option<EnvelopeId> {
     if hex.len() != 64 {
         return None;
     }

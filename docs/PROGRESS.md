@@ -251,3 +251,54 @@ Newest entry at the bottom (chronological), each dated.
   only logs that an event happened. Wiring transport events into actual mesh behavior (parse →
   dedup/store → decide what to relay where) is a distinct, larger increment ("the mesh engine
   loop"), not implied by this one landing.
+
+## 2026-07-23 — Mesh engine loop: gossip-on-contact + epidemic relay, wired end to end
+
+- New `core/src/relay.rs`: `RelayEngine`, pure Rust and transport-agnostic (peer handles are
+  just `u64`, frames are just `Vec<u8>` — no idea what radio carried them). Implements
+  `docs/ROUTING-PROTOCOL.md` §1/§3's "gossip on contact": a `ContactMessage` wire format
+  (`Summary`/`Data`, its own framing distinct from `Envelope`'s), summary exchange on peer
+  connect, push-what-they're-missing on receiving a summary, and epidemic relay (TTL-decrement,
+  never bounce back to the sender, stop relaying once TTL hits zero). **Stated simplification**
+  versus the doc's explicit `SUMMARY`→`WANT`→`DATA` three-step (pull) exchange: this pushes
+  directly on `SUMMARY` since `Store`'s summary is still an exact set, not a Bloom filter, so a
+  `WANT` round-trip wouldn't disambiguate anything yet — flagged in `docs/IMPLEMENTATION-STATUS.md`,
+  revisit once Bloom filters land.
+- **Found and fixed a real, structural bug while writing the multi-node relay tests, not a test
+  bug:** `Envelope`'s content-derived ID included `ttl_hops` in its hash. Since `ttl_hops` is
+  decremented at every relay hop, the *same logical message* got a *different* ID at every hop —
+  which silently defeats dedup for anything beyond one hop (the two-node test failed with the
+  envelope missing from the receiving store; tracing it down showed the relayed copy's
+  recomputed ID didn't match the original because the wire bytes it was hashed from had
+  `ttl_hops=7` instead of `8`). This would have made real multi-hop epidemic routing behave like
+  naive flooding with no loop/duplicate suppression at all. Fixed in `envelope.rs`: ID is now
+  computed from a hop-stable subset of fields (version, addressing, priority, `expires_at`,
+  sealed payload) that deliberately excludes `ttl_hops`; `to_bytes`/`from_bytes` still encode/
+  decode `ttl_hops` on the wire as before (relay still needs it), just not as part of identity.
+  Added `envelope::tests::id_is_stable_across_ttl_decrement_at_each_relay_hop` as a permanent
+  regression test.
+- Two initial relay-engine tests also had the push direction backwards (asserted the receiver of
+  an empty summary would emit the missing envelope, when actually it's the sender of the summary
+  who triggers the other side's push) — caught and corrected once the real bug above was ruled
+  out first. `relay.rs` now has 7 tests: contact-message wire roundtrip, malformed-input
+  rejection, 2-node and 3-node simulated-mesh gossip/relay, duplicate-delivery is a no-op,
+  TTL-exhausted envelopes aren't relayed further, and summary exchange doesn't loop indefinitely.
+- New `core/src/ffi_node.rs`: `FfiMeshNode` — the thing a real app actually drives. Owns one
+  `FfiMeshTransport` (from `ffi_transport.rs`) plus a `RelayEngine`; `on_peer_connected`/
+  `on_frame`/`compose_local` run the protocol *and* call `transport.send(...)` automatically for
+  everything it produces. The native layer's job shrinks to: implement `start`/`stop`/`send`,
+  and call `on_peer_connected`/`on_frame`/`on_peer_lost`/`compose_local` when radio/user events
+  happen — no `ContactMessage`, summary, or relay-decision knowledge needed on the Kotlin/Swift
+  side at all. 2 tests: a full two-node gossip exchange through the complete FFI object graph
+  (mock recording transport, still zero hardware), and transport-send-failure propagating back
+  through `on_frame` as a real `Err`.
+- 62 tests passing (10 new: 1 envelope regression, 7 in `relay.rs`, 2 in `ffi_node.rs`).
+- Regenerated Kotlin bindings: 4,972 → 5,393 lines (`FfiMeshNode` present). Copied into
+  `android/`.
+- Still explicitly not done: any real radio driver (unchanged reason — no Android toolchain in
+  this dev environment), Bloom-filter summaries (exact-set stand-in still in place), rate
+  limiting / client puzzles, MLS/channels/onion routing, and session (Noise/ratchet) integration
+  with the relay layer — `RelayEngine` moves already-sealed envelopes; composing a *sealed*
+  direct message still requires the caller to run `FfiHandshake`/`FfiSession` first and hand the
+  resulting ciphertext to `compose_local` as the envelope's `sealed` payload, which is correct
+  layering (`docs/ARCHITECTURE.md` §2) but not yet demonstrated end-to-end in one test.

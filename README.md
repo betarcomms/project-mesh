@@ -9,7 +9,7 @@
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
 [![Phase](https://img.shields.io/badge/phase-1%20of%204-blue)](docs/ROADMAP.md)
-[![Core tests](https://img.shields.io/badge/core%20tests-52%20passing-brightgreen)](core/)
+[![Core tests](https://img.shields.io/badge/core%20tests-62%20passing-brightgreen)](core/)
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPLv3%20(proposed)-lightgrey)](docs/GOVERNANCE.md)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
@@ -77,13 +77,15 @@ every contributor is expected to follow.
 complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) is underway: identity,
 Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, envelope wire
 format, a store-carry-forward engine that now survives a restart (in-memory index backed by
-encrypted-at-rest storage, wired together via `DurableStore`), a UniFFI callback interface for
-the radio transport boundary (tested with a mock loopback, no hardware needed), and a UniFFI
-surface covering all of the above are implemented and unit-tested (**52 tests passing**).
-Encryption-at-rest uses `redb` + AEAD rather than the design docs' SQLCipher — a deliberate,
-documented substitution after SQLCipher's OpenSSL dependency proved unbuildable in this dev
-environment (see `docs/PROGRESS.md`). No real BLE/Wi-Fi/LoRa driver exists yet — this dev
-environment has no Android SDK, Gradle, or even a Kotlin compiler, so that native platform code
+encrypted-at-rest storage, wired together via `DurableStore`), a mesh engine loop (gossip-on-
+contact + epidemic relay, transport-agnostic, tested with a simulated multi-node mesh — no
+hardware needed), a UniFFI callback interface for the radio transport boundary, the mesh engine
+wired to that transport end to end (`FfiMeshNode`), and a UniFFI surface covering all of the
+above are implemented and unit-tested (**62 tests passing**). Encryption-at-rest uses `redb` +
+AEAD rather than the design docs' SQLCipher — a deliberate, documented substitution after
+SQLCipher's OpenSSL dependency proved unbuildable in this dev environment (see
+`docs/PROGRESS.md`). No real BLE/Wi-Fi/LoRa driver exists yet — this dev environment has no
+Android SDK, Gradle, or even a Kotlin compiler, so that native platform code
 can't be written and verified here at all. An Android app skeleton calls into the generated
 Kotlin bindings but hasn't been built or run. Nothing here has been
 independently security-audited — see
@@ -106,9 +108,11 @@ mesh/
 │       ├── engine.rs           — in-memory store, dedup, TTL, priority eviction
 │       ├── persistence.rs      — encrypted-at-rest envelope store (redb + AEAD)
 │       ├── durable.rs          — engine.rs + persistence.rs wired together (restart-safe)
+│       ├── relay.rs            — mesh engine loop: gossip-on-contact + epidemic relay
 │       ├── transport.rs        — radio abstraction trait (no native driver yet)
 │       ├── ffi.rs              — UniFFI-exported surface: identity, crypto, store
-│       └── ffi_transport.rs    — UniFFI callback interface for the transport trait
+│       ├── ffi_transport.rs    — UniFFI callback interface for the transport trait
+│       └── ffi_node.rs         — relay.rs wired to the transport, over UniFFI
 └── android/                    — Android app skeleton (Kotlin/Compose), in progress
 ```
 

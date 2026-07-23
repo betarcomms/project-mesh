@@ -91,8 +91,7 @@ impl Envelope {
         expires_at: u64,
         sealed: Vec<u8>,
     ) -> Self {
-        let header_and_body = Self::encode_body(addressing, priority, ttl_hops, expires_at, &sealed);
-        let id = EnvelopeId(blake3::hash(&header_and_body).into());
+        let id = Self::compute_id(addressing, priority, expires_at, &sealed);
         Envelope {
             id,
             addressing,
@@ -101,6 +100,25 @@ impl Envelope {
             expires_at,
             sealed,
         }
+    }
+
+    /// The envelope ID deliberately excludes `ttl_hops`: it is decremented at every relay hop
+    /// (`crate::engine::decrement_ttl`), so if it were part of the identity hash, the *same*
+    /// logical message would get a *different* ID at each hop — silently defeating dedup for
+    /// anything beyond a single hop. `expires_at`, by contrast, is fixed at creation and never
+    /// mutated in transit, so it safely stays part of identity.
+    fn compute_id(addressing: Addressing, priority: Priority, expires_at: u64, sealed: &[u8]) -> EnvelopeId {
+        let mut buf = Vec::with_capacity(1 + 1 + 32 + 1 + 8 + 4 + sealed.len());
+        buf.push(WIRE_VERSION);
+        buf.push(addressing.tag());
+        if let Some(target) = addressing.target() {
+            buf.extend_from_slice(target);
+        }
+        buf.push(priority as u8);
+        buf.extend_from_slice(&expires_at.to_le_bytes());
+        buf.extend_from_slice(&(sealed.len() as u32).to_le_bytes());
+        buf.extend_from_slice(sealed);
+        EnvelopeId(blake3::hash(&buf).into())
     }
 
     fn encode_body(
@@ -190,7 +208,9 @@ impl Envelope {
         }
         let sealed = cursor.to_vec();
 
-        let id = EnvelopeId(blake3::hash(bytes).into());
+        // Recomputed the same hop-stable way as `new` (see `compute_id`) — deliberately not a
+        // hash of the raw wire `bytes`, since those include `ttl_hops`, which changes per hop.
+        let id = Self::compute_id(addressing, priority, expires_at, &sealed);
 
         Ok(Envelope {
             id,
@@ -272,5 +292,25 @@ mod tests {
         assert!(!env.is_expired(1_000_000_000));
         assert!(env.is_expired(1_800_000_000));
         assert!(env.is_expired(1_900_000_000));
+    }
+
+    #[test]
+    fn id_is_stable_across_ttl_decrement_at_each_relay_hop() {
+        // Regression test: ttl_hops is decremented at every relay hop
+        // (`crate::engine::decrement_ttl`). If it were part of the ID's content hash, the same
+        // logical message would get a different ID at every hop, silently breaking dedup for
+        // anything beyond one hop.
+        let addressing = Addressing::Broadcast;
+        let sealed = b"same-message".to_vec();
+        let hop0 = Envelope::new(addressing, Priority::Normal, 8, 9_999_999_999, sealed.clone());
+        let hop1 = Envelope::new(addressing, Priority::Normal, 7, 9_999_999_999, sealed.clone());
+        let hop2 = Envelope::new(addressing, Priority::Normal, 1, 9_999_999_999, sealed);
+        assert_eq!(hop0.id, hop1.id);
+        assert_eq!(hop0.id, hop2.id);
+
+        // And the same holds after a real decrement_ttl + wire roundtrip, not just construction.
+        let relayed = crate::engine::decrement_ttl(hop0.clone()).expect("hops remain");
+        let parsed = Envelope::from_bytes(&relayed.to_bytes()).unwrap();
+        assert_eq!(parsed.id, hop0.id);
     }
 }

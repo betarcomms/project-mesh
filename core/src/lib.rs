@@ -17,9 +17,11 @@ pub mod engine;
 pub mod envelope;
 pub mod error;
 pub mod ffi;
+pub mod ffi_node;
 pub mod ffi_transport;
 pub mod identity;
 pub mod persistence;
+pub mod relay;
 pub mod transport;
 
 uniffi::setup_scaffolding!();
