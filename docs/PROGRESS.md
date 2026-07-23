@@ -946,3 +946,55 @@ Newest entry at the bottom (chronological), each dated.
   roughly the same time — the async bootstrap built earlier this session isn't exported over
   FFI); Channel/Group UI blocked on their own FFI export work, tracked as separate tasks, not
   silently dropped from this one.
+
+## 2026-07-24 — Three civic-broadcast features: SOS, disaster bulletins, resource board
+
+- User asked for these three next. Recognized before writing code that all three are the same
+  shape underneath (`FEATURES.md` §1/§2/§4): a public `Addressing::Broadcast` post with a
+  category and a text body, differing mainly in `Priority` and what the categories mean. Built
+  one shared framing (`messaging/CivicPost.kt`) instead of three near-duplicate encoders —
+  `[magic:1][category:1][extra:1][has_location:1][lat:4]?[lon:4]?[text]`, with a one-byte magic
+  prefix (0xF1/0xF2/0xF3) distinguishing SOS/bulletin/resource from each other and from plain
+  chat broadcast. `extra`'s meaning is feature-specific: SOS uses it for
+  new-alert-vs-acknowledgement, resource board for have-vs-need, bulletins don't use it.
+- **Real cross-feature bug caught before it shipped:** plain chat broadcast (`BroadcastMessaging.kt`,
+  built earlier today) polls *all* `Addressing::Broadcast` envelopes and decodes them as raw
+  UTF-8 text. Without a check, every SOS/bulletin/resource post would also show up in the plain
+  chat feed as garbled bytes (0xF1/0xF2/0xF3 aren't valid UTF-8 lead bytes). Added
+  `isCivicMagic()` and an early-skip in `BroadcastMessenger.pollForNewPosts()` before any of the
+  three new features were even fully written, once the shared-framing decision made the
+  collision obvious.
+- **SOS acknowledgement — a real design choice, not a default:** could have made an ACK a
+  private Direct-addressed reply back to the sender (`DirectMessaging.kt`'s framing already
+  solves "how do you address a specific person"). Chose a *public* ACK instead
+  (`extra=EXTRA_ACKNOWLEDGEMENT`, `text` holds the acknowledged envelope's hex ID) because doing
+  the private version would require embedding the SOS sender's fingerprint in the alert itself —
+  which would deanonymize exactly the person who's in danger, the wrong tradeoff for this
+  specific feature even though it's the more "obvious" pattern to reach for. Documented the
+  reasoning in `SosMessenger`'s class doc so it doesn't look like an oversight later.
+- `Priority` enum coarseness surfaced and accepted rather than worked around: `FEATURES.md` §7
+  ranks priority as SOS > bulletin > resource/map > direct/group > channel/broadcast chatter, but
+  `envelope.rs`'s `Priority` enum only has four tiers (Sos/Bulletin/Normal/Low). Resource-board
+  posts use `Priority::Normal`, the same tier as Direct messages and plain chat — a real fidelity
+  gap versus the doc's five-tier ordering, flagged in `IMPLEMENTATION-STATUS.md` rather than
+  quietly adding a new `Priority` variant mid-feature-build (that's a wire-format change touching
+  `envelope.rs`'s content-ID logic, not something to do as a side effect of a UI task).
+- New `messaging/SosMessaging.kt`, `BulletinMessaging.kt`, `ResourceMessaging.kt` (messengers) and
+  `CivicScreens.kt` (three Compose screens: category selector as a horizontally-scrollable row of
+  toggle buttons, text field, feed list — same shape as `MessagingScreen.kt`'s Broadcast section).
+  `MeshApplication` gained three more lazily-constructed messengers alongside the existing ones.
+- **Verified on a real emulator, all three:** posted a bulletin (category tag rendered correctly
+  in the feed, full compose→store→poll→decode→display round trip); sent an SOS with a chosen
+  category and confirmed the same round trip; tapped Acknowledge on that SOS and confirmed the UI
+  flipped from "Not yet acknowledged" to "Acknowledged" via a second real envelope round trip
+  (the ACK envelope), not a local-only UI flag — this is the check that actually matters for the
+  public-ACK design decision above, since it proves the *envelope* carrying the ack was composed,
+  stored, and successfully matched back to the original alert by ID. Resource-board posting uses
+  the identical code path (same shared framing, same messenger shape) as bulletins, which was
+  directly exercised; the resource-specific have/need toggle was visually confirmed rendering
+  correctly but not separately tapped-and-posted in this pass.
+- **Not done:** no device location for SOS (needs a location permission + `FusedLocationProvider`
+  integration, out of scope this pass — the wire format already supports a location field for
+  when that lands); no responder-key endorsement for bulletins; no have/need matching or search
+  for the resource board (flat feed only); all three remain unsigned, same gap as plain broadcast
+  chat.
