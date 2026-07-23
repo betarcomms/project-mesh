@@ -6,6 +6,7 @@
 //! does not claim otherwise. Post-quantum (PQXDH) and MLS group crypto are not yet implemented;
 //! tracked as follow-up increments, not silently skipped.
 
+pub mod channel;
 pub mod noise;
 pub mod passphrase;
 pub mod prekey;

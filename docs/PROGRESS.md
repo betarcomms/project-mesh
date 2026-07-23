@@ -655,3 +655,35 @@ Newest entry at the bottom (chronological), each dated.
 - **Not done:** no native-layer UI/flow yet for actually triggering a panic-wipe or setting a
   duress passphrase — this pass is the crypto/storage primitive only, same pattern as every other
   core-first increment in this project.
+
+## 2026-07-24 — Channels: passphrase-derived shared key + routing selector
+
+- New `core/src/crypto/channel.rs`: `Channel::from_passphrase` derives both the secret AEAD key
+  and the public routing selector (`envelope.rs`'s `Addressing::Channel([u8;32])` already existed
+  as an unused variant, anticipating exactly this) from one Argon2id call, expanded via HKDF into
+  two domain-separated 32-byte outputs rather than running the expensive KDF twice.
+- **The one real design fork this needed, decided explicitly:** `crypto::passphrase` (built for
+  duress/decoy stores) generates a random salt once and persists it locally — fine when only one
+  device ever needs to re-derive that key. A channel is the opposite case: two strangers who only
+  exchanged a spoken or written passphrase (a relief camp coordinator saying "the channel is
+  `north-gate-42`") must independently arrive at the *identical* key and selector with zero other
+  shared state. So the salt here is deterministic — `BLAKE3("MESH_CHANNEL_SALT" || passphrase)` —
+  not random. Documented in the module why this doesn't weaken brute-force resistance: Argon2id's
+  memory-hardness makes each guess expensive regardless of salt secrecy; the salt's only job is
+  domain separation from other Argon2id call sites in this crate, and a passphrase-derived salt is
+  definitionally exactly as guessable as the passphrase already is — no new weakness introduced.
+- Caught two real bugs via compiler errors before they became runtime bugs, not guesswork: (1) a
+  helper function tried to reference `self::passphrase::SALT_LEN` from inside `channel.rs`, but
+  `passphrase` is a sibling module under `crypto`, not a child of `channel` — fixed to a plain
+  `passphrase::SALT_LEN` path via the existing `use` import. (2) `from_passphrase`'s parameter was
+  originally named `passphrase: &[u8]`, which shadowed the `use crate::crypto::{..., passphrase}`
+  module import for the rest of that function body, making `passphrase::derive_key(...)`
+  unresolvable inside its own definition — renamed the parameter to `passphrase_bytes`.
+- 6 new tests: two independently-constructed `Channel`s from the same passphrase produce identical
+  key and selector (the actual property that matters — simulating two strangers, not two calls on
+  one device), different passphrases diverge, key and selector are distinct from each other,
+  seal/open round trip, a wrong-passphrase guess fails to open, and repeated seals of identical
+  plaintext produce different ciphertext (fresh nonce every call). 103 tests passing (6 new).
+- **Not done:** no helper wiring a sealed `Channel` message directly into
+  `Envelope::new(Addressing::Channel(selector), ...)` (mechanical plumbing, not attempted this
+  pass), not exported over UniFFI yet.
