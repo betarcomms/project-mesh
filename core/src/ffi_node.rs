@@ -110,6 +110,26 @@ impl FfiMeshNode {
             None => false,
         }
     }
+
+    /// Tune the client puzzle (`docs/ROUTING-PROTOCOL.md` §4.5). `0` disables it (the default).
+    /// See `core/src/puzzle.rs`'s doc comment for why the default difficulty is a reasoned
+    /// estimate, not one benchmarked against real target hardware.
+    pub fn set_puzzle_difficulty(&self, difficulty_bits: u8) {
+        self.engine
+            .lock()
+            .expect("lock poisoned")
+            .set_puzzle_difficulty(difficulty_bits);
+    }
+
+    /// Tune per-peer rate limits (`docs/ROUTING-PROTOCOL.md` §4.4). Defaults: 120 envelopes and
+    /// 2,000,000 bytes per 60-second window per peer — reasoned, not benchmarked (see
+    /// `core/src/relay.rs`'s `RateLimitConfig::default`).
+    pub fn set_rate_limits(&self, max_envelopes_per_window: u32, max_bytes_per_window: u64, window_seconds: u64) {
+        self.engine
+            .lock()
+            .expect("lock poisoned")
+            .set_rate_limits(max_envelopes_per_window, max_bytes_per_window, window_seconds);
+    }
 }
 
 #[cfg(test)]
@@ -227,6 +247,60 @@ mod tests {
         // compose_local floods to the connected peer; the mock transport now fails every send.
         let bytes = sample_envelope(5);
         assert!(node.compose_local(bytes, 0).is_err());
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn set_puzzle_difficulty_via_ffi_is_honored_on_compose() {
+        let path = temp_db_path("node-puzzle");
+        let _ = std::fs::remove_file(&path);
+        let transport = RecordingTransport::new();
+        let node = FfiMeshNode::open(path.clone(), vec![7u8; 32], 10, 0, transport.clone()).unwrap();
+        node.set_puzzle_difficulty(10);
+        node.on_peer_connected(1).unwrap();
+        transport.drain();
+
+        node.compose_local(sample_envelope(9), 0).unwrap();
+        let sent = transport.drain();
+        assert_eq!(sent.len(), 1);
+        let (envelope, nonce) = crate::relay::ContactMessage::from_bytes(&sent[0].1)
+            .ok()
+            .and_then(|m| match m {
+                crate::relay::ContactMessage::Data { envelope, puzzle_nonce } => Some((envelope, puzzle_nonce)),
+                _ => None,
+            })
+            .expect("expected a Data message");
+        assert!(crate::puzzle::verify(&envelope.id, nonce, 10));
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn set_rate_limits_via_ffi_drops_excess_frames() {
+        let path = temp_db_path("node-ratelimit");
+        let _ = std::fs::remove_file(&path);
+        let transport = RecordingTransport::new();
+        let node = FfiMeshNode::open(path.clone(), vec![8u8; 32], 10, 0, transport.clone()).unwrap();
+        node.set_rate_limits(1, 1_000_000, 60);
+        node.on_peer_connected(1).unwrap();
+        transport.drain();
+
+        let first = crate::relay::ContactMessage::Data {
+            envelope: crate::envelope::Envelope::from_bytes(&sample_envelope(1)).unwrap(),
+            puzzle_nonce: 0,
+        }
+        .to_bytes();
+        let second = crate::relay::ContactMessage::Data {
+            envelope: crate::envelope::Envelope::from_bytes(&sample_envelope(2)).unwrap(),
+            puzzle_nonce: 0,
+        }
+        .to_bytes();
+
+        node.on_frame(1, first, 0).unwrap();
+        node.on_frame(1, second, 0).unwrap(); // 2nd in same window, over the cap of 1: dropped
+
+        assert_eq!(node.len(), 1);
 
         let _ = std::fs::remove_file(&path);
     }

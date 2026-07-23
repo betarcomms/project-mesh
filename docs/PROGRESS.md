@@ -338,3 +338,54 @@ Newest entry at the bottom (chronological), each dated.
   filter happens to false-positive on it that round; it's still delivered on the next contact,
   which is the same best-effort/probabilistic delivery model `docs/ROUTING-PROTOCOL.md` §7
   already documents, not a new risk class.
+
+## 2026-07-23 — Rate limiting and client puzzle (`docs/ROUTING-PROTOCOL.md` §4.4/§4.5)
+
+- New `core/src/puzzle.rs`: Hashcash-style proof-of-work — find a nonce such that
+  `BLAKE3(envelope_id || nonce)` has at least N leading zero bits; cheap (one hash) to verify,
+  expensive to solve, so it burdens mass envelope production far more than the handful of
+  messages a real person sends. **Deviation from the doc, flagged in the module doc comment and
+  `IMPLEMENTATION-STATUS.md`:** §4.5 says the puzzle binds to `(envelope_id, created_at)`; this
+  crate's `Envelope` has no `created_at` field (only `expires_at` — the doc's conceptual §2
+  layout diagram was never fully implemented as written). Since `envelope_id` is already
+  content-derived over everything the envelope carries, binding to `envelope_id` alone still
+  commits the puzzle to the full envelope content — `created_at` would only help if it existed
+  to bind against. **Deliberately not part of `Envelope`'s own wire format** — the proof travels
+  in `relay.rs`'s `ContactMessage::Data` instead, keeping envelope identity independent of
+  routing-layer anti-flood mechanics. Solved once by the originator, forwarded unchanged at
+  every relay hop (only possible because `envelope_id` is already hop-stable — see the earlier
+  TTL/ID fix), re-verified cheaply at each hop rather than re-solved. Difficulty `0` disables it
+  entirely ("(tunable/optional)" per the doc); default `DEFAULT_DIFFICULTY_BITS = 20` is a
+  reasoned estimate (BLAKE3 is fast; ~2^20 average attempts is sub-10ms on typical desktop
+  hardware) — **not benchmarked against real target hardware**, stated honestly since no Android
+  device has been available in this dev environment. 5 tests: solved-nonce verifies, wrong nonce
+  rejected, wrong ID rejected, difficulty-0 always passes (this is how "disabled" is expressed),
+  and the leading-zero-bit-counting helper's correctness directly.
+- `relay.rs`: `ContactMessage::Data` changed shape from `Data(Envelope)` to
+  `Data { envelope: Envelope, puzzle_nonce: u64 }` — touched the wire format, both relay
+  functions (`relay_to_others`/`relay_to_all` now thread the nonce through unchanged), and every
+  existing test that constructed or matched on `ContactMessage::Data` (mechanical but
+  non-trivial — pattern matches, not just constructors). Added a per-peer `RateLimiter`
+  (`RateLimitConfig`: envelopes/window, bytes/window, window_seconds) into `PeerState`, checked
+  in `on_frame`'s `Data` branch before accepting into the store. Both new controls **drop the
+  offending frame silently** — no `Err`, no store mutation, no relay — rather than surfacing an
+  error or deciding to disconnect the peer; that policy question belongs to the native transport
+  layer, not this module (stated in the module doc comment). `RelayEngine::new` keeps its
+  existing signature (puzzle disabled, default rate limits) — both are tuned via new
+  `set_puzzle_difficulty`/`set_rate_limits` setters, so no existing call site broke.
+- 5 new relay.rs tests: valid-puzzle-proof is accepted and relayed, invalid proof is silently
+  dropped, `compose_local` actually solves the puzzle when difficulty is set (and the resulting
+  message verifies), rate limit drops the 3rd envelope in a window but allows it once the window
+  rolls over, and rate limits are tracked independently per peer (peer 2's budget isn't affected
+  by peer 1 exhausting theirs).
+- `ffi_node.rs`: `FfiMeshNode::set_puzzle_difficulty`/`set_rate_limits` expose both knobs to
+  native code. 2 new FFI-layer tests confirming both are actually honored through the full
+  object graph (not just internally on `RelayEngine`).
+- 81 tests passing (12 new: 5 in `puzzle.rs`, 5 in `relay.rs`, 2 in `ffi_node.rs`).
+- Regenerated Kotlin bindings: 5,393 → 5,457 lines (`setPuzzleDifficulty`/`setRateLimits` present
+  on `FfiMeshNode`). Copied into `android/`.
+- This closes out every row in `docs/ROUTING-PROTOCOL.md` §4's flood/abuse control list except
+  §4.6 (optional directional spraying, explicitly marked optional in the doc itself) and the
+  per-identity-signing / local key-blocking piece of §4.5, which depends on identity/session
+  integration with the relay layer that doesn't exist yet (see the still-open item from the
+  previous entry).

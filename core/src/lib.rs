@@ -22,6 +22,7 @@ pub mod ffi_node;
 pub mod ffi_transport;
 pub mod identity;
 pub mod persistence;
+pub mod puzzle;
 pub mod relay;
 pub mod transport;
 
