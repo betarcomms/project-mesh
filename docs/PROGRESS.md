@@ -538,3 +538,55 @@ Newest entry at the bottom (chronological), each dated.
 - **Still not done:** physical device testing, and everything past this one screen (see the
   "Blocks features work" list in `IMPLEMENTATION-STATUS.md` — no transport driver, no other UI,
   etc.). The emulator (`mesh_test`) is left running for follow-up testing in this session.
+
+## 2026-07-24 — Real BLE transport driver written; two-emulator test blocked by host capacity
+
+- Wrote the first real `android.bluetooth.*` driver (`android/app/src/main/java/india/projectmesh/app/ble/`):
+  `BleTransportDriver` implements `FfiMeshTransport` with both GATT roles running concurrently
+  (a `BluetoothGattServer` for peripheral/advertise, a `BluetoothGatt` per outbound connection
+  for central/scan). Full design in the plan doc (`silly-imagining-hummingbird.md`); key points:
+  - Wired to `FfiMeshNode` directly, not `FfiTransportHub` — the hub only logs events, the node
+    is what actually drives `RelayEngine`. Resolved the resulting construction-order circularity
+    (the node needs the transport, the transport needs to call back into the node) with a
+    `MeshEventSink` interface set post-construction by a new `MeshCoordinator` class.
+  - Two characteristics (inbound write, outbound notify) rather than `TRANSPORT.md`'s implied
+    single characteristic. 4-byte fragmentation header (message_id/flags/fragment_index) chunks
+    frames to the negotiated ATT MTU.
+  - The dual-role connect race (both sides advertise *and* scan, so each could initiate a
+    connection to the other) can't be resolved by comparing local vs. remote Bluetooth address —
+    `BluetoothAdapter.getAddress()` returns a constant dummy value on modern Android, a real
+    platform restriction not anticipated when the plan was first drafted, caught while
+    implementing rather than left as a bug. Fixed by advertising a random per-session ID in BLE
+    scan-response service data instead and tie-breaking on that.
+  - Master key for `FfiMeshNode.open` (new `MeshCoordinator`): `SecureRandom`-generated once,
+    stored in plain `SharedPreferences` — explicitly **not** Keystore-backed, flagged as a
+    separate outstanding item, not silently bundled into "BLE driver done."
+  - `MainActivity` gained a "Mesh (BLE)" section: runtime Bluetooth permission request, Start/Stop
+    mesh, connected-peer count, and a manual "Send test broadcast" / "Check received" pair (using
+    the already-exported `envelopePack`/`envelopeUnpack`/`composeLocal`/`containsHex`) for an
+    application-level verification signal beyond link-layer bytes moving.
+  - One real compile bug caught by the build, not guesswork: `Fragmentation.kt`'s
+    `encodeFragments` mixed `List<ByteArray>` and `List<List<Byte>>` across an if/else branch,
+    which Kotlin widened to a common supertype losing the element type (`chunk.toByteArray()`
+    became unresolved) — fixed by keeping both branches `List<List<Byte>>`.
+- `./gradlew assembleDebug` succeeds clean (no warnings after also fixing an unrelated
+  `Divider`→`HorizontalDivider` deprecation). Installed and launched on `mesh_test`
+  (emulator-5554): no crash, "Start mesh" → advertising starts successfully (`logcat -s MeshBle`
+  confirms `start(): service=... sessionId=...` then `advertising started`).
+- **Attempted the real two-emulator verification the plan called for — blocked by host capacity,
+  not a code problem.** Created a second AVD (`mesh_test2`), but running it alongside `mesh_test`
+  pegs this dev machine at a steady 100% CPU; the second emulator's `system_server` hits
+  "Process system isn't responding" almost immediately and never recovered across ~10 minutes of
+  waiting (checked 3 times, clock still advancing slowly each check, so not fully frozen — just
+  starved). Killed the Gradle daemon to free RAM/CPU, which helped some (CPU load dropped from
+  100% to ~55%) but the ANR still didn't clear. Killed and recreated `mesh_test2` from scratch to
+  rule out corrupted state — the fresh instance hit the identical ANR within seconds of boot,
+  confirming this is a genuine resource ceiling on this host (two headless Android emulators is
+  too much), not a stuck/corrupted AVD.
+- **Net result:** the driver is written, builds clean, and is verified working solo (advertising
+  starts, no crash) — but an actual two-device BLE exchange (scan discovery, GATT connect, MTU
+  negotiation, frame exchange, `onPeerConnected`/`onFrame` firing) is **not yet verified**. Real
+  verification needs either a beefier host that can run two emulators at once, or two physical
+  devices. Recorded honestly in `IMPLEMENTATION-STATUS.md` (🚧, not ✅) rather than claimed done.
+- Second emulator killed; `mesh_test` (emulator-5554) left running with the mesh started, in case
+  a follow-up session has a physical device to pair it against.
