@@ -998,3 +998,64 @@ Newest entry at the bottom (chronological), each dated.
   when that lands); no responder-key endorsement for bulletins; no have/need matching or search
   for the resource board (flat feed only); all three remain unsigned, same gap as plain broadcast
   chat.
+
+## 2026-07-24 — Project folder moved from C: to G:
+
+- User moved their working directory from `C:\Users\konko\Desktop\mesh` to `G:\mesh`. Verified no
+  tracked file hardcoded an absolute path to its own location before the move (only
+  `android/local.properties`, gitignored and machine-SDK-specific not project-path-specific, had
+  any `C:\Users\konko` reference). Copied via `robocopy /MIR` (21,885 files, 9.085 GB, 0 failed),
+  verified git integrity at the new location (clean status, correct log/remote) before touching
+  the source.
+- **Real harness constraint hit, not a code issue:** this session's shell has
+  `C:\Users\konko\Desktop\mesh` pinned as its working directory — it resets back to that path
+  after every single command, for both Bash and PowerShell tools, and Windows won't let you
+  delete a directory that's a live process's CWD. Couldn't remove the old folder itself; emptied
+  its contents instead (0 items left) so nothing is duplicated on disk, and now use explicit
+  `G:\mesh\...` paths in every command rather than relying on `cd` persisting.
+- All subsequent builds from `G:\mesh` are naturally full rebuilds (Gradle/Cargo caches keyed
+  partly by absolute path, so moving drives invalidates them) — expected, not a regression.
+
+## 2026-07-24 — Localization foundation (English-only framework, per the user)
+
+- User asked for SOS/Wi-Fi Direct/offline maps localization work next; explicitly said "for
+  first release don't need other language, start with English only" before this was built —
+  which changed the scope from "build the framework and translate into Hindi/Bengali/etc." to
+  "build the framework, ship English, leave translation to the community process
+  `LOCALIZATION-UX.md` §1 already specifies." That's the right call independent of the
+  instruction: Hindi and Bengali are languages with enough training-data confidence to attempt,
+  but Assamese and especially Bodo are not, and for a civic-safety app where mistranslating
+  "Trapped" or "Fire" could cause real harm, a confident-sounding wrong translation is worse than
+  an honest gap. Glad the user front-ran that judgment call rather than needing it raised back to
+  them.
+- Extracted every hardcoded UI string across `MainActivity.kt`, `MessagingScreen.kt`, and
+  `CivicScreens.kt` into `res/values/strings.xml`, referenced via `stringResource()`. The four
+  category enums (`SosCategory`, `BulletinCategory`, `ResourceKind`, `ResourceCategory`) changed
+  from holding a raw `label: String` to `@StringRes val labelRes: Int`, resolved at display time
+  — the idiomatic Compose pattern for localizable enum-backed UI, and the only way an enum
+  (non-`@Composable` context) can defer to a resource that `stringResource()` (a `@Composable`
+  function) would otherwise have to resolve immediately.
+- **Deliberately shared string resources across features for the "glossary" `LOCALIZATION-UX.md`
+  §1 asks for**: `category_food`/`category_shelter`/`category_other` are used by both
+  `BulletinCategory` and `ResourceCategory` rather than each feature getting its own copy — one
+  Hindi translation of "Food" later, not two that could drift out of sync.
+- Hit the exact same `--` inside an XML comment bug this project has now hit three times
+  (`AndroidManifest.xml` twice, now `strings.xml`) — caught immediately by the real build failure
+  again, fixed the same way. Three strikes; genuinely worth a standing habit of avoiding `--` as
+  a prose dash inside any XML comment in this codebase from now on, not just remembering after
+  the fact.
+- **Verified on a real emulator**, and specifically checked the part compile-time can't catch:
+  every `String.format()` call with `%1$s`/`%2$s`/`%1$d`-style placeholders (connected-peer
+  count, category-prefixed feed posts, the `[selected category]` bracket format) actually
+  renders correctly against real data, including persisted posts from an earlier session still
+  sitting in the emulator's durable store (`[Trapped] stuck_under_debris_north_gate`,
+  `Acknowledged`, `[Relief camp] well_3_working` all rendered correctly through the new
+  resource-based code path). A wrong argument count or type in one of these calls would only
+  surface as a runtime `IllegalFormatException`, not a compile error — worth the extra emulator
+  round trip rather than trusting the manual placeholder-counting.
+- **Not done, stated plainly:** no actual Hindi/Bengali/Assamese/Bodo translation files
+  (`values-hi/strings.xml` etc.) — per the user's explicit instruction and the reasoning above,
+  deferred to `LOCALIZATION-UX.md`'s community-contributed workflow, tracked as the real
+  remaining scope of this doc's §1, not silently declared done. Also not done: Noto font
+  bundling, complex-script shaping, RTL support, icon-led navigation, voice notes, TTS — every
+  one of these is its own separate, larger effort than string externalization.
