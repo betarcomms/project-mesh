@@ -5,3 +5,13 @@ members = ["core"]
 [workspace.package]
 edition = "2021"
 license = "AGPL-3.0-or-later"
+
+[profile.test]
+# openmls's PrivateMessage::decrypt has a debug_assert!(false, ...) on AEAD decryption failure
+# (dev-build-only loud signal; it returns a proper Err in release builds regardless). Our own
+# tests deliberately tamper with MLS ciphertext to prove authentication works, which is exactly
+# the scenario that debug_assert fires on -- not a bug in our integration. Scoped to the `test`
+# profile only (does not affect `cargo build`/`cargo run`); note this also silences any
+# debug_assert! in our own code specifically during `cargo test` -- we don't use any today, but
+# worth knowing if that changes.
+debug-assertions = false

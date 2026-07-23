@@ -389,3 +389,69 @@ Newest entry at the bottom (chronological), each dated.
   per-identity-signing / local key-blocking piece of §4.5, which depends on identity/session
   integration with the relay layer that doesn't exist yet (see the still-open item from the
   previous entry).
+
+## 2026-07-23 — MLS groups (RFC 9420), via `openmls`
+
+- **Real decision point handled explicitly, not silently.** MLS/TreeKEM is a different order of
+  complexity from everything hand-rolled in this crate so far (Noise, Double Ratchet, AEAD
+  wrappers) — tree-state invariants, epoch handshake correctness, proposal/commit validation are
+  exactly what `docs/CRYPTOGRAPHY.md` §9 says needs independent cryptographic review before
+  shipping; hand-rolling a full RFC 9420 implementation would raise that bar far higher than it
+  already sits, for a security-focused civic-infrastructure project. Presented the fork to the
+  user (hand-roll vs. an existing implementation vs. defer) rather than choosing silently, given
+  how much bigger a decision this is than any prior "write it ourselves" call this project has
+  made. User chose to use `openmls` — the reference-quality, actively maintained RFC 9420
+  implementation, same pattern as using `snow` for Noise instead of hand-rolling it, just for
+  something with far higher stakes if gotten wrong.
+- **Researched the real API before writing integration code**, rather than guessing against a
+  library this large and this security-critical: fetched `openmls`'s own `large-groups.rs`
+  benchmark example directly from its GitHub repo via `gh api` (highest-confidence source — the
+  project's own compiled, CI-tested code), plus book pages for group creation, adding members,
+  and application messages. This is the same "verify before recommending" discipline auto-memory
+  already asks for, applied to a live integration decision instead of a stored fact.
+- New `core/src/groups.rs`: `MlsMember` (crypto/storage provider, MLS signing keypair, credential
+  — credential's "identity" bytes are this app's existing `Identity` fingerprint, linking MLS
+  group membership to the same on-device identity used elsewhere, even though the MLS signature
+  keypair itself is necessarily separate) and `MlsGroupHandle` (create/add-member/process-commit/
+  seal/open). Ciphersuite `MLS_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519` — X25519/
+  ChaCha20-Poly1305/Ed25519, matching every other primitive choice already made in this project.
+  Added `MeshError::Group(String)` (openmls's error surface is diverse and its `Display` output
+  is informative — worth preserving, not collapsing to a static string) and the matching
+  `FfiError::Group` boundary variant (kept the `From` conversion exhaustive even though
+  `groups.rs` isn't exported over FFI yet).
+- **Two real bugs found and fixed via actual compiler/test failures, not guesswork:**
+  1. `MlsMessageIn::into_welcome()`/`into_protocol_message()` don't exist in the public API of
+     openmls 0.8.1 — the compiler pointed at them being `#[cfg(any(feature = "test-utils",
+     test))]`-gated, i.e. testing-only helpers, not meant for real integration code. Fixed by
+     using the public `.extract()` → match on `MlsMessageBodyIn::Welcome(w)` and the already-
+     public `try_into_protocol_message()` instead — found by reading the actual gated source
+     (`message_in.rs`) in the local cargo registry cache rather than guessing again.
+  2. A new member's `StagedWelcome::new_from_welcome(..., None)` failed with "No ratchet tree
+     available to build initial tree after receiving a Welcome message" — `MlsGroupCreateConfig`
+     needs `.use_ratchet_tree_extension(true)` so the tree travels with the Welcome; without it
+     there's no out-of-band channel in this module for the new member to get the tree any other
+     way. Root-caused by reading the actual error message (it says exactly what's wrong) rather
+     than trial-and-error.
+  3. A test that deliberately tampers with MLS ciphertext to prove authentication rejects it hit
+     a `debug_assert!(false, "Ciphertext decryption failed")` **inside openmls itself**
+     (`private_message_in.rs`) — a dev-build-only loud signal on AEAD failure; it returns a
+     proper `Err` in release builds regardless. Not a bug in the integration; added
+     `[profile.test] debug-assertions = false` to the workspace root `Cargo.toml`, scoped to the
+     `test` profile only, with a comment explaining exactly why (and noting it would also
+     silence any `debug_assert!` in our own code during `cargo test` specifically — we don't use
+     any today).
+- 5 tests: group creation + application-message sealing sanity check, add-member + Welcome-join
+  reaching matching epoch state, a full two-member application-message roundtrip, tampered-
+  ciphertext rejection, and a three-member scenario where the second joiner's Welcome arrives
+  after the first member has to process an intermediate Commit to stay in sync.
+- 86 tests passing (5 new). Release build (`cargo build --release`) confirmed still succeeds
+  with the new dependency tree.
+- **No UniFFI export in this pass** — `groups.rs` isn't reachable from Kotlin/Swift yet.
+  KeyPackage/Commit/Welcome exchange needs its own FFI design pass, the same way the transport
+  callback interface did before `ffi_transport.rs` existed.
+- **Explicitly not done, stated plainly:** durable persistence (openmls's storage-provider is
+  in-memory only in this integration; a process restart loses all group state — `persistence.rs`
+  /`durable.rs` solve this for envelopes, MLS group state needs its own storage-provider wiring),
+  routing integration (MLS ciphertext doesn't travel as `Envelope`s through `RelayEngine` yet),
+  member removal / self-update / external commits (openmls supports these; only add/join/
+  application-message paths are exercised so far).

@@ -9,7 +9,7 @@
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
 [![Phase](https://img.shields.io/badge/phase-1%20of%204-blue)](docs/ROADMAP.md)
-[![Core tests](https://img.shields.io/badge/core%20tests-81%20passing-brightgreen)](core/)
+[![Core tests](https://img.shields.io/badge/core%20tests-86%20passing-brightgreen)](core/)
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPLv3%20(proposed)-lightgrey)](docs/GOVERNANCE.md)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
@@ -75,15 +75,17 @@ every contributor is expected to follow.
 
 **Design / pre-alpha, Phase 1 in progress.** The research and technical specification are
 complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) is underway: identity,
-Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, envelope wire
-format with a hand-rolled Bloom-filter summary vector (`docs/ROUTING-PROTOCOL.md` §3's compact
-gossip summary, no new dependency), a store-carry-forward engine that now survives a restart
-(in-memory index backed by encrypted-at-rest storage, wired together via `DurableStore`), a mesh
-engine loop (gossip-on-contact + epidemic relay, per-peer rate limiting, and an optional
-Hashcash-style client puzzle — transport-agnostic, tested with a simulated multi-node mesh, no
-hardware needed), a UniFFI callback interface for the radio transport boundary, the mesh engine
-wired to that transport end to end (`FfiMeshNode`), and a UniFFI surface covering all of the
-above are implemented and unit-tested (**81 tests passing**). Encryption-at-rest uses `redb` +
+Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, MLS groups
+(RFC 9420, via the `openmls` crate rather than hand-rolled — TreeKEM is a different order of
+complexity from this project's other hand-rolled primitives), envelope wire format with a
+hand-rolled Bloom-filter summary vector (`docs/ROUTING-PROTOCOL.md` §3's compact gossip summary,
+no new dependency), a store-carry-forward engine that now survives a restart (in-memory index
+backed by encrypted-at-rest storage, wired together via `DurableStore`), a mesh engine loop
+(gossip-on-contact + epidemic relay, per-peer rate limiting, and an optional Hashcash-style
+client puzzle — transport-agnostic, tested with a simulated multi-node mesh, no hardware
+needed), a UniFFI callback interface for the radio transport boundary, the mesh engine wired to
+that transport end to end (`FfiMeshNode`), and a UniFFI surface covering most of the above are
+implemented and unit-tested (**86 tests passing**). Encryption-at-rest uses `redb` +
 AEAD rather than the design docs' SQLCipher — a deliberate, documented substitution after
 SQLCipher's OpenSSL dependency proved unbuildable in this dev environment (see
 `docs/PROGRESS.md`). No real BLE/Wi-Fi/LoRa driver exists yet — this dev environment has no
@@ -106,6 +108,7 @@ mesh/
 │   └── src/
 │       ├── identity.rs         — Ed25519 + X25519 identity, fingerprint
 │       ├── crypto/              — Noise XX handshake, Double Ratchet
+│       ├── groups.rs            — MLS groups (RFC 9420, via openmls)
 │       ├── envelope.rs         — wire format, content-derived envelope IDs
 │       ├── bloom.rs            — Bloom filter (compact gossip summary vectors)
 │       ├── engine.rs           — in-memory store, dedup, TTL, priority eviction

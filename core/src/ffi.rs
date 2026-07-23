@@ -46,6 +46,8 @@ pub enum FfiError {
     EnvelopeRejected(String),
     #[error("invalid state: {0}")]
     InvalidState(String),
+    #[error("group error: {0}")]
+    Group(String),
 }
 
 impl From<MeshError> for FfiError {
@@ -56,6 +58,7 @@ impl From<MeshError> for FfiError {
             MeshError::Handshake(s) => FfiError::Handshake(s),
             MeshError::Ratchet(s) => FfiError::Ratchet(s.to_string()),
             MeshError::Crypto(s) => FfiError::Crypto(s.to_string()),
+            MeshError::Group(s) => FfiError::Group(s),
         }
     }
 }

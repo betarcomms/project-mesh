@@ -12,6 +12,8 @@ pub enum MeshError {
     Ratchet(&'static str),
     #[error("crypto error: {0}")]
     Crypto(&'static str),
+    #[error("group error: {0}")]
+    Group(String),
 }
 
 pub type Result<T> = std::result::Result<T, MeshError>;

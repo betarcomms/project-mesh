@@ -23,6 +23,11 @@ zeroize = { version = "1", features = ["derive"] }
 thiserror = "1"
 uniffi = { version = "0.28", features = ["cli"] }
 redb = "4"
+openmls = "0.8"
+openmls_rust_crypto = "0.5"
+openmls_basic_credential = "0.5"
+openmls_traits = "0.5"
+tls_codec = "0.4"
 
 [dev-dependencies]
 proptest = "1"
