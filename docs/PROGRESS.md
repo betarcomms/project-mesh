@@ -799,3 +799,33 @@ Newest entry at the bottom (chronological), each dated.
   removal/self-update/external-commit paths, the small-group per-member-copy fallback, and
   snapshot cadence/atomicity at scale (every call rewrites the whole file — fine for this pass's
   group sizes, not benchmarked).
+
+## 2026-07-24 — BLE link-identifier rotation
+
+- `BleTransportDriver`'s advertised session ID (scan-response service data, used only for the
+  dual-role connect tie-break — see the earlier BLE driver session) was generated once at
+  `start()` and never touched again, which quietly defeated the whole point of
+  `CRYPTOGRAPHY.md` §7.1's rotation requirement: a fixed 4-byte identifier broadcast for the
+  entire time the mesh runs is exactly the kind of stable link identifier that lets a passive
+  observer correlate a device across time and place, regardless of whatever MAC-address rotation
+  the OS is doing underneath it.
+- Added a 15-minute rotation cycle (`SESSION_ID_ROTATION_INTERVAL_MS`, a `Handler`-based
+  self-rescheduling `Runnable`, started in `start()` and cancelled in `stop()`): regenerate the
+  ID, stop and restart advertising with fresh `AdvertiseData` (BLE advertising payloads can't be
+  updated in place — there's no "change this running advertisement's bytes" call, only
+  stop-then-start-again with new data).
+- **Real concurrency bug caught and fixed before it shipped, not just in review:** the original
+  field was a plain `private var localSessionId: ByteArray`, read from Binder-thread scan/GATT
+  callbacks. Rotating it by mutating the existing array's bytes in place (as the original
+  one-shot `SecureRandom().nextBytes(localSessionId)` at `start()` did) would let a concurrent
+  reader on another thread observe a half-written array mid-rotation. Fixed by marking the field
+  `@Volatile` and always replacing the *reference* with a freshly allocated, fully-populated
+  array (`freshSessionId()`) rather than mutating bytes in place — safe publication, no reader
+  ever sees a torn value.
+- **Honest scope note, stated in the class doc:** this rotates the identifier *this driver
+  itself* chose to broadcast at the application layer. It does not, and via any public Android
+  API cannot, force rotation of the actual BLE MAC/link-layer address — that's the platform's own
+  privacy policy. Rotating on a matching ~15-minute cadence means this driver's own identifier
+  doesn't undermine whatever the OS is already doing, rather than claiming to control something
+  it doesn't.
+- `./gradlew assembleDebug` succeeds clean, no new warnings.
