@@ -5,14 +5,14 @@
 //! crypto, no routing decisions.
 //!
 //! **Phase 1 status:** identity, Noise XX handshake, Double Ratchet, X3DH-style asynchronous
-//! bootstrap (`crypto::prekey`), MLS groups (RFC 9420, via `openmls`), envelope wire format, the
-//! store-carry-forward engine (in-memory + durable-encrypted, wired together via
-//! [`durable::DurableStore`]), the mesh engine loop (gossip, relay, rate limiting, client
-//! puzzle), and a UniFFI surface covering most of the above are implemented and tested. Not yet
-//! implemented: PQXDH post-quantum handshake, Sphinx onion routing, MLS durable
-//! persistence/routing integration/UniFFI export, channels, duress/panic-wipe — each is a
-//! tracked follow-up, not silently assumed done. See `docs/IMPLEMENTATION-STATUS.md` for the
-//! exact current picture.
+//! bootstrap (`crypto::prekey`) with a PQXDH hybrid variant (`crypto::pqxdh`, ML-KEM-1024 via
+//! `ml-kem`), MLS groups (RFC 9420, via `openmls`), passphrase channels (`crypto::channel`),
+//! duress/panic-wipe, envelope size bucketing, envelope wire format, the store-carry-forward
+//! engine (in-memory + durable-encrypted, wired together via [`durable::DurableStore`]), the
+//! mesh engine loop (gossip, relay, rate limiting, client puzzle), and a UniFFI surface covering
+//! most of the above are implemented and tested. Not yet implemented: Sphinx onion routing, MLS
+//! durable persistence/routing integration/UniFFI export — each is a tracked follow-up, not
+//! silently assumed done. See `docs/IMPLEMENTATION-STATUS.md` for the exact current picture.
 
 pub mod bloom;
 pub mod crypto;

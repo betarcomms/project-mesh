@@ -10,6 +10,7 @@ pub mod channel;
 pub mod noise;
 pub mod padding;
 pub mod passphrase;
+pub mod pqxdh;
 pub mod prekey;
 pub mod ratchet;
 pub mod session;

@@ -711,3 +711,40 @@ Newest entry at the bottom (chronological), each dated.
   ratchet `encrypt` all still take raw plaintext) — this pass is the primitive only; wiring it in
   everywhere messages get sealed, and deciding whether/how routing-header fields like `Envelope`'s
   own metadata should also be bucketed, is separate follow-up work.
+
+## 2026-07-24 — PQXDH: hybrid post-quantum handshake, via ML-KEM-1024
+
+- New `core/src/crypto/pqxdh.rs`, built on top of `crypto::prekey` (X3DH) rather than replacing
+  it: `HybridBundle` extends `PrekeyBundle` with a signed ML-KEM-1024 encapsulation key
+  (`PqPrekey`, via the `ml-kem` crate). `initiate`/`respond` run classical X3DH and an ML-KEM
+  encapsulation/decapsulation side by side, combining both into one final shared secret via HKDF
+  — "secure if either the classical or post-quantum problem holds," per `CRYPTOGRAPHY.md` §6a's
+  decision. Same reasoning as MLS/`openmls` for not hand-rolling FIPS 203.
+- **Researched the real crate API before writing integration code**, same discipline as the
+  openmls integration: fetched docs.rs pages and the crate's GitHub source via `WebFetch` before
+  guessing. This paid off partially, not completely — the doc summaries showed simplified example
+  code (`ek.encapsulate()`, `MlKem768::generate_keypair()`) that turned out to omit real required
+  arguments; the *actual* compiler errors, once code was written against the summarized API,
+  caught the true method names (`generate_keypair_from_rng(&mut rng)`,
+  `encapsulate_with_rng(&mut rng)`, `KeyExport::to_bytes()` needing an explicit trait import) in a
+  handful of fast iterations. Worth remembering: doc-summarization tools can silently drop
+  significant details (an RNG parameter is not a minor detail); the compiler remains the actual
+  source of truth for a crate's real API, exactly as this project's `PROGRESS.md` has noted before
+  for openmls.
+- **New dependency wrinkle, resolved cleanly:** `ml-kem` requires `rand_core ^0.10`'s `CryptoRng`
+  trait, while this crate has used `rand_core 0.6` everywhere else (`x25519-dalek`,
+  `ed25519-dalek`'s `rand_core` feature) since the beginning. Rather than a disruptive
+  crate-wide RNG version migration, added `rand = "0.10"` (which pulls a compatible `rand_core
+  0.10`) as a second, independent RNG dependency used only inside `pqxdh.rs` (`rand::rng()`) —
+  Cargo happily resolves both major versions of `rand_core` simultaneously since nothing needs to
+  pass a value across that boundary; each call site just uses whichever version its own
+  dependencies expect.
+- 4 new tests: initiator and responder derive the same hybrid secret, a tampered PQ-prekey
+  signature is rejected (both signatures — classical *and* PQ — must verify, not just one),
+  the hybrid secret differs from what plain classical-only X3DH would have produced (proving the
+  PQ term actually contributes, not just riding along unused), and a full
+  hybrid-bootstrap-through-ratchet-messaging round trip. 113 tests passing (4 new). Release build
+  (`cargo build --release`) reconfirmed successful with the larger dependency tree (ML-KEM pulls
+  in `sha3`/`keccak`, `hybrid-array`, `module-lattice`, `kem`).
+- **Not done:** not exported over UniFFI yet, no key-rotation/pool management for `PqPrekey`
+  (mirrors the same already-acknowledged gap for the classical `SignedPrekey`).

@@ -29,6 +29,8 @@ openmls_rust_crypto = "0.5"
 openmls_basic_credential = "0.5"
 openmls_traits = "0.5"
 tls_codec = "0.4"
+ml-kem = "0.3.2"
+rand = "0.10.2"
 
 [dev-dependencies]
 proptest = "1"
