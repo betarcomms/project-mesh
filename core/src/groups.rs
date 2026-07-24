@@ -28,10 +28,13 @@
 //! every mutating `MlsGroup` call already writes through correctly — as an opaque
 //! `(key, value)` byte-pair map (`MemoryStorage.values` is a public field) and persists that map
 //! wholesale, AEAD-sealed, via `MlsGroup::load` to reconstruct on reopen. **Explicitly not
-//! covered:** the member's own MLS `SignatureKeyPair` and `CredentialWithKey` are not persisted
-//! by this module — they're ordinary in-process values the caller must durably store separately
-//! (this crate's `persistence.rs`/`durable.rs` pattern, or the platform keystore, are natural
-//! fits) and hand back via [`MlsMember::from_signer_and_credential`] on restart.
+//! covered:** the member's own MLS `SignatureKeyPair` is not persisted by this module — it's an
+//! ordinary in-process value the caller must durably store separately (this crate's
+//! `persistence.rs`/`durable.rs` pattern, or the platform keystore, are natural fits) and hand
+//! back via [`MlsMember::signer_from_bytes`]/[`MlsMember::from_identity_and_signer`] on restart.
+//! `CredentialWithKey` needs no separate persistence at all — it's a pure function of the app
+//! identity's fingerprint and the signer's public key
+//! ([`MlsMember::derive_credential_with_key`]), rebuilt identically either way.
 //!
 //! **Routing integration** ([`MlsGroupHandle::seal_as_envelope`] /
 //! [`MlsGroupHandle::open_from_envelope`]): wraps `seal`/`open`'s wire bytes as an `Envelope`
@@ -96,16 +99,45 @@ impl MlsMember {
         let provider = OpenMlsRustCrypto::default();
         let signer = SignatureKeyPair::new(CIPHERSUITE.signature_algorithm())
             .map_err(|e| group_err("generating MLS signature keypair", e))?;
-        let credential = BasicCredential::new(identity.public().fingerprint().0.to_vec());
-        let credential_with_key = CredentialWithKey {
-            credential: credential.into(),
-            signature_key: signer.to_public_vec().into(),
-        };
+        let credential_with_key = Self::derive_credential_with_key(identity, &signer);
         Ok(Self {
             provider,
             signer,
             credential_with_key,
         })
+    }
+
+    /// `CredentialWithKey` is a pure function of the app identity's fingerprint and the MLS
+    /// signer's public key — no independent state of its own. Shared by [`new`](Self::new) and
+    /// [`from_identity_and_signer`](Self::from_identity_and_signer) so a restored member's
+    /// credential is reconstructed identically to a fresh one, rather than needing to be
+    /// separately persisted.
+    fn derive_credential_with_key(identity: &Identity, signer: &SignatureKeyPair) -> CredentialWithKey {
+        let credential = BasicCredential::new(identity.public().fingerprint().0.to_vec());
+        CredentialWithKey {
+            credential: credential.into(),
+            signature_key: signer.to_public_vec().into(),
+        }
+    }
+
+    /// Export this member's MLS signing keypair for persistence (`tls_codec` wire bytes) —
+    /// **not** the app's `Identity`; a separate, MLS-protocol-specific keypair
+    /// (`docs/CRYPTOGRAPHY.md` §6). Pair with [`signer_from_bytes`](Self::signer_from_bytes) and
+    /// [`from_identity_and_signer`](Self::from_identity_and_signer) to resume signing as this
+    /// exact member after a restart — the piece `docs/IMPLEMENTATION-STATUS.md` has flagged as
+    /// missing since the MLS export pass landed. **The caller is entirely responsible for
+    /// protecting these bytes at rest**, same as `Identity::to_bytes`/`FfiIdentity::to_bytes` —
+    /// whoever holds them can sign as this member in every group it belongs to.
+    pub fn signer_to_bytes(&self) -> Result<Vec<u8>> {
+        self.signer
+            .tls_serialize_detached()
+            .map_err(|e| group_err("serializing MLS signer", e))
+    }
+
+    /// Parse untrusted/previously-persisted wire bytes from [`signer_to_bytes`]. Structural
+    /// validation only — pair with [`from_identity_and_signer`] to actually use the result.
+    pub fn signer_from_bytes(bytes: &[u8]) -> Result<SignatureKeyPair> {
+        SignatureKeyPair::tls_deserialize_exact(bytes).map_err(|e| group_err("parsing MLS signer bytes", e))
     }
 
     /// A `KeyPackage` this member publishes so someone else can add them to a group. Consumed
@@ -159,6 +191,21 @@ impl MlsMember {
             signer,
             credential_with_key,
         }
+    }
+
+    /// The practical way to resume signing as a previously-existing member after a restart: pass
+    /// the same on-device `identity` used when the member was first created (via
+    /// [`new`](Self::new)) and the MLS signer restored from [`signer_from_bytes`]. Rebuilds
+    /// `credential_with_key` deterministically rather than needing it separately persisted (see
+    /// [`derive_credential_with_key`](Self::derive_credential_with_key)'s doc) — this is the
+    /// piece that was missing since the MLS export pass, stated plainly in this module's own doc
+    /// and in `ffi_groups.rs`'s: `FfiMlsMember::new` always generated a fresh signing keypair, so
+    /// `load_group_from_disk` couldn't actually resume signing as the group's pre-restart member.
+    /// It can now, as long as the caller durably stored the signer bytes (e.g.
+    /// Keystore-wrapped, matching this crate's master-key/identity persistence pattern).
+    pub fn from_identity_and_signer(identity: &Identity, signer: SignatureKeyPair) -> Self {
+        let credential_with_key = Self::derive_credential_with_key(identity, &signer);
+        Self::from_signer_and_credential(signer, credential_with_key)
     }
 
     pub fn signer(&self) -> &SignatureKeyPair {
@@ -617,6 +664,53 @@ mod tests {
         assert_eq!(bob_group.open(&sealed_after).unwrap(), b"after restart");
 
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn signer_to_bytes_from_bytes_roundtrip_resumes_signing_after_a_real_restart() {
+        // Unlike `group_state_survives_a_simulated_restart` above (which keeps the exact
+        // in-memory `SignatureKeyPair`/`CredentialWithKey` objects around across the "restart"),
+        // this drives the actual persistence path: serialize the signer to bytes, drop every
+        // in-memory value, reconstruct purely from those bytes plus the original `Identity` --
+        // proving `from_identity_and_signer` really does resume the pre-restart member, not just
+        // reuse an object that never left memory.
+        let path = temp_snapshot_path("real-signer-persist");
+        let _ = std::fs::remove_file(&path);
+        let master_key = [9u8; 32];
+        let alice_identity = Identity::generate();
+
+        let alice = MlsMember::new(&alice_identity).unwrap();
+        let signer_bytes = alice.signer_to_bytes().unwrap();
+        let mut alice_group = alice.create_group().unwrap();
+
+        let bob = MlsMember::new(&Identity::generate()).unwrap();
+        let bob_key_package = bob.key_package().unwrap();
+        let output = alice_group.add_member(bob_key_package).unwrap();
+        let mut bob_group = bob.join_from_welcome(&output.welcome_bytes).unwrap();
+
+        let group_id = alice_group.group_id().clone();
+        alice_group.snapshot_to_disk(&path, &master_key).unwrap();
+        drop(alice_group); // simulates the process ending -- no in-memory state survives
+
+        // "Restart": nothing carried over except `alice_identity` (the app's own identity,
+        // already persisted separately -- `KeystoreIdentityStore.kt`) and `signer_bytes` (what a
+        // real caller would have durably stored per `signer_to_bytes`'s doc).
+        let restored_signer = MlsMember::signer_from_bytes(&signer_bytes).unwrap();
+        let alice_restarted = MlsMember::from_identity_and_signer(&alice_identity, restored_signer);
+        let mut alice_group_restarted = alice_restarted.load_group_from_disk(&path, &master_key, &group_id).unwrap();
+
+        // The restored member can still sign new application messages as itself, and the group's
+        // other member (who never restarted) still accepts them -- proving this isn't just a
+        // structurally-valid-but-inert reconstruction.
+        let sealed = alice_group_restarted.seal(b"signed after a real restart").unwrap();
+        assert_eq!(bob_group.open(&sealed).unwrap(), b"signed after a real restart");
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn signer_from_bytes_rejects_garbage() {
+        assert!(MlsMember::signer_from_bytes(b"not a real signer").is_err());
     }
 
     #[test]

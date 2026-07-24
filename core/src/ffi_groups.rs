@@ -11,16 +11,16 @@
 //! second attempt — the same pattern `ffi.rs`'s `FfiHandshake::take_finished` already uses for
 //! an identical one-shot-transition problem.
 //!
-//! **Not exported this pass:** `MlsMember::from_signer_and_credential` — resuming a specific
-//! member's signing identity within a group across a process restart needs `SignatureKeyPair`/
-//! `CredentialWithKey` to survive that restart too, and this crate has no FFI-safe serialization
-//! for those types yet. `load_group_from_disk` *is* exported (the read path itself is
-//! straightforward — reads a snapshot file, no signer/credential involved in reading it), but
-//! callers should know `FfiMlsMember::new` always generates a **fresh** signing keypair, so
-//! today this cannot actually resume signing as the group's pre-restart member — same honest
-//! limitation `groups.rs`'s own module doc already states, not a new gap introduced here.
-//! Member removal, self-update, and external commits also aren't exported — `groups.rs` doesn't
-//! implement them yet either.
+//! **Now exported (later pass):** [`FfiMlsMember::signer_bytes`] /
+//! [`FfiMlsMember::from_identity_and_signer`] — the FFI-safe serialization for
+//! `SignatureKeyPair` this module used to be missing (`CredentialWithKey` never needed its own
+//! serialization: it's rebuilt deterministically from the app identity + signer's public key,
+//! see `groups.rs`'s `derive_credential_with_key`). Paired with
+//! [`FfiMlsGroupHandle::load_group_from_disk`], a restored group can now actually resume signing
+//! as its pre-restart member, closing the gap this doc comment used to flag.
+//!
+//! **Not exported this pass:** member removal, self-update, and external commits — `groups.rs`
+//! doesn't implement them yet either.
 
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -55,6 +55,22 @@ impl FfiMlsMember {
         }))
     }
 
+    /// Resume a previously-existing member's signing identity after a restart — pass the same
+    /// `identity` used when [`new`](Self::new) first created it, and the signer bytes from
+    /// [`signer_bytes`](Self::signer_bytes) (durably stored by the caller in between, e.g.
+    /// Keystore-wrapped like the app master key/identity). Closes the gap this module's own doc
+    /// has flagged since the MLS export pass: previously `new` always generated a fresh signing
+    /// keypair, so [`FfiMlsGroupHandle::load_group_from_disk`]'s restored group could never
+    /// actually sign as its pre-restart member — it can now, paired with this constructor.
+    #[uniffi::constructor]
+    pub fn from_identity_and_signer(identity: Arc<FfiIdentity>, signer_bytes: Vec<u8>) -> Result<Arc<Self>, FfiError> {
+        let signer = MlsMember::signer_from_bytes(&signer_bytes)?;
+        let member = MlsMember::from_identity_and_signer(identity.inner(), signer);
+        Ok(Arc::new(Self {
+            inner: Mutex::new(Some(member)),
+        }))
+    }
+
     /// This member's `KeyPackage`, wire-serialized, to publish so someone else can add them to
     /// a group via [`FfiMlsGroupHandle::add_member`]. Does not consume — callable repeatedly
     /// (each call builds a fresh `KeyPackage`, per `groups::MlsMember::key_package`).
@@ -67,6 +83,19 @@ impl FfiMlsMember {
             .key_package()?
             .tls_serialize_detached()
             .map_err(|e| FfiError::Group(format!("serializing key package: {e}")))
+    }
+
+    /// Export this member's MLS signing keypair for persistence — **the caller is entirely
+    /// responsible for protecting these bytes at rest** (whoever holds them can sign as this
+    /// member in every group it belongs to), same as `FfiIdentity::toBytes`. Pair with
+    /// [`from_identity_and_signer`](Self::from_identity_and_signer) on the next launch. Does not
+    /// consume — callable repeatedly, same as [`key_package_bytes`](Self::key_package_bytes).
+    pub fn signer_bytes(&self) -> Result<Vec<u8>, FfiError> {
+        let guard = self.inner.lock().expect("lock poisoned");
+        let member = guard
+            .as_ref()
+            .ok_or_else(|| FfiError::InvalidState("FfiMlsMember already used to create/join a group".into()))?;
+        Ok(member.signer_to_bytes()?)
     }
 
     /// Create a brand-new group with this member as its sole, founding member. Consumes.
@@ -86,11 +115,10 @@ impl FfiMlsMember {
         }))
     }
 
-    /// Load a previously [`FfiMlsGroupHandle::snapshot_to_disk`]'d group. Consumes. **Honest
-    /// limitation, matching `groups.rs`'s own module doc:** since [`new`](Self::new) always
-    /// generates a fresh MLS signing keypair, this cannot yet actually resume signing as the
-    /// group's pre-restart member — exposed because the read path is straightforward and
-    /// harmless on its own, not because the restart story is complete end to end.
+    /// Load a previously [`FfiMlsGroupHandle::snapshot_to_disk`]'d group. Consumes. Construct
+    /// `self` via [`from_identity_and_signer`](Self::from_identity_and_signer) (not
+    /// [`new`](Self::new), which always generates a fresh signing keypair) to actually resume
+    /// signing as the group's pre-restart member — see the module doc.
     pub fn load_group_from_disk(
         &self,
         path: String,
@@ -313,5 +341,41 @@ mod tests {
         let alice = FfiMlsMember::new(fresh_identity()).unwrap();
         let alice_group = alice.create_group().unwrap();
         assert!(alice_group.snapshot_to_disk(temp_db_path("badkey"), vec![1u8; 16]).is_err());
+    }
+
+    #[test]
+    fn from_identity_and_signer_resumes_signing_after_a_real_restart_via_ffi() {
+        let path = temp_db_path("signer-restart");
+        let _ = std::fs::remove_file(&path);
+        let master_key = vec![3u8; 32];
+        let alice_identity = fresh_identity();
+
+        let alice = FfiMlsMember::new(alice_identity.clone()).unwrap();
+        let signer_bytes = alice.signer_bytes().unwrap();
+        let alice_group = alice.create_group().unwrap();
+
+        let bob = FfiMlsMember::new(fresh_identity()).unwrap();
+        let bob_key_package = bob.key_package_bytes().unwrap();
+        let output = alice_group.add_member(bob_key_package).unwrap();
+        let bob_group = bob.join_from_welcome(output.welcome_bytes).unwrap();
+
+        let group_id_hex = alice_group.group_id_hex();
+        alice_group.snapshot_to_disk(path.clone(), master_key.clone()).unwrap();
+        drop(alice_group); // simulates the process ending -- no in-memory state survives
+
+        // "Restart": nothing carried over except the original identity and the durably-stored
+        // signer bytes, exactly what a real Android caller would have Keystore-wrapped.
+        let alice_restarted = FfiMlsMember::from_identity_and_signer(alice_identity, signer_bytes).unwrap();
+        let alice_group_restarted = alice_restarted.load_group_from_disk(path.clone(), master_key, group_id_hex).unwrap();
+
+        let sealed = alice_group_restarted.seal(b"signed after a real restart, via ffi".to_vec()).unwrap();
+        assert_eq!(bob_group.open(sealed).unwrap(), b"signed after a real restart, via ffi");
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn from_identity_and_signer_rejects_garbage_signer_bytes() {
+        assert!(FfiMlsMember::from_identity_and_signer(fresh_identity(), b"not a real signer".to_vec()).is_err());
     }
 }
