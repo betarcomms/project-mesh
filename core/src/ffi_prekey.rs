@@ -101,6 +101,28 @@ impl FfiHybridPrekeyPool {
         })
     }
 
+    /// Resume a previously-persisted pool from [`to_bytes`](Self::to_bytes)'s output — the whole
+    /// point being to close the "in-memory only, regenerated every launch" gap this pool had:
+    /// without this, a bundle published in a previous app session could never be answered again
+    /// after a restart.
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Arc<Self>, FfiError> {
+        Ok(Arc::new(Self {
+            inner: Mutex::new(HybridPrekeyPool::from_bytes(&bytes)?),
+        }))
+    }
+
+    /// Export every secret this pool holds for persistence — **the caller is entirely
+    /// responsible for protecting these bytes at rest** (e.g. Keystore-wrapped, matching this
+    /// crate's identity/master-key persistence pattern): this is everything needed to answer a
+    /// hybrid bootstrap sent against this device's currently-published bundle. Callable
+    /// repeatedly — call again after [`top_up`](Self::top_up)/[`rotate_signed_prekey`](Self::rotate_signed_prekey)/
+    /// [`rotate_pq_prekey`](Self::rotate_pq_prekey)/[`respond`](Self::respond) (each of those
+    /// mutates the pool's secrets) and re-persist.
+    pub fn to_bytes(&self) -> Result<Vec<u8>, FfiError> {
+        Ok(self.inner.lock().expect("lock poisoned").to_bytes()?)
+    }
+
     /// The bundle to publish/gossip right now, wire-serialized
     /// (`crypto::pqxdh::HybridBundle::to_bytes`) — ready to hand to `envelope_pack` as a
     /// Broadcast payload per `docs/ROUTING-PROTOCOL.md` §5.1.
@@ -189,6 +211,29 @@ mod tests {
 
         let reply = bob_session.encrypt(b"got it".to_vec()).unwrap();
         assert_eq!(init.session.decrypt(reply).unwrap(), b"got it");
+    }
+
+    #[test]
+    fn pool_persists_across_a_real_restart_and_can_still_respond_via_ffi() {
+        let bob_identity = fresh_identity();
+        let bob_pool = FfiHybridPrekeyPool::new(bob_identity.clone(), 3);
+        let pool_bytes = bob_pool.to_bytes().unwrap();
+        drop(bob_pool); // simulates the process ending -- no in-memory state survives
+
+        let restored_pool = FfiHybridPrekeyPool::from_bytes(pool_bytes).unwrap();
+        assert_eq!(restored_pool.available_count(), 3);
+
+        let bundle = FfiHybridBundle::from_bytes(restored_pool.current_bundle_bytes(bob_identity.clone())).unwrap();
+        let alice = bundle.initiate(fresh_identity()).unwrap();
+        let bob_session = restored_pool.respond(bob_identity, alice.message_to_send).unwrap();
+
+        let sealed = alice.session.encrypt(b"hello after a real ffi restart".to_vec()).unwrap();
+        assert_eq!(bob_session.decrypt(sealed).unwrap(), b"hello after a real ffi restart");
+    }
+
+    #[test]
+    fn pool_from_bytes_rejects_garbage() {
+        assert!(FfiHybridPrekeyPool::from_bytes(b"not a real pool".to_vec()).is_err());
     }
 
     #[test]

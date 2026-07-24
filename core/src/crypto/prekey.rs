@@ -67,6 +67,26 @@ impl SignedPrekey {
     fn secret_copy(&self) -> StaticSecret {
         StaticSecret::from(self.secret.to_bytes())
     }
+
+    /// Export for persistence: `[secret:32][signature:64]`. `public` isn't stored — it's
+    /// deterministically re-derived from `secret` on [`from_bytes`](Self::from_bytes), the same
+    /// "don't persist what's derivable" call this crate already makes elsewhere (e.g. MLS's
+    /// `CredentialWithKey`). **The caller is entirely responsible for protecting these bytes at
+    /// rest** — same as every other raw-key-export in this crate.
+    pub fn to_bytes(&self) -> [u8; 96] {
+        let mut out = [0u8; 96];
+        out[..32].copy_from_slice(&self.secret.to_bytes());
+        out[32..].copy_from_slice(&self.signature.to_bytes());
+        out
+    }
+
+    /// Parse untrusted/previously-persisted wire bytes from [`to_bytes`](Self::to_bytes).
+    pub fn from_bytes(bytes: &[u8; 96]) -> Self {
+        let secret = StaticSecret::from(<[u8; 32]>::try_from(&bytes[..32]).unwrap());
+        let public = XPublicKey::from(&secret);
+        let signature = Signature::from_bytes(bytes[32..96].try_into().unwrap());
+        Self { secret, public, signature }
+    }
 }
 
 /// A single-use X25519 keypair. Each one is meant to be handed out to at most one initiator and
@@ -79,6 +99,19 @@ pub struct OneTimePrekey {
 impl OneTimePrekey {
     pub fn generate() -> Self {
         let secret = StaticSecret::random_from_rng(rand_core::OsRng);
+        let public = XPublicKey::from(&secret);
+        Self { secret, public }
+    }
+
+    /// Export for persistence: just the 32-byte secret — `public` is re-derived on
+    /// [`from_bytes`](Self::from_bytes). Same at-rest-protection caveat as
+    /// [`SignedPrekey::to_bytes`].
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.secret.to_bytes()
+    }
+
+    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
+        let secret = StaticSecret::from(*bytes);
         let public = XPublicKey::from(&secret);
         Self { secret, public }
     }
@@ -342,6 +375,35 @@ impl PrekeyPool {
     pub fn rotate_signed_prekey(&mut self, identity: &Identity) {
         self.signed_prekey = SignedPrekey::generate(identity);
     }
+
+    /// Export the pool's secrets for persistence: `[signed_prekey:96][count:u32][one_time_prekey
+    /// secrets: count * 32]`. **The caller is entirely responsible for protecting these bytes at
+    /// rest** — every secret needed to answer a hybrid bootstrap against this device's currently-
+    /// published bundle is in here.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::with_capacity(96 + 4 + self.available.len() * 32);
+        buf.extend_from_slice(&self.signed_prekey.to_bytes());
+        buf.extend_from_slice(&(self.available.len() as u32).to_le_bytes());
+        for otpk in &self.available {
+            buf.extend_from_slice(&otpk.to_bytes());
+        }
+        buf
+    }
+
+    /// Parse untrusted/previously-persisted wire bytes from [`to_bytes`](Self::to_bytes).
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() < 96 + 4 {
+            return Err(MeshError::Malformed("truncated prekey pool"));
+        }
+        let signed_prekey = SignedPrekey::from_bytes(bytes[..96].try_into().unwrap());
+        let count = u32::from_le_bytes(bytes[96..100].try_into().unwrap()) as usize;
+        let rest = &bytes[100..];
+        if rest.len() != count * 32 {
+            return Err(MeshError::Malformed("prekey pool one-time-prekey count doesn't match remaining bytes"));
+        }
+        let available = rest.chunks_exact(32).map(|chunk| OneTimePrekey::from_bytes(chunk.try_into().unwrap())).collect();
+        Ok(Self { signed_prekey, available })
+    }
 }
 
 /// Bob's ratchet-seeding keypair for [`crate::crypto::ratchet::DoubleRatchet::init_responder`] —
@@ -563,6 +625,63 @@ mod tests {
         pool.consume(&public);
         assert_eq!(pool.available_count(), 0);
         assert!(pool.current_bundle(&bob_identity.public()).one_time_prekey.is_none());
+    }
+
+    #[test]
+    fn signed_prekey_to_bytes_from_bytes_roundtrip_preserves_signature_and_derives_the_same_public() {
+        let bob_identity = Identity::generate();
+        let spk = SignedPrekey::generate(&bob_identity);
+        let restored = SignedPrekey::from_bytes(&spk.to_bytes());
+        assert_eq!(restored.public, spk.public);
+        assert_eq!(restored.signature, spk.signature);
+        assert!(bob_identity.public().verify(restored.public.as_bytes(), &restored.signature));
+    }
+
+    #[test]
+    fn one_time_prekey_to_bytes_from_bytes_roundtrip_derives_the_same_public() {
+        let otpk = OneTimePrekey::generate();
+        let restored = OneTimePrekey::from_bytes(&otpk.to_bytes());
+        assert_eq!(restored.public, otpk.public);
+    }
+
+    #[test]
+    fn prekey_pool_to_bytes_from_bytes_roundtrip_resumes_bootstrapping_after_a_real_restart() {
+        let bob_identity = Identity::generate();
+        let pool = PrekeyPool::new(&bob_identity, 3);
+        let pool_bytes = pool.to_bytes();
+        drop(pool); // simulates the process ending -- no in-memory state survives
+
+        let restored_pool = PrekeyPool::from_bytes(&pool_bytes).unwrap();
+        assert_eq!(restored_pool.available_count(), 3);
+
+        let alice_identity = Identity::generate();
+        let bundle = restored_pool.current_bundle(&bob_identity.public());
+        let init = initiate(&alice_identity, &bundle).unwrap();
+        let mut alice_ratchet = DoubleRatchet::init_initiator(init.shared_secret, bundle.signed_prekey_public);
+        let (header, ciphertext) = alice_ratchet.encrypt(b"hello after a real restart").unwrap();
+
+        let mut restored_pool = restored_pool;
+        let used_otpk = init.used_one_time_prekey.map(|public| restored_pool.consume(&public).unwrap());
+        let bob_secret = respond(
+            &bob_identity,
+            restored_pool.signed_prekey(),
+            used_otpk.as_ref(),
+            &alice_identity.public(),
+            &init.ephemeral_public,
+        );
+        assert_eq!(bob_secret, init.shared_secret);
+        let mut bob_ratchet = DoubleRatchet::init_responder(bob_secret, responder_ratchet_seed(restored_pool.signed_prekey()));
+        assert_eq!(bob_ratchet.decrypt(&header, &ciphertext).unwrap(), b"hello after a real restart");
+    }
+
+    #[test]
+    fn prekey_pool_from_bytes_rejects_truncated_input() {
+        let bob_identity = Identity::generate();
+        let pool = PrekeyPool::new(&bob_identity, 2);
+        let bytes = pool.to_bytes();
+        for cut in [0, 50, 96, 99, bytes.len() - 1] {
+            assert!(PrekeyPool::from_bytes(&bytes[..cut]).is_err());
+        }
     }
 
     #[test]

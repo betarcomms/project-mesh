@@ -21,7 +21,7 @@
 use ed25519_dalek::Signature;
 use hkdf::Hkdf;
 use ml_kem::kem::{Decapsulate, Encapsulate, Kem};
-use ml_kem::{Ciphertext, Key as MlKemKey, KeyExport, MlKem1024};
+use ml_kem::{Ciphertext, Key as MlKemKey, KeyExport, MlKem1024, Seed as MlKemSeed};
 use sha2::Sha256;
 
 use crate::crypto::prekey::{self, OneTimePrekey, PrekeyBundle, PrekeyPool, SignedPrekey};
@@ -44,6 +44,36 @@ impl PqPrekey {
         let (decapsulation_key, encapsulation_key) = MlKem1024::generate_keypair_from_rng(&mut rand::rng());
         let signature = identity.sign(&encapsulation_key.to_bytes());
         Self { decapsulation_key, encapsulation_key, signature }
+    }
+
+    /// Export for persistence: `[seed:64][signature:64]`. The encapsulation key isn't stored —
+    /// it's deterministically re-derived from the seed on [`from_bytes`](Self::from_bytes), same
+    /// "don't persist what's derivable" call this crate already makes for MLS's
+    /// `CredentialWithKey` (`groups.rs`'s `derive_credential_with_key`). **The caller is entirely
+    /// responsible for protecting these bytes at rest** — the seed reconstructs this device's PQ
+    /// decapsulation key, i.e. whoever holds it can decrypt every hybrid bootstrap sent against
+    /// the matching published bundle.
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let seed = self
+            .decapsulation_key
+            .to_seed()
+            .ok_or(MeshError::Crypto("PQ prekey has no exportable seed (not created via generate)"))?;
+        let mut buf = Vec::with_capacity(64 + 64);
+        buf.extend_from_slice(seed.as_slice());
+        buf.extend_from_slice(&self.signature.to_bytes());
+        Ok(buf)
+    }
+
+    /// Parse untrusted/previously-persisted wire bytes from [`to_bytes`](Self::to_bytes).
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() != 128 {
+            return Err(MeshError::Malformed("PQ prekey bytes must be exactly 128 bytes"));
+        }
+        let seed = MlKemSeed::try_from(&bytes[..64]).map_err(|_| MeshError::Malformed("invalid PQ prekey seed length"))?;
+        let decapsulation_key = DecapsulationKey::from_seed(seed);
+        let encapsulation_key = decapsulation_key.encapsulation_key().clone();
+        let signature = Signature::from_bytes(bytes[64..128].try_into().unwrap());
+        Ok(Self { decapsulation_key, encapsulation_key, signature })
     }
 }
 
@@ -199,6 +229,37 @@ impl HybridPrekeyPool {
             self.classical.current_one_time_prekey(),
             &self.pq_prekey,
         )
+    }
+
+    /// Export every secret this pool holds for persistence: `[classical_len:u32][classical_bytes]
+    /// [pq_prekey_bytes:128]`. **The caller is entirely responsible for protecting these bytes at
+    /// rest** — this is everything needed to answer a hybrid bootstrap sent against this device's
+    /// currently-published bundle (e.g. Keystore-wrapped, matching this crate's identity/master-key
+    /// persistence pattern).
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let classical = self.classical.to_bytes();
+        let pq = self.pq_prekey.to_bytes()?;
+        let mut buf = Vec::with_capacity(4 + classical.len() + pq.len());
+        buf.extend_from_slice(&(classical.len() as u32).to_le_bytes());
+        buf.extend_from_slice(&classical);
+        buf.extend_from_slice(&pq);
+        Ok(buf)
+    }
+
+    /// Parse untrusted/previously-persisted wire bytes from [`to_bytes`](Self::to_bytes).
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        if bytes.len() < 4 {
+            return Err(MeshError::Malformed("truncated hybrid prekey pool"));
+        }
+        let classical_len = u32::from_le_bytes(bytes[..4].try_into().unwrap()) as usize;
+        let rest = &bytes[4..];
+        if rest.len() < classical_len {
+            return Err(MeshError::Malformed("truncated hybrid prekey pool"));
+        }
+        let (classical_bytes, pq_bytes) = rest.split_at(classical_len);
+        let classical = PrekeyPool::from_bytes(classical_bytes)?;
+        let pq_prekey = PqPrekey::from_bytes(pq_bytes)?;
+        Ok(Self { classical, pq_prekey })
     }
 }
 
@@ -546,6 +607,69 @@ mod tests {
         let bytes = pack_initiation_message(&alice_identity.public(), &init);
         for cut in [0, 10, 64, 95, bytes.len() - 1] {
             assert!(unpack_initiation_message(&bytes[..cut]).is_err());
+        }
+    }
+
+    #[test]
+    fn pq_prekey_to_bytes_from_bytes_roundtrip_decapsulates_the_same_way() {
+        let bob_identity = Identity::generate();
+        let pq = PqPrekey::generate(&bob_identity);
+        let restored = PqPrekey::from_bytes(&pq.to_bytes().unwrap()).unwrap();
+
+        assert_eq!(restored.encapsulation_key, pq.encapsulation_key);
+        assert_eq!(restored.signature, pq.signature);
+
+        // Prove the restored decapsulation key actually still works, not just that the public
+        // encapsulation key matches.
+        let (ciphertext, shared_secret) = pq.encapsulation_key.encapsulate_with_rng(&mut rand::rng());
+        assert_eq!(restored.decapsulation_key.decapsulate(&ciphertext), shared_secret);
+    }
+
+    #[test]
+    fn pq_prekey_from_bytes_rejects_wrong_length() {
+        assert!(PqPrekey::from_bytes(&[0u8; 127]).is_err());
+        assert!(PqPrekey::from_bytes(&[0u8; 129]).is_err());
+    }
+
+    #[test]
+    fn hybrid_prekey_pool_to_bytes_from_bytes_roundtrip_resumes_bootstrapping_after_a_real_restart() {
+        let bob_identity = Identity::generate();
+        let pool = HybridPrekeyPool::new(&bob_identity, 3);
+        let pool_bytes = pool.to_bytes().unwrap();
+        drop(pool); // simulates the process ending -- no in-memory state survives
+
+        let mut restored_pool = HybridPrekeyPool::from_bytes(&pool_bytes).unwrap();
+        assert_eq!(restored_pool.available_count(), 3);
+
+        let alice_identity = Identity::generate();
+        let bundle = restored_pool.current_bundle(&bob_identity.public());
+        let init = initiate(&alice_identity, &bundle).unwrap();
+        let mut alice_ratchet = DoubleRatchet::init_initiator(init.shared_secret, bundle.classical.signed_prekey_public);
+        let (header, ciphertext) = alice_ratchet.encrypt(b"hello via a restored hybrid pool").unwrap();
+
+        let used_otpk = init.used_one_time_prekey.map(|public| restored_pool.consume(&public).unwrap());
+        let bob_secret = respond(
+            &bob_identity,
+            restored_pool.classical().signed_prekey(),
+            restored_pool.pq_prekey(),
+            used_otpk.as_ref(),
+            &alice_identity.public(),
+            &init.ephemeral_public,
+            &init.pq_ciphertext,
+        );
+        assert_eq!(bob_secret, init.shared_secret);
+        let mut bob_ratchet =
+            DoubleRatchet::init_responder(bob_secret, prekey::responder_ratchet_seed(restored_pool.classical().signed_prekey()));
+        assert_eq!(bob_ratchet.decrypt(&header, &ciphertext).unwrap(), b"hello via a restored hybrid pool");
+    }
+
+    #[test]
+    fn hybrid_prekey_pool_from_bytes_rejects_truncated_input() {
+        let bob_identity = Identity::generate();
+        let pool = HybridPrekeyPool::new(&bob_identity, 1);
+        let bytes = pool.to_bytes().unwrap();
+        for cut in [0, 2, 4, bytes.len() / 2, bytes.len() - 1] {
+            assert!(HybridPrekeyPool::from_bytes(&bytes[..cut]).is_err());
         }
     }
 

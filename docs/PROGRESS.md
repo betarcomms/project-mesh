@@ -1687,3 +1687,36 @@ commit, tests, and (where Android-side) an `assembleDebug` rebuild against a fre
   explicit decision on how to add it rather than just doing it); no release signing configured;
   cross-machine/cross-OS reproducibility untested (only one machine available here); only the
   Rust `.so` was checked, not the full packaged APK. Full list in `REPRODUCIBLE-BUILD.md` §4.
+
+## 2026-07-25 — Closing remaining Phase 1 loose ends ahead of a GitHub release: LICENSE, rust-toolchain.toml, prekey pool and MLS group persistence
+
+Ahead of cutting a GitHub release, closed the loose ends that were actually closeable this
+session (leaving translation work and the real F-Droid submission for later, per explicit
+instruction).
+
+- **`LICENSE` added** (AGPL-3.0-or-later, canonical text from gnu.org) and **`rust-toolchain.toml`
+  pinned** to 1.96.0 (verified: `rustup` resolves it exactly) — both flagged as gaps in the
+  previous F-Droid pass, now closed.
+- **`HybridPrekeyPool` persists across restarts.** Added `SignedPrekey`/`OneTimePrekey`/
+  `PrekeyPool::to_bytes`/`from_bytes` (classical secrets) and `PqPrekey::to_bytes`/`from_bytes`
+  (via `ml-kem`'s `DecapsulationKey::to_seed`/`from_seed` — verified with a real
+  encapsulate-then-decapsulate round trip against the restored key, not just a byte-length check),
+  composed into `HybridPrekeyPool::to_bytes`/`from_bytes`. Exported as
+  `FfiHybridPrekeyPool::toBytes`/`fromBytes`, Keystore-wrapped in `DirectMessaging.kt` and
+  re-persisted after every mutating call. A bundle published in a previous app session can now
+  actually be answered after a restart — closes the gap flagged the moment this pool was built.
+  10 new Rust tests, 2 new FFI-layer tests.
+- **MLS group persistence wired into `GroupMessaging.kt`.** Each `createGroup`/`joinFromWelcome`
+  call makes a *distinct* MLS signer (not one shared per app identity) — captured and
+  Keystore-wrapped before the consuming call, snapshotted (AEAD-sealed, keyed by the app's shared
+  master key) after every state-advancing operation: creation, `addMember`, `processCommit`,
+  `send`, and receiving a post. Restored in `GroupMessenger.init` via
+  `FfiMlsMember::fromIdentityAndSigner` + `FfiMlsGroupHandle::loadGroupFromDisk`; a group that
+  fails to restore is logged and skipped, not fatal to the others. Uses the FFI primitives the
+  MLS-signer-export pass added but never wired to a caller.
+- 191 core tests passing overall (up from 181). `jniLibs/` rebuilt via `cargo ndk` and
+  `./gradlew assembleDebug` reconfirmed against both new bits of FFI surface.
+- Deliberately not attempted this pass: localization/translations, the actual F-Droid submission,
+  leave/forget-channel and leave-group/member-removal UI (needs new MLS self-update/
+  external-commit Rust work, not just UI wiring), QR-code trust establishment, and physical/
+  two-device hardware verification — all stated honestly as out of scope, not silently skipped.
