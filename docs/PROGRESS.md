@@ -1544,3 +1544,58 @@ guessing from the Rust source — paid off immediately, no compiler-error/fix cy
   self-update UI (the underlying `groups.rs` doesn't support them yet either); no QR-code exchange.
 - `docs/IMPLEMENTATION-STATUS.md`'s Messaging UI row updated to reflect all four modes and the
   exact verification boundary for Group specifically, not rounded up to "done."
+
+## 2026-07-24 — Identity, Direct contact, and Channel persistence: the biggest gap from this session's own product demo, closed
+
+- The Channel-messaging-demo artifact built earlier this session named identity non-persistence as
+  the single biggest practical gap in the app's on-boarding story: every process restart generated
+  a brand-new identity, silently orphaning every Direct contact. Closed this pass.
+- **Real prerequisite found and built first:** no persistence primitive existed for `Identity` at
+  all — not in `core/src/identity.rs`, not over UniFFI. Added `Identity::to_bytes`/`from_bytes`
+  (`[signing_seed:32][agreement_scalar:32]`, doc comment explicit that protecting these bytes at
+  rest is entirely the caller's job) and `FfiIdentity::toBytes`/`fromBytes` over UniFFI. 3 new
+  `identity.rs` tests (roundtrip preserves fingerprint *and* signing capability, not just the
+  public fingerprint; 64-byte determinism; different identities export different bytes), 2 new
+  `ffi.rs` tests (FFI-layer roundtrip, wrong-length rejection). 151 core tests passing (5 new).
+  Kotlin bindings regenerated (6,833 → 6,900 lines), all 3 Android ABIs rebuilt.
+- **Refactored rather than duplicated:** `KeystoreMasterKey.kt`'s AES-GCM wrap/unwrap logic was
+  extracted into a new generic `KeystoreSecretBox.kt` (encrypt/decrypt an arbitrary byte secret
+  under a caller-chosen Keystore alias) the moment a second real caller (identity) needed the
+  identical pattern — same "share the primitive once a second call site exists" call this project
+  already made for `crypto::padding` and `crypto::passphrase`. `KeystoreMasterKey.kt` now
+  delegates to it; new `KeystoreIdentityStore.kt` uses it for the 64-byte identity.
+  `MeshApplication.kt`'s `identity` property changed from `FfiIdentity.generate()` to
+  `KeystoreIdentityStore.loadOrCreate(this)`.
+- **Channel session persistence** (`ChannelMessaging.kt`): the list of joined passphrases is
+  Keystore-wrapped (same `KeystoreSecretBox`, variable-length this time — `unwrap` gained an
+  optional `expectedLength` parameter, `null` meaning "no fixed-size check," since the two
+  existing callers need an exact-length check but a passphrase list doesn't have one) and
+  reloaded on construction, re-deriving each `FfiChannel` fresh via `fromPassphrase` — cheap and
+  deterministic, so there's nothing to persist beyond the passphrase text itself. **Message
+  history still doesn't persist** — only which channels you'd joined, not their posts, stated
+  plainly rather than folded into "channels persist now."
+- **Direct contact list persistence** (`DirectMessaging.kt`): fingerprints saved to plain
+  `SharedPreferences`, deliberately *not* through `KeystoreSecretBox` — a fingerprint is a public
+  value (already meant to be read aloud/shared), so there's no confidentiality property to
+  protect, and adding encryption where there's nothing secret would be more mechanism than the
+  problem needs. **The live ratchet session itself still doesn't persist** — a restored contact
+  starts at `NO_SESSION` and needs a fresh Noise handshake next contact window. Stated explicitly
+  as a separate, larger, deliberately-not-attempted task: ratchet state is forward-secret key
+  material, and serializing it to disk is a real security design question (What's the at-rest
+  protection? Does persisting skipped-message keys change the forward-secrecy story?), not
+  something to bolt on as a side effect of a contact-list persistence pass.
+- **Group persistence deliberately not attempted, stated plainly rather than silently skipped:**
+  `FfiMlsGroupHandle::snapshotToDisk`/`FfiMlsMember::loadGroupFromDisk` already exist from the MLS
+  export pass, but `FfiMlsMember::new` always generates a fresh signing keypair — a loaded group
+  couldn't actually resume signing as its pre-restart member. Wiring a "Group persists!" UI on top
+  of a foundation already known not to fully work would misrepresent it, not just leave a gap.
+- **Verified on a real emulator across a full `force-stop` + relaunch cycle, all three
+  independently confirmed via `uiautomator dump` (not screenshots/eyeballing):** identity
+  fingerprint byte-for-byte identical before and after (`335fbbe2...`); a joined channel
+  (`supply-drop-9`) reappeared with the *same* selector prefix, proving deterministic
+  re-derivation rather than a fresh/different channel; an added Direct contact
+  (`aaaaaaaa...`) reappeared at its prior status. Logcat clean of `FATAL`/exceptions throughout.
+- `docs/IMPLEMENTATION-STATUS.md` updated: Identity row (new tests), UniFFI bindings row (test
+  count), the Keystore row (renamed/expanded to cover the new `KeystoreSecretBox` design and both
+  new consumers), and the Messaging UI row (persistence now real for three of four modes, with the
+  exact boundary of what still doesn't persist stated per mode, not rounded up).

@@ -34,6 +34,37 @@ impl Identity {
         Self { signing, agreement }
     }
 
+    /// Export the raw key material for persistence — `[signing_seed:32][agreement_scalar:32]`.
+    /// **The caller is entirely responsible for protecting these bytes at rest** (this is the
+    /// device's long-term identity; anyone who obtains them can impersonate it indefinitely).
+    /// This module does not encrypt, store, or transmit them — that's a native-layer job (e.g.
+    /// Android Keystore-wrapped, matching `MeshCoordinator`'s master-key pattern), same division
+    /// of responsibility `docs/CRYPTOGRAPHY.md` §8 already draws for the at-rest master key.
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut out = [0u8; 64];
+        out[..32].copy_from_slice(self.signing.to_bytes().as_slice());
+        out[32..].copy_from_slice(&self.agreement.to_bytes());
+        out
+    }
+
+    /// Reconstruct an identity from bytes previously produced by [`to_bytes`](Self::to_bytes).
+    /// Any 32-byte value is a structurally valid X25519 scalar and Ed25519 seed, so this cannot
+    /// reject "wrong" bytes by format alone — a caller handing back corrupted or unrelated bytes
+    /// gets a *different*, internally self-consistent identity, not an error. The only real
+    /// integrity check available is comparing the resulting fingerprint against one already
+    /// known/expected, which is the caller's job (e.g. comparing against a previously-displayed
+    /// fingerprint after a restore), not this function's.
+    pub fn from_bytes(bytes: &[u8; 64]) -> Self {
+        let mut signing_seed = [0u8; 32];
+        signing_seed.copy_from_slice(&bytes[..32]);
+        let mut agreement_bytes = [0u8; 32];
+        agreement_bytes.copy_from_slice(&bytes[32..]);
+        Self {
+            signing: SigningKey::from_bytes(&signing_seed),
+            agreement: StaticSecret::from(agreement_bytes),
+        }
+    }
+
     pub fn public(&self) -> PublicIdentity {
         PublicIdentity {
             verifying: self.signing.verifying_key(),
@@ -103,6 +134,38 @@ mod tests {
         let pub1 = id.public();
         let pub2 = id.public();
         assert_eq!(pub1.fingerprint(), pub2.fingerprint());
+    }
+
+    #[test]
+    fn to_bytes_from_bytes_roundtrip_preserves_fingerprint_and_signing() {
+        let original = Identity::generate();
+        let fingerprint_before = original.public().fingerprint();
+        let bytes = original.to_bytes();
+
+        let restored = Identity::from_bytes(&bytes);
+        assert_eq!(restored.public().fingerprint(), fingerprint_before);
+
+        // The restored identity signs exactly as the original would have.
+        let msg = b"restored after a restart";
+        let sig = restored.sign(msg);
+        assert!(restored.public().verify(msg, &sig));
+        assert!(original.public().verify(msg, &sig)); // same key, so original's own verify agrees too
+    }
+
+    #[test]
+    fn to_bytes_is_exactly_64_bytes_and_deterministic_for_the_same_identity() {
+        let id = Identity::generate();
+        let a = id.to_bytes();
+        let b = id.to_bytes();
+        assert_eq!(a.len(), 64);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn different_identities_export_different_bytes() {
+        let a = Identity::generate();
+        let b = Identity::generate();
+        assert_ne!(a.to_bytes(), b.to_bytes());
     }
 
     #[test]

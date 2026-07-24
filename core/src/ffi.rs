@@ -77,14 +77,42 @@ pub struct FfiIdentity {
 
 #[uniffi::export]
 impl FfiIdentity {
-    /// Generate a fresh identity from the platform CSPRNG. Call once, at first launch, and
-    /// persist the result (persistence is not yet implemented — see
-    /// `docs/IMPLEMENTATION-STATUS.md`; today, callers must hold onto the returned handle).
+    /// Generate a fresh identity from the platform CSPRNG. Call once, at first launch; persist
+    /// the result via [`to_bytes`](Self::to_bytes) and restore future launches via
+    /// [`from_bytes`](Self::from_bytes) rather than generating a new one every time.
     #[uniffi::constructor]
     pub fn generate() -> Arc<Self> {
         Arc::new(Self {
             inner: CoreIdentity::generate(),
         })
+    }
+
+    /// Reconstruct a previously-generated identity from [`to_bytes`](Self::to_bytes)'s output.
+    /// `bytes` must be exactly 64 bytes (`[signing_seed:32][agreement_scalar:32]`) — anything
+    /// else is rejected structurally, but 64 bytes that didn't actually come from `to_bytes`
+    /// produce a different, internally-consistent identity rather than an error (see
+    /// `crate::identity::Identity::from_bytes`'s doc comment for why that's the best this layer
+    /// can do without an expected fingerprint to compare against).
+    #[uniffi::constructor]
+    pub fn from_bytes(bytes: Vec<u8>) -> Result<Arc<Self>, FfiError> {
+        if bytes.len() != 64 {
+            return Err(FfiError::Malformed("identity bytes must be exactly 64 bytes".into()));
+        }
+        let mut arr = [0u8; 64];
+        arr.copy_from_slice(&bytes);
+        Ok(Arc::new(Self {
+            inner: CoreIdentity::from_bytes(&arr),
+        }))
+    }
+
+    /// Export this identity's raw key material for the native layer to persist (e.g.
+    /// Android-Keystore-wrapped, matching `MeshCoordinator`'s master-key pattern) and hand back
+    /// to [`from_bytes`](Self::from_bytes) on the next launch. **The caller is entirely
+    /// responsible for protecting these bytes at rest** — this is the device's long-term
+    /// identity; whoever holds these bytes can impersonate it indefinitely. This module does not
+    /// encrypt, store, or transmit them itself.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.inner.to_bytes().to_vec()
     }
 
     /// Full 64-hex-character fingerprint — the canonical identity value.
@@ -627,6 +655,24 @@ mod tests {
         let a = FfiIdentity::generate();
         let b = FfiIdentity::generate();
         assert_ne!(a.fingerprint_hex(), b.fingerprint_hex());
+    }
+
+    #[test]
+    fn identity_to_bytes_from_bytes_roundtrip_via_ffi() {
+        let original = FfiIdentity::generate();
+        let fingerprint_before = original.fingerprint_hex();
+        let bytes = original.to_bytes();
+        assert_eq!(bytes.len(), 64);
+
+        let restored = FfiIdentity::from_bytes(bytes).unwrap();
+        assert_eq!(restored.fingerprint_hex(), fingerprint_before);
+        assert_eq!(restored.safety_string(), original.safety_string());
+    }
+
+    #[test]
+    fn identity_from_bytes_rejects_wrong_length() {
+        assert!(FfiIdentity::from_bytes(vec![0u8; 32]).is_err());
+        assert!(FfiIdentity::from_bytes(vec![0u8; 65]).is_err());
     }
 
     #[test]
