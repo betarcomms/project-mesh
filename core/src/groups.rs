@@ -355,7 +355,15 @@ fn decode_kv_pairs(buf: &[u8]) -> Result<Vec<(Vec<u8>, Vec<u8>)>> {
 
     let mut cursor = buf;
     let count = read_u32(&mut cursor)? as usize;
-    let mut out = Vec::with_capacity(count);
+    // Deliberately not `Vec::with_capacity(count)`: `count` is an untrusted u32 read straight
+    // from the snapshot file, before any of it has been validated against the buffer's actual
+    // size -- a corrupt or maliciously crafted snapshot claiming a huge count would otherwise
+    // trigger an eager multi-gigabyte allocation attempt (crash/DoS) before the per-entry length
+    // checks below get a chance to reject it. `push` in the loop grows the vec incrementally,
+    // and each iteration already requires real bytes to be present in `cursor` or returns `Err`
+    // (truncated snapshot) -- so growth is naturally bounded by the buffer's actual size, not by
+    // the attacker-controlled `count` field.
+    let mut out = Vec::new();
     for _ in 0..count {
         let klen = read_u32(&mut cursor)? as usize;
         if cursor.len() < klen {
@@ -384,6 +392,32 @@ pub struct AddMemberOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Regression test for a real finding from a repo-wide error-hardening pass: `decode_kv_pairs`
+    /// used to call `Vec::with_capacity(count)` on `count` before validating it against the
+    /// buffer's actual size -- a corrupt/malicious snapshot claiming a huge `count` with a tiny
+    /// buffer would attempt a multi-gigabyte allocation (crash/DoS) before the per-entry length
+    /// checks ever ran. This proves the fix: a huge claimed count with an undersized buffer
+    /// returns a clean `Err`, not a panic or hang.
+    #[test]
+    fn decode_kv_pairs_rejects_huge_count_with_undersized_buffer_without_panicking() {
+        let mut malicious = Vec::new();
+        malicious.extend_from_slice(&u32::MAX.to_le_bytes()); // claims ~4 billion entries
+        malicious.extend_from_slice(&[0u8; 4]); // then nowhere near enough real data to back that up
+        assert!(decode_kv_pairs(&malicious).is_err());
+    }
+
+    #[test]
+    fn decode_kv_pairs_roundtrips_with_encode_kv_pairs() {
+        let entries = vec![
+            (b"key-one".to_vec(), b"value-one".to_vec()),
+            (Vec::new(), b"empty-key-nonempty-value".to_vec()),
+            (b"empty-value".to_vec(), Vec::new()),
+        ];
+        let encoded = encode_kv_pairs(&entries);
+        let decoded = decode_kv_pairs(&encoded).unwrap();
+        assert_eq!(decoded, entries);
+    }
 
     #[test]
     fn create_group_and_send_application_message_to_self() {

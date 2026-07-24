@@ -1209,3 +1209,82 @@ Newest entry at the bottom (chronological), each dated.
   its own pass" pattern (the same split BLE's transport callback interface and the mesh engine
   loop both went through before). `IMPLEMENTATION-STATUS.md`'s Messaging UI row and Channels row
   both updated to reflect exactly this split, not silently left stale.
+
+## 2026-07-24 — Full codebase-vs-docs audit; work order set for the rest of Phase 1 plus onion routing
+
+- Before starting the next feature batch, ran a dedicated audit (background agent, not the main
+  session) checking whether `IMPLEMENTATION-STATUS.md`/`PROGRESS.md` actually match the real repo
+  — fresh `cargo test --release` (122 passed, matches the docs), fresh `./gradlew clean
+  assembleDebug` (succeeds independent of any cached state), every ✅ row's cited file spot-checked
+  for genuine content (not just existence — confirmed `groups.rs` really calls into `openmls`,
+  `pqxdh.rs` really uses `ml-kem`, `persistence.rs` really uses `redb` not SQLCipher as flagged),
+  every 🚧/⬜ "not done" claim re-verified still true (padding primitive still has zero call sites
+  outside its own module, no prekey pool manager exists anywhere, no MLS UniFFI export, no Android
+  Keystore reference anywhere in the Kotlin tree), and a check for undocumented drift in the other
+  direction (none found — the only unreferenced files are boilerplate: `error.rs`, `lib.rs`,
+  `MeshApplication.kt`).
+- **Result: docs are honest and accurate.** Only two stale numbers found, both cosmetic count
+  drift from later sessions adding tests to a file without back-filling that file's row: envelope
+  wire format's test count (row said 6, `envelope.rs` actually has 7 — the
+  `id_is_stable_across_ttl_decrement_at_each_relay_hop` regression test from the mesh-engine-loop
+  session was never back-filled into this row) and the store-carry-forward engine's count (row
+  said 7, `engine.rs` actually has 9 — 2 tests added during the Bloom-filter session, same
+  back-fill miss). Both fixed in this doc. No code changes needed — every described capability was
+  genuinely present.
+- **Set the work order for the rest of this session with the user, given the growing scope:**
+  (A) this audit — done; (B) a dedicated repo-wide error-hardening pass (Rust + Kotlin) hunting
+  panics/unwraps/unchecked-overflow/unhandled-disconnect across *all* existing code, including
+  modules from earlier sessions this one hasn't touched (BLE driver, relay engine, persistence),
+  not just new code going forward; (C) the remaining Phase 1 punch list one item at a time —
+  Channel messaging UI, MLS UniFFI export, Android Keystore master key, prekey pool manager,
+  prekey bundle transport decision, wiring the padding primitive into a real sealing call site,
+  offline maps; (D) Sphinx onion routing as its own dedicated pass after (C), explicitly scoped by
+  the user as a **fallback mechanism** (engaged only when internet-connected or a
+  connection/identity is exposed/revealed), not the default offline mesh path — and, matching this
+  project's MLS precedent, the hand-roll-vs-library decision for it gets surfaced to the user
+  before any Sphinx code is written, not chosen silently.
+
+## 2026-07-24 — Repo-wide error-hardening pass: one real allocation-DoS bug found and fixed
+
+- Ran the (B) pass agreed above: a dedicated background hunt across every Rust and Kotlin file for
+  reachable panics/unwraps/unbounded-allocation-from-untrusted-length/unhandled-disconnect —
+  find-only, no edits, so the fix could be reviewed and applied by hand with full test
+  verification rather than trusting unsupervised edits to security-critical crypto/routing code.
+- **Real finding, fixed:** `core/src/groups.rs`'s `decode_kv_pairs` (used by
+  `MlsGroupHandle::load_group_from_disk` to parse the raw `(key, value)` entries out of an
+  AEAD-opened MLS group snapshot) called `Vec::with_capacity(count)` where `count` is a raw `u32`
+  read directly off the snapshot bytes, **before** validating it against the buffer's actual
+  size. Per-entry `klen`/`vlen` fields inside the loop were already correctly bounds-checked
+  against remaining buffer length — only the outer `count` wasn't. Not remotely exploitable today
+  (the snapshot file is AEAD-sealed, so a network attacker can't reach this without the master
+  key first) — but the master key currently lives in plain `SharedPreferences`, not Keystore
+  (already flagged elsewhere), so anyone with local storage access (rooted device, backup
+  extraction, an adjacent vuln) could plant a snapshot claiming `count` near `u32::MAX` and crash
+  or OOM the app the next time it loads its own MLS group state. Fixed by dropping
+  `with_capacity` in favor of a plain `Vec::new()` — `push` inside the loop grows it
+  incrementally, and each iteration already requires real bytes to be present or returns `Err`,
+  so growth is naturally bounded by the buffer's actual size rather than by the untrusted `count`
+  field. 2 new tests: a regression test feeding `decode_kv_pairs` a `u32::MAX` claimed count with
+  a 4-byte buffer (confirms `Err`, not a panic or OOM attempt), and an `encode`/`decode`
+  round-trip test (including empty-key and empty-value entries) that happened not to exist before
+  despite `encode_kv_pairs` having its own doc comment describing the wire format.
+- **Minor, fixed for defensive style, not because it was reachable today:**
+  `messaging/DirectMessaging.kt`'s `handleHandshakeFrame` had two `contact.handshake!!` force
+  unwraps. Provably safe today (mutually exclusive with the preceding `== null` branch, and the
+  whole function is wrapped in `try/catch` anyway), but replaced with an explicit
+  `?: throw IllegalStateException(...)` guard so a future edit that broke that invariant would
+  still log-and-drop via the existing catch rather than depend on the force-unwrap continuing to
+  be safe by construction.
+- **Everything else checked and confirmed already solid, not re-flagged:** `envelope.rs`,
+  `relay.rs`'s `ContactMessage::from_bytes`, and `bloom.rs`'s wire parsing all bounds-check
+  length/count fields before indexing or allocating, matching their existing
+  malformed/truncated-input test coverage. `ratchet.rs`'s skipped-message-key store is bounded
+  (`MAX_SKIP = 1000`, checked before insert). `SocketFraming.kt::readFrame` does validate against
+  `WifiDirectConfig.MAX_FRAME_SIZE` before allocating — confirmed by reading, not assumed.
+  `ble/Fragmentation.kt`'s `Reassembler` bounds-checks fragment length before slicing.
+  `MultiTransport.kt::send` fails closed on an unknown peer handle rather than crashing.
+  `prekey.rs`/`pqxdh.rs`/`puzzle.rs` have no unwraps reachable from untrusted input.
+- 124 tests passing (2 new). `./gradlew assembleDebug` → `BUILD SUCCESSFUL`. Neither fix touched
+  the UniFFI-exported surface (`decode_kv_pairs` is `groups.rs`-internal, not itself exported yet;
+  `DirectMessaging.kt`'s change is Kotlin-only), so no cdylib rebuild / Kotlin binding
+  regeneration / Android cross-compile was needed this time.
