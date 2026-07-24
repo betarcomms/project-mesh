@@ -1600,7 +1600,7 @@ guessing from the Rust source — paid off immediately, no compiler-error/fix cy
   new consumers), and the Messaging UI row (persistence now real for three of four modes, with the
   exact boundary of what still doesn't persist stated per mode, not rounded up).
 
-## 2026-07-25 — Rest-of-Phase-1 punch list: padding wiring, PQXDH export, prekey bundle transport, MLS signer export, DTN sim harness
+## 2026-07-25 — Rest-of-Phase-1 punch list: padding wiring, PQXDH export, prekey bundle transport, MLS signer export, DTN sim harness, wire-parser fuzzing
 
 Worked the remaining real Phase 1 gaps (as opposed to the hardware/data gaps this dev environment
 genuinely can't close — physical BLE hardware, real OSM tile packs) in order, each with its own
@@ -1661,3 +1661,17 @@ commit, tests, and (where Android-side) an `assembleDebug` rebuild against a fre
   - 5 sim-harness tests (linear multi-hop chain, an irrelevant early contact causing no harm,
     partition-then-heal via a single bridge contact, TTL exhaustion, and no-path non-delivery).
   - 181 core tests passing overall (up from 155 at the start of this pass).
+- **Wire-parser fuzzing harness set up** (`core/fuzz/`, 6 `cargo-fuzz` targets covering every
+  untrusted-bytes-in parser: envelope, Bloom filter, contact message, both prekey bundle formats,
+  the hybrid initiation message). Installed a nightly toolchain + `cargo-fuzz` fresh for this.
+  Source confirmed correct via a plain `cargo check`. **Cannot actually run `cargo fuzz run` on
+  this Windows/MSVC dev box** — a real linker conflict, not a fuzzing find: `mesh-core`'s `cdylib`
+  crate-type (needed for Android) gets built as a side effect of the fuzz binary's dependency on
+  it, and MSVC's linker rejects that spurious `cdylib` output for missing sanitizer/coverage
+  runtime symbols (tried both `-s address` and `-s none`, confirmed via the actual linker errors
+  both times — `unresolved external symbol main`, then `unresolved external symbol
+  __sanitizer_cov_pcs_init`). Windows/MSVC-specific; not expected to reproduce on Linux. The real
+  fix (split `mesh-core` into a pure-`rlib` crate plus a thin `cdylib`-only Android wrapper) is a
+  real architectural change out of scope for adding a fuzzing harness, and risks the
+  already-verified Android build pipeline — not attempted. Full detail in `core/fuzz/README.md`.
+  Needs a Linux/macOS machine or CI runner to actually execute.

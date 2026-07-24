@@ -1,0 +1,58 @@
+[package]
+name = "mesh-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.mesh-core]
+path = ".."
+
+[[bin]]
+name = "envelope_from_bytes"
+path = "fuzz_targets/envelope_from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bloom_filter_from_bytes"
+path = "fuzz_targets/bloom_filter_from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "contact_message_from_bytes"
+path = "fuzz_targets/contact_message_from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "prekey_bundle_from_bytes"
+path = "fuzz_targets/prekey_bundle_from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hybrid_bundle_from_bytes"
+path = "fuzz_targets/hybrid_bundle_from_bytes.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "unpack_initiation_message"
+path = "fuzz_targets/unpack_initiation_message.rs"
+test = false
+doc = false
+bench = false
