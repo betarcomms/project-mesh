@@ -1117,3 +1117,54 @@ Newest entry at the bottom (chronological), each dated.
   discovery runs independently), no short-lived connect/exchange/disconnect cycle, no
   backoff/fairness for dense crowds, no foreground-service integration, no Wi-Fi-disabled recovery
   flow.
+
+## 2026-07-24 — Wi-Fi Direct wired into `MeshCoordinator`; `--`-in-XML-comment bug fixed at the source
+
+- Closed the gap from the previous entry: `FfiMeshNode` takes exactly one `FfiMeshTransport` at
+  construction, and `BleTransportDriver`/`WifiDirectTransportDriver` each number their own peers
+  independently starting at 1 (`BlePeerRegistry`/`WifiPeerRegistry` are transport-local) — handing
+  both straight to the node would collide. New `android/app/src/main/java/india/projectmesh/app/MultiTransport.kt`:
+  implements `FfiMeshTransport` itself, sets itself as *both* drivers' `MeshEventSink`, and remaps
+  each `(link, localHandle)` pair into one global `ULong` on the way in (`onPeerConnected`/
+  `onFrame`/`onPeerLost`), reversing the lookup in `send()` on the way out. `start()` starts BLE
+  unconditionally and Wi-Fi Direct best-effort — a device with no Wi-Fi Direct support logs a
+  warning and keeps running on BLE alone rather than failing the whole mesh, since BLE is this
+  project's universal baseline (`TRANSPORT.md` §1) and Wi-Fi Direct is the bulk-transfer sibling.
+- `MeshCoordinator.kt`: now constructs `MultiTransport(BleTransportDriver(context), WifiDirectTransportDriver(context))`
+  instead of holding a bare `BleTransportDriver`. No other call-site changes needed —
+  `coordinator.isRunning()`/`connectedPeerCount()` keep their signatures, `MainActivity`'s
+  `MeshScreen` composable is untouched.
+- **Real gap caught by re-reading what the new driver actually needs, not assumed from BLE's
+  existing permission list:** `MainActivity`'s `requiredMeshPermissions()` only requested
+  Bluetooth-related runtime permissions — Wi-Fi Direct discovery needs its own independent grant
+  (`ACCESS_FINE_LOCATION` on API 29-32, the framework's actual requirement for P2P service
+  discovery regardless of what BLE's own permission model needs at the same API levels;
+  `NEARBY_WIFI_DEVICES` on API 33+). Without this, `WifiDirectTransportDriver.start()` would throw
+  `FfiException.InvalidState`-wrapped `SecurityException`s at runtime on a real device even though
+  the app appeared to have "granted mesh permissions." Fixed by adding a parallel `wifiDirect`
+  permission branch, unioned with the existing `bluetooth`/`notifications` sets via `toSet()` to
+  avoid requesting `ACCESS_FINE_LOCATION` twice on API < 31 (both branches independently resolve
+  to it there).
+- `./gradlew assembleDebug` → `BUILD SUCCESSFUL`, `compileDebugKotlin` ran (not cached) after each
+  change, confirming `MultiTransport`, `MeshCoordinator`, and `MainActivity` all compile together
+  against the real UniFFI-generated types.
+- **User asked to fix the `--`-in-XML-comment bug "project wide properly"** after it recurred a
+  fourth time in the previous entry (this session's own `AndroidManifest.xml` edit). Grepped every
+  `.xml` under `android/app/src` for `--`: the only matches left were inside `<string>` resource
+  *values* (valid XML — the restriction is comment-body-only) or `§`-as-`SS` terminal rendering
+  artifacts, confirming the tree itself was already clean — but "clean right now" isn't the same
+  as "can't recur," which is what was actually asked for.
+  - Added a `checkXmlComments` Gradle task to `android/app/build.gradle.kts`: scans every `.xml`
+    under `src/main`, extracts each `<!-- ... -->` comment's body specifically (excluding the
+    delimiters themselves, so a `<string>` value's own legitimate `--` text is never a false
+    positive), fails with an exact `file:line` per violation instead of the manifest merger's
+    opaque downstream error. Wired as a `preBuild` dependency so it runs on every build
+    automatically, not as an opt-in lint check someone has to remember to run.
+  - **Verified both directions, not just written and trusted:** ran `checkXmlComments` standalone
+    against the clean tree (passes); appended a deliberate `<!-- test comment with a bad --
+    double hyphen -->` to `strings.xml`, reran, confirmed it failed with the exact injected line
+    number and a clear message; removed the test line; reran `assembleDebug` end to end to
+    confirm the task is correctly wired into `preBuild` and the whole build still succeeds clean.
+  - This is a standing fix, not a note-to-self: the assistant's own private session memory
+    already recorded "remember not to do this," but a fourth recurrence showed remembering wasn't
+    enough — the build itself now enforces it for any future session or contributor.
