@@ -1675,3 +1675,15 @@ commit, tests, and (where Android-side) an `assembleDebug` rebuild against a fre
   real architectural change out of scope for adding a fuzzing harness, and risks the
   already-verified Android build pipeline — not attempted. Full detail in `core/fuzz/README.md`.
   Needs a Linux/macOS machine or CI runner to actually execute.
+- **F-Droid reproducible-build pipeline started** (`metadata/india.projectmesh.app.yml`,
+  `docs/REPRODUCIBLE-BUILD.md`): pinned and documented the exact toolchain (Rust 1.96.0,
+  `cargo-ndk` 4.1.2, NDK r27c, AGP 8.7.2, Kotlin 2.0.21, Gradle 8.11.1). **Actually verified
+  same-machine reproducibility, not assumed:** built the `arm64-v8a` `.so` twice from a clean
+  target directory and identical source — both builds hashed identical (SHA-256). F-Droid
+  build-recipe metadata added, reasoned from the public `fdroiddata` schema (not validated against
+  F-Droid's own linter/build server — no real submission possible from this dev session). **Real
+  gaps found and stated plainly, not silently worked around:** no `LICENSE` file at the repo root
+  yet (downloaded the canonical AGPL-3.0 text to add it, but held off — flagging the gap for an
+  explicit decision on how to add it rather than just doing it); no release signing configured;
+  cross-machine/cross-OS reproducibility untested (only one machine available here); only the
+  Rust `.so` was checked, not the full packaged APK. Full list in `REPRODUCIBLE-BUILD.md` §4.
