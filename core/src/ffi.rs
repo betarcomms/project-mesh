@@ -5,10 +5,13 @@
 //!
 //! **Status:** identity, the Noise `XX` handshake, the Double Ratchet session, the
 //! store-carry-forward engine (in-memory `FfiStore`, standalone durable `FfiEncryptedStore`,
-//! and the two wired together as `FfiDurableStore` — use that one in a real app) are exported.
-//! Envelopes cross the boundary as opaque wire bytes (`envelope_pack` / `envelope_unpack`)
-//! rather than a rich typed object, matching `docs/ARCHITECTURE.md` §1's "dumb byte pipe"
-//! native layer. Not exported yet: MLS groups, channels, onion routing, and the
+//! and the two wired together as `FfiDurableStore` — use that one in a real app), and passphrase
+//! `Channel`s (`FfiChannel`) are exported. Envelopes cross the boundary as opaque wire bytes
+//! (`envelope_pack` / `envelope_unpack`) rather than a rich typed object, matching
+//! `docs/ARCHITECTURE.md` §1's "dumb byte pipe" native layer — `FfiChannel::seal`'s output is
+//! handed to `envelope_pack` as `sealed` with `addressing_tag=1` and `addressing_target` set to
+//! `FfiChannel::selector_hex`'s bytes, exactly like any other envelope; no new pack/unpack path
+//! was needed. Not exported yet: MLS groups, onion routing, and the
 //! `MeshTransport`/`MeshTransportSink` callback interfaces (those need native drivers to call
 //! against, which don't exist yet). Tracked in `docs/IMPLEMENTATION-STATUS.md`.
 
@@ -18,6 +21,7 @@ use std::sync::{Arc, Mutex};
 
 use snow::HandshakeState;
 
+use crate::crypto::channel::Channel;
 use crate::crypto::ratchet::{DoubleRatchet, Header};
 use crate::crypto::{noise, session as core_session};
 use crate::engine::{Accept, Store};
@@ -266,6 +270,48 @@ impl FfiSession {
         let header: Header = sealed.header.try_into()?;
         let mut ratchet = self.ratchet.lock().expect("lock poisoned");
         Ok(ratchet.decrypt(&header, &sealed.ciphertext)?)
+    }
+}
+
+/// A passphrase-derived shared channel (`docs/CRYPTOGRAPHY.md` §6, `crate::crypto::channel`).
+/// No owner, no server: anyone who knows the passphrase derives the identical `(key, selector)`
+/// pair independently. `seal`'s output is meant to be handed to [`envelope_pack`] as `sealed`
+/// with `addressing_tag=1` and `addressing_target` set to this channel's [`selector_hex`]
+/// bytes — deliberately not a new envelope-construction path, reusing the one `envelope_pack`
+/// already has for every other addressing kind.
+///
+/// [`selector_hex`]: FfiChannel::selector_hex
+#[derive(uniffi::Object)]
+pub struct FfiChannel {
+    inner: Channel,
+}
+
+#[uniffi::export]
+impl FfiChannel {
+    /// Derive a channel from a shared passphrase. Deterministic — every caller with the same
+    /// passphrase bytes gets the same channel, with no other coordination needed.
+    #[uniffi::constructor]
+    pub fn from_passphrase(passphrase: String) -> Result<Arc<Self>, FfiError> {
+        let inner = Channel::from_passphrase(passphrase.as_bytes())?;
+        Ok(Arc::new(Self { inner }))
+    }
+
+    /// This channel's public routing selector, hex-encoded — the `addressing_target` bytes for
+    /// `envelope_pack`'s `addressing_tag=1`, and what a receiver matches an inbound envelope's
+    /// `addressing_target` against to know "this is for a channel I'm subscribed to."
+    pub fn selector_hex(&self) -> String {
+        self.inner.selector.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    /// Seal a message for this channel. Fresh random nonce per call (see
+    /// `crate::crypto::channel::Channel::seal`'s doc comment) — safe to call repeatedly with the
+    /// same channel.
+    pub fn seal(&self, plaintext: Vec<u8>) -> Result<Vec<u8>, FfiError> {
+        Ok(self.inner.seal(&plaintext)?)
+    }
+
+    pub fn open(&self, sealed: Vec<u8>) -> Result<Vec<u8>, FfiError> {
+        Ok(self.inner.open(&sealed)?)
     }
 }
 
@@ -624,6 +670,54 @@ mod tests {
         assert_eq!(parsed.priority_tag, 0);
         assert_eq!(parsed.sealed, b"sos");
         assert_eq!(parsed.id_hex.len(), 64);
+    }
+
+    #[test]
+    fn ffi_channel_seal_open_roundtrip() {
+        let poster = FfiChannel::from_passphrase("relief-camp-1".to_string()).unwrap();
+        let reader = FfiChannel::from_passphrase("relief-camp-1".to_string()).unwrap();
+        let sealed = poster.seal(b"water available at well 3".to_vec()).unwrap();
+        assert_eq!(reader.open(sealed).unwrap(), b"water available at well 3");
+    }
+
+    #[test]
+    fn ffi_channel_two_independent_derivations_match() {
+        let a = FfiChannel::from_passphrase("north-gate-42".to_string()).unwrap();
+        let b = FfiChannel::from_passphrase("north-gate-42".to_string()).unwrap();
+        assert_eq!(a.selector_hex(), b.selector_hex());
+    }
+
+    #[test]
+    fn ffi_channel_wrong_passphrase_cannot_open() {
+        let poster = FfiChannel::from_passphrase("relief-camp-1".to_string()).unwrap();
+        let eavesdropper_guess = FfiChannel::from_passphrase("relief-camp-2".to_string()).unwrap();
+        let sealed = poster.seal(b"secret-ish local info".to_vec()).unwrap();
+        assert!(eavesdropper_guess.open(sealed).is_err());
+    }
+
+    /// End-to-end through the same path a real app would use: `FfiChannel::seal` -> the
+    /// selector goes into `envelope_pack`'s `addressing_target` -> `envelope_unpack` on the
+    /// receiving side recovers that same target -> `FfiChannel::open`. No new pack/unpack
+    /// function needed, per this module's doc comment on why.
+    #[test]
+    fn ffi_channel_composes_into_an_envelope_and_back_via_ffi() {
+        let channel = FfiChannel::from_passphrase("north-gate-42".to_string()).unwrap();
+        let hex = channel.selector_hex();
+        let selector_bytes: Vec<u8> = (0..hex.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap())
+            .collect();
+        let sealed = channel.seal(b"road washed out past km 12".to_vec()).unwrap();
+
+        let envelope_bytes =
+            envelope_pack(1, Some(selector_bytes.clone()), 1, 8, 9_999_999_999, sealed).unwrap();
+
+        let parsed = envelope_unpack(envelope_bytes).unwrap();
+        assert_eq!(parsed.addressing_tag, 1);
+        assert_eq!(parsed.addressing_target, Some(selector_bytes));
+
+        let reader = FfiChannel::from_passphrase("north-gate-42".to_string()).unwrap();
+        assert_eq!(reader.open(parsed.sealed).unwrap(), b"road washed out past km 12");
     }
 
     #[test]

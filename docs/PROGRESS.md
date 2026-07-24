@@ -1168,3 +1168,44 @@ Newest entry at the bottom (chronological), each dated.
   - This is a standing fix, not a note-to-self: the assistant's own private session memory
     already recorded "remember not to do this," but a fourth recurrence showed remembering wasn't
     enough — the build itself now enforces it for any future session or contributor.
+
+## 2026-07-24 — Channels exported over UniFFI (`FfiChannel`)
+
+- User picked this from four candidate next Phase 1 items (the others: Android Keystore master
+  key, prekey pool manager, DTN simulation harness). `Channel` (`core/src/crypto/channel.rs`) has
+  been built and tested since the duress/passphrase session but was never reachable from
+  Kotlin/Swift — closing that gap unblocks a real deferred feature (`MessagingScreen.kt`'s own doc
+  comment has said "Channel and Group need their own UniFFI export pass" since the messaging UI
+  landed).
+- New `FfiChannel` in `core/src/ffi.rs`: `from_passphrase(passphrase: String)`, `selector_hex()`,
+  `seal(plaintext)`, `open(sealed)` — same shape as every other `Object` export in this file
+  (`FfiIdentity`, `FfiSession`). **Deliberately did not add a new pack/unpack path**: re-reading
+  `envelope_pack`'s existing signature showed `addressing_tag=1` (Channel) already accepts an
+  arbitrary 32-byte `addressing_target`, which is exactly what `FfiChannel::selector_hex`'s
+  decoded bytes are — so a Kotlin caller composes a channel envelope with the same
+  `envelope_pack`/`envelope_unpack` free functions every other addressing kind already uses,
+  `FfiChannel::seal`'s output going in as `sealed`. This means the row 2 sessions ago
+  (`IMPLEMENTATION-STATUS.md`'s "no envelope-composition helper wiring `Channel` into
+  `Envelope::new`... not attempted this pass") wasn't actually a separate gap once the FFI layer
+  existed to check against — it resolved itself as a byproduct of matching the existing pattern,
+  not a new thing built.
+- 4 new tests in `ffi.rs`: seal/open round trip, two independent passphrase derivations produce
+  matching selectors, wrong passphrase can't open, and one exercising the *exact* path a real app
+  takes — `FfiChannel::seal` → `envelope_pack` (selector as `addressing_target`) →
+  `envelope_unpack` → `FfiChannel::open` — proving the "reuse `envelope_pack`" design decision
+  actually works end to end, not just compiles. Wrote a tiny 4-line inline hex decoder for the
+  test rather than adding the `hex` crate as a dependency for one test — this crate has stayed
+  dependency-minimal throughout (hand-rolled Bloom filter, hand-rolled AEAD wrappers) and a single
+  test doesn't justify breaking that.
+- 122 tests passing (4 new), full suite reconfirmed green — not just the new module.
+- Rebuilt the release cdylib and regenerated Kotlin bindings: 5,457 → 5,897 lines (`FfiChannel`
+  present as `fromPassphrase`/`selectorHex`/`seal`/`open`, correctly typed). Copied into
+  `android/app/src/main/java/uniffi/mesh_core/`. Re-ran the full Android cross-compile
+  (`cargo ndk` for arm64-v8a/armeabi-v7a/x86_64) since the FFI surface changed — all three `.so`s
+  rebuilt clean. `./gradlew assembleDebug` → `BUILD SUCCESSFUL` against the updated bindings and
+  native libraries.
+- **Not done, stated plainly:** no Kotlin `ChannelMessenger`/Compose screen consumes `FfiChannel`
+  yet — this pass is the FFI export only, matching this project's consistent "export first, UI is
+  its own pass" pattern (the same split BLE's transport callback interface and the mesh engine
+  loop both went through before). `IMPLEMENTATION-STATUS.md`'s Messaging UI row and Channels row
+  both updated to reflect exactly this split, not silently left stale.
