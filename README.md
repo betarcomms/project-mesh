@@ -1,4 +1,5 @@
 <div align="center">
+<img src="docs/assets/logo.svg" width="120" height="120" alt="Project Mesh logo — a mesh-network glyph in the Indian tricolor">
 
 # 🕸️ Project Mesh — Connecting India
 
@@ -7,12 +8,16 @@
 *Resilient communication for disconnected India — rural regions, disaster zones, and*
 *any place or moment the network goes dark.*
 
+[![Release](https://img.shields.io/github/v/release/konkomaji/project-mesh?include_prereleases&label=release&color=blueviolet)](https://github.com/konkomaji/project-mesh/releases/latest)
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
 [![Phase](https://img.shields.io/badge/phase-1%20nearly%20done-blue)](docs/ROADMAP.md)
 [![Core tests](https://img.shields.io/badge/core%20tests-191%20passing-brightgreen)](core/)
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPL--3.0--or--later-lightgrey)](LICENSE)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
+
+**[⬇️ Download the latest APK](https://github.com/konkomaji/project-mesh/releases/latest)** —
+pre-alpha, debug-signed, `minSdk` 26 (Android 8.0+)
 
 </div>
 
@@ -25,6 +30,19 @@ provider, no central server, and no account.** When the grid is up it stays quie
 the grid goes down it keeps working.
 
 > A stewardship project of **Konko Maji** (research + open source).
+
+---
+
+### ✨ At a glance
+
+| | |
+|---|---|
+| 🔐 **Crypto** | Noise `XX` → Double Ratchet · X3DH + hybrid post-quantum PQXDH (ML-KEM-1024) for offline first contact · MLS groups (RFC 9420) · Argon2id passphrase Channels · envelope-size padding against traffic analysis |
+| 📡 **Transport** | Real BLE dual-role GATT driver + Wi-Fi Direct, composed behind one mesh engine · store-carry-forward gossip, TTL, rate limiting, a client puzzle |
+| 💬 **Messaging** | Direct, Broadcast, Channel, Group — all four persist across restarts, Keystore-wrapped wherever real secrets are involved |
+| 🆘 **Civic features** | Emergency SOS, disaster bulletin board, community resource board, offline maps (MapLibre, zero network calls) |
+| 🧪 **Confidence** | 191 Rust tests · a DTN simulation harness that found a real relay bug · a wire-parser fuzzing harness · a security-review pass · a real on-device QA pass that found and fixed two more real bugs |
+| 🚫 **What it isn't** | No server, no account, no cloud, no independent security audit yet — see [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) |
 
 ---
 
@@ -106,7 +124,12 @@ out the civic features. A real on-device QA pass (not just `assembleDebug` succe
 fixed two genuine bugs this pass: a silently-stale native library after a toolchain-pinning
 regression, and a metadata leak where the prekey bundle's raw bytes rendered as garbled text in
 the plain chat feed — both documented in [`docs/PROGRESS.md`](docs/PROGRESS.md) with how they were
-found, not just that they were fixed.
+found, not just that they were fixed. The app now also has a proper launcher icon (the tricolor
+mesh glyph above) instead of the platform default — app name and the rest of the UI/UX are a
+later, separate pass.
+
+**[v0.1.0-prealpha](https://github.com/konkomaji/project-mesh/releases/tag/v0.1.0-prealpha) is
+the first published build** — debug-signed, pre-alpha, exactly what's described on this page.
 
 **Not yet done, stated plainly:** no physical-device or two-device verification (this dev
 environment has no spare hardware and can't run two emulators at once); no member-removal/
