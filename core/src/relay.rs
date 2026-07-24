@@ -243,11 +243,22 @@ impl RelayEngine {
                     outbound.push((from_peer, ContactMessage::Summary(self.store.summary_bloom()).to_bytes()));
                 }
                 for envelope in self.store.missing_from_bloom(&their_filter) {
-                    let nonce = puzzle::solve(&envelope.id, self.puzzle_difficulty_bits);
+                    // A gossip push is a relay hop exactly like the live `relay_to_others`/
+                    // `relay_to_all` path is -- decrement TTL here too, or hop count never
+                    // actually bounds propagation in the (realistic, for an opportunistic mesh)
+                    // case where every contact is a separate, sequential pairwise window rather
+                    // than several peers connected simultaneously. Found via building the DTN
+                    // simulation harness (`dtn_sim.rs`): before this fix, `ttl_hops` never
+                    // decreased across a chain of purely gossip-triggered pushes, silently
+                    // leaving `expires_at` as the only real bound on propagation in that regime.
+                    let Some(relayed) = decrement_ttl(envelope.clone()) else {
+                        continue; // last hop already spent -- don't relay this one any further
+                    };
+                    let nonce = puzzle::solve(&relayed.id, self.puzzle_difficulty_bits);
                     outbound.push((
                         from_peer,
                         ContactMessage::Data {
-                            envelope: envelope.clone(),
+                            envelope: relayed,
                             puzzle_nonce: nonce,
                         }
                         .to_bytes(),
@@ -418,6 +429,36 @@ mod tests {
         }
 
         assert!(b.store().contains(&e.id));
+    }
+
+    #[test]
+    fn gossip_push_decrements_ttl_same_as_a_live_relay_would() {
+        // Regression for a real gap the DTN simulation harness (`dtn_sim.rs`) surfaced: a
+        // summary-triggered gossip push is a relay hop exactly like `relay_to_others`/
+        // `relay_to_all`'s live-flood path is, so it must decrement `ttl_hops` too -- otherwise
+        // hop count never bounds propagation at all in the realistic case where every contact is
+        // a separate, sequential pairwise window (no two peers ever simultaneously connected to
+        // trigger the live-relay decrement path).
+        let mut a = engine("ttl-gossip-a", [50u8; 32]);
+        let mut b = engine("ttl-gossip-b", [51u8; 32]);
+
+        let e = env(Priority::Normal, 3, 7);
+        a.compose_local(e.clone(), 0).unwrap();
+
+        let a_hello = a.on_peer_connected(1);
+        let b_hello = b.on_peer_connected(1);
+        let from_a = a.on_frame(1, &b_hello, 0).unwrap();
+        assert!(b.on_frame(1, &a_hello, 0).unwrap().is_empty());
+
+        let mut pushed_ttl = None;
+        for (_, bytes) in &from_a {
+            if let ContactMessage::Data { envelope, .. } = ContactMessage::from_bytes(bytes).unwrap() {
+                if envelope.id == e.id {
+                    pushed_ttl = Some(envelope.ttl_hops);
+                }
+            }
+        }
+        assert_eq!(pushed_ttl, Some(2), "the pushed copy must carry one fewer hop than the original (3 -> 2)");
     }
 
     #[test]

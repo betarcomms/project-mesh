@@ -1599,3 +1599,65 @@ guessing from the Rust source — paid off immediately, no compiler-error/fix cy
   count), the Keystore row (renamed/expanded to cover the new `KeystoreSecretBox` design and both
   new consumers), and the Messaging UI row (persistence now real for three of four modes, with the
   exact boundary of what still doesn't persist stated per mode, not rounded up).
+
+## 2026-07-25 — Rest-of-Phase-1 punch list: padding wiring, PQXDH export, prekey bundle transport, MLS signer export, DTN sim harness
+
+Worked the remaining real Phase 1 gaps (as opposed to the hardware/data gaps this dev environment
+genuinely can't close — physical BLE hardware, real OSM tile packs) in order, each with its own
+commit, tests, and (where Android-side) an `assembleDebug` rebuild against a freshly `cargo ndk`'d
+`.so`.
+
+- **Stale doc row fixed:** `IMPLEMENTATION-STATUS.md`'s "Real BLE/Wi-Fi/LoRa driver" row still said
+  "not written yet" from before the Android toolchain existed — both drivers have been written and
+  verified for a while. Left it pointing at the real per-driver rows instead of duplicating status
+  that would just drift out of sync again.
+- **Envelope-size padding wired into Direct and Group messages:** `crypto::padding`'s
+  `pad_to_bucket`/`unpad` was only wired into `Channel::seal`/`open`. Extended to
+  `DoubleRatchet::encrypt`/`decrypt` and `MlsGroupHandle::seal`/`open` — every relay-visible seal
+  path now gets the same metadata protection. Deliberately left `aead_seal`'s other two callers
+  (`persistence.rs`'s at-rest storage, `groups.rs`'s `snapshot_to_disk`) unpadded: both are
+  local-disk-only, never relay-visible, so bucketing there would close no real gap. 4 new tests.
+- **PQXDH exported over UniFFI, plus the PQ prekey rotation/pool it never had:** `HybridPrekeyPool`
+  composes the existing classical `PrekeyPool` with a rotatable `PqPrekey`. Added
+  `HybridBundle::to_bytes`/`from_bytes` and `pack_initiation_message`/`unpack_initiation_message`
+  (wire framing for the "first contact" reply Alice must send Bob — previously undecided). New
+  `core/src/ffi_prekey.rs` exports `FfiHybridBundle`/`FfiHybridPrekeyPool`, hybrid-only per
+  `pqxdh.rs`'s own doc that hybrid "is the one a real app should actually call." One-time-prekey
+  secrets never cross the FFI boundary — `respond` consumes the referenced prekey internally and
+  hands back only a ready-to-use `FfiSession`. 16 new tests.
+- **Prekey bundle transport wired into `DirectMessenger`:** each instance now owns an in-memory
+  `FfiHybridPrekeyPool`, publishes its bundle as a magic-byte-prefixed Broadcast envelope (mirrors
+  `CivicPost.kt`'s framing), and caches bundles it sees broadcast. `initiateAsync(contact)`
+  bootstraps a session from a cached bundle instead of the interactive Noise handshake — works
+  even if the contact isn't reachable right now. Deliberately opt-in per contact (a new button,
+  shown only once a bundle is known and the contact isn't connected yet), not auto-fired alongside
+  the interactive attempt, to avoid two bootstrap mechanisms racing for the same contact. **Honest
+  limit:** the pool is in-memory only, regenerated fresh every launch — a bundle from a previous
+  session can't be answered after a restart, same kind of deferred-persistence gap as the MLS item
+  below.
+- **MLS signer exported for group persistence, closing the post-restart signing gap:**
+  `MlsMember::signer_to_bytes`/`signer_from_bytes` plus `from_identity_and_signer`, which rebuilds
+  `CredentialWithKey` deterministically (`derive_credential_with_key`) rather than needing it
+  separately persisted — turned out to be a pure function of the app identity's fingerprint and
+  the signer's public key, both already available, so no new serialization format was needed for
+  it at all. `load_group_from_disk` can now actually resume signing as the group's pre-restart
+  member, proven with a real round trip (serialize, drop every in-memory value, reconstruct from
+  bytes + the original `Identity`, sign a message the never-restarted other member accepts).
+  Exported as `FfiMlsMember::signerBytes`/`fromIdentityAndSigner`. 4 new tests.
+- **DTN simulation harness built** (`core/src/dtn_sim.rs`): drives real `RelayEngine`/
+  `DurableStore` instances (no mock transport, no reimplemented protocol) through a
+  caller-scripted sequence of pairwise contact windows, measuring delivery ratio under
+  partition/churn — closes `ARCHITECTURE.md` §7's harness gap.
+  - **Found and fixed a real bug while building it:** a summary-triggered gossip push
+    (`missing_from_bloom`-driven, the actual store-carry-forward path) never decremented
+    `ttl_hops`, unlike the live `relay_to_others`/`relay_to_all` flood path. In the realistic
+    case — every contact a separate, sequential pairwise window, never two peers simultaneously
+    connected to trigger the live-relay decrement — hop count never bounded propagation at all;
+    only `expires_at` did. `IMPLEMENTATION-STATUS.md` had been claiming "epidemic relay with TTL
+    decrement" without that caveat. Fixed in `relay.rs` (the gossip-push loop now calls
+    `decrement_ttl` and skips forwarding once it returns `None`, mirroring the live-relay path
+    exactly); 1 new regression test at the `relay.rs` level, plus a dedicated DTN-sim-level test
+    proving hop exhaustion actually stops propagation partway down a long chain.
+  - 5 sim-harness tests (linear multi-hop chain, an irrelevant early contact causing no harm,
+    partition-then-heal via a single bridge contact, TTL exhaustion, and no-path non-delivery).
+  - 181 core tests passing overall (up from 155 at the start of this pass).

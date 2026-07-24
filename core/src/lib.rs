@@ -17,6 +17,7 @@
 
 pub mod bloom;
 pub mod crypto;
+pub mod dtn_sim;
 pub mod durable;
 pub mod engine;
 pub mod envelope;
