@@ -1334,3 +1334,66 @@ Newest entry at the bottom (chronological), each dated.
   leave/forget-channel action.
 - Both `IMPLEMENTATION-STATUS.md`'s Messaging UI row and Channels row updated to reflect the UI
   now existing and being verified, not just the FFI export.
+
+## 2026-07-24 — MLS groups exported over UniFFI (`FfiMlsMember`/`FfiMlsGroupHandle`)
+
+- Second item of the (C) Phase 1 punch list. `groups.rs` has had group creation, add-member,
+  join-from-welcome, application messages, durable persistence, and routing integration since an
+  earlier session, but none of it was reachable from Kotlin — this pass closes that gap, the same
+  way `FfiChannel` closed it for Channels.
+- **Real gap found and closed at the source, not the FFI layer:** the FFI boundary only ever has
+  untrusted wire bytes for a published `KeyPackage`, but `groups.rs`'s existing `add_member` took
+  a typed, already-validated `openmls::prelude::KeyPackage` — there was no parse-and-validate path
+  anywhere in the crate for raw bytes. Added `MlsGroupHandle::add_member_from_bytes` to
+  `groups.rs` itself (not `ffi_groups.rs`) so the crypto/validation logic stays in the crypto
+  module and the FFI wrapper stays a mechanical bytes-in/bytes-out translator, matching this
+  crate's existing layering discipline. Needed reading `openmls`'s actual source in the local
+  cargo registry cache to confirm `KeyPackageIn::validate` and `GroupId::from_slice` exist and
+  their exact signatures (`validate(self, crypto: &impl OpenMlsCrypto, protocol_version:
+  ProtocolVersion)`), rather than guessing against a crate this size — same discipline the
+  original MLS integration used. 2 new `groups.rs` tests: the bytes-path reaches the same group
+  state as the typed path, and garbage bytes are rejected cleanly.
+- New `core/src/ffi_groups.rs`: `FfiMlsMember` (not yet tied to a group) and `FfiMlsGroupHandle`
+  (a live view of one specific group). **The same consuming-constructor problem `FfiHandshake`
+  already solved, applied again:** `MlsMember::create_group`/`join_from_welcome`/
+  `load_group_from_disk` all take `self` by value in the underlying crate — a one-shot
+  member-with-no-group → member's-view-of-one-group transition — but UniFFI objects live behind
+  `Arc<Self>` (shared refs only). Wrapped in `Mutex<Option<MlsMember>>`, taken on first use,
+  erroring on any second attempt — literally the same pattern `FfiHandshake::take_finished`
+  already established in `ffi.rs`, reused rather than reinvented.
+  `FfiMlsGroupHandle::seal_as_envelope`/`open_from_envelope` mirror `FfiChannel`'s design: the
+  envelope construction happens inside the FFI wrapper (unlike Channel, where it's mechanical
+  composition on the Kotlin side) since `Addressing::Group`'s selector comes from live group
+  state, not a passphrase a caller already has — still zero new Rust wire-format code, reusing
+  `Envelope::new`/`to_bytes`/`from_bytes` exactly as `groups.rs` already did internally.
+- Small supporting changes: `FfiIdentity` gained a `pub(crate) fn inner(&self)` accessor so
+  `ffi_groups.rs` can build an `MlsMember` from an already-generated identity without duplicating
+  identity generation, while keeping the field itself private (not new exported API);
+  `ffi.rs`'s `decode_priority` made `pub(crate)` so `ffi_groups.rs` could reuse the same
+  priority-tag mapping `envelope_pack` already uses rather than duplicating it.
+- **Honest limitation, stated in the module doc, not silently incomplete:**
+  `MlsMember::from_signer_and_credential` isn't exported — there's no FFI-safe serialization for
+  `SignatureKeyPair`/`CredentialWithKey` yet, so while `load_group_from_disk` *is* exported (the
+  read path itself is straightforward), `FfiMlsMember::new` always generates a fresh signing
+  keypair, meaning this can't yet actually resume signing as a group's pre-restart member across
+  a real process restart. Exposed anyway because the read path is harmless and mechanical on its
+  own — same gap `groups.rs`'s own module doc already stated before this pass, not a new one
+  introduced here.
+- 6 new tests in `ffi_groups.rs`, all passing on the first build attempt (no compiler-error/API-
+  guessing cycle this time, unlike some earlier FFI passes): a full two-member add→join→seal→open
+  round trip and a seal-as-envelope→open-from-envelope round trip purely through the FFI types,
+  a double-consumption error case, a garbage-KeyPackage error case, and two `snapshot_to_disk`
+  cases (writes a real file; rejects a wrong-length master key).
+- 132 tests passing (8 new: 2 in `groups.rs`, 6 in `ffi_groups.rs`). Rebuilt the release cdylib,
+  regenerated Kotlin bindings (6,833 lines, up from 5,897 — `FfiMlsMember`/`FfiMlsGroupHandle`/
+  `FfiAddMemberOutput` all present and correctly typed), re-ran the full Android cross-compile
+  (arm64-v8a/armeabi-v7a/x86_64), and confirmed `./gradlew assembleDebug` succeeds against the
+  updated bindings and native libraries.
+- Also fixed a real doc-drift bug while touching `lib.rs`: its own crate-level doc comment still
+  said "Not yet implemented: ... MLS durable persistence/routing integration/UniFFI export" —
+  stale even before this pass, since durable persistence and routing integration had already
+  landed in an earlier session per `groups.rs`'s own module doc. Corrected to match reality.
+- **Not done, stated plainly:** no Kotlin `GroupMessenger`/Compose screen consumes this yet — same
+  export-then-UI split every other FFI addition in this project has gone through, tracked
+  separately. `IMPLEMENTATION-STATUS.md`'s MLS groups row, UniFFI bindings row, and Messaging UI
+  row all updated to match.

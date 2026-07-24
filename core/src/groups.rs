@@ -203,6 +203,20 @@ pub struct MlsGroupHandle {
 }
 
 impl MlsGroupHandle {
+    /// FFI-facing convenience over [`add_member`](Self::add_member): the FFI boundary only ever
+    /// has untrusted wire bytes for a published `KeyPackage`, never the typed, already-validated
+    /// `openmls::prelude::KeyPackage`. Parses and validates them here (in the crypto module,
+    /// not the FFI layer -- `core/src/ffi_groups.rs` stays a mechanical bytes-in/bytes-out
+    /// wrapper, matching this crate's existing layering) before delegating.
+    pub fn add_member_from_bytes(&mut self, key_package_bytes: &[u8]) -> Result<AddMemberOutput> {
+        let key_package_in = KeyPackageIn::tls_deserialize_exact(key_package_bytes)
+            .map_err(|e| group_err("parsing key package", e))?;
+        let key_package = key_package_in
+            .validate(self.member.provider.crypto(), ProtocolVersion::Mls10)
+            .map_err(|e| group_err("validating key package", e))?;
+        self.add_member(key_package)
+    }
+
     /// Add a new member (from their published `KeyPackage`) and commit immediately. Returns the
     /// Commit message (wire bytes, to send to existing members) and the Welcome message (wire
     /// bytes, to send to the new member so they can call [`MlsMember::join_from_welcome`]).
@@ -444,6 +458,28 @@ mod tests {
 
         // Both sides agree on the group's epoch/state after Bob joins from the same Welcome.
         assert_eq!(alice_group.group.epoch(), bob_group.group.epoch());
+    }
+
+    #[test]
+    fn add_member_from_bytes_matches_typed_add_member() {
+        // Proves the FFI-facing path (serialized KeyPackage bytes -> parse -> validate -> add)
+        // reaches the same group state as the typed path the test above exercises directly.
+        let alice = MlsMember::new(&Identity::generate()).unwrap();
+        let mut alice_group = alice.create_group().unwrap();
+
+        let bob = MlsMember::new(&Identity::generate()).unwrap();
+        let bob_key_package_bytes = bob.key_package().unwrap().tls_serialize_detached().unwrap();
+
+        let output = alice_group.add_member_from_bytes(&bob_key_package_bytes).unwrap();
+        let bob_group = bob.join_from_welcome(&output.welcome_bytes).unwrap();
+        assert_eq!(alice_group.group.epoch(), bob_group.group.epoch());
+    }
+
+    #[test]
+    fn add_member_from_bytes_rejects_garbage() {
+        let alice = MlsMember::new(&Identity::generate()).unwrap();
+        let mut alice_group = alice.create_group().unwrap();
+        assert!(alice_group.add_member_from_bytes(b"not a real key package").is_err());
     }
 
     #[test]

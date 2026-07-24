@@ -100,6 +100,15 @@ impl FfiIdentity {
     }
 }
 
+impl FfiIdentity {
+    /// Crate-internal accessor to the wrapped [`CoreIdentity`] — lets other FFI modules
+    /// (`ffi_groups.rs`) build on an already-generated identity without duplicating identity
+    /// generation, while keeping `inner` itself private (not part of the exported UniFFI API).
+    pub(crate) fn inner(&self) -> &CoreIdentity {
+        &self.inner
+    }
+}
+
 /// Drives one side of the Noise `XX` handshake message-by-message across an actual mesh link
 /// (`docs/CRYPTOGRAPHY.md` §4.1). Interior mutability (`Mutex`) because UniFFI object methods
 /// take `&self`, but driving a handshake is inherently stateful and sequential.
@@ -590,7 +599,7 @@ fn encode_addressing(a: Addressing) -> (u8, Option<Vec<u8>>) {
     }
 }
 
-fn decode_priority(tag: u8) -> Result<Priority, FfiError> {
+pub(crate) fn decode_priority(tag: u8) -> Result<Priority, FfiError> {
     match tag {
         0 => Ok(Priority::Sos),
         1 => Ok(Priority::Bulletin),
