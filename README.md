@@ -8,9 +8,9 @@
 *any place or moment the network goes dark.*
 
 [![Status](https://img.shields.io/badge/status-pre--alpha-orange)](docs/IMPLEMENTATION-STATUS.md)
-[![Phase](https://img.shields.io/badge/phase-1%20of%204-blue)](docs/ROADMAP.md)
-[![Core tests](https://img.shields.io/badge/core%20tests-86%20passing-brightgreen)](core/)
-[![Code licence](https://img.shields.io/badge/code%20licence-AGPLv3%20(proposed)-lightgrey)](docs/GOVERNANCE.md)
+[![Phase](https://img.shields.io/badge/phase-1%20nearly%20done-blue)](docs/ROADMAP.md)
+[![Core tests](https://img.shields.io/badge/core%20tests-191%20passing-brightgreen)](core/)
+[![Code licence](https://img.shields.io/badge/code%20licence-AGPL--3.0--or--later-lightgrey)](LICENSE)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
 
@@ -60,12 +60,13 @@ every contributor is expected to follow.
 | 🏗️ [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System layers, Rust core, native UI, module boundaries |
 | 📶 [`docs/TRANSPORT.md`](docs/TRANSPORT.md) | BLE mesh, Wi-Fi Direct, LoRa; iOS/Android radio realities |
 | 🔀 [`docs/ROUTING-PROTOCOL.md`](docs/ROUTING-PROTOCOL.md) | Store-carry-forward routing, packet format, dedup, TTL |
-| 🔐 [`docs/CRYPTOGRAPHY.md`](docs/CRYPTOGRAPHY.md) | Identity, Noise handshake, Double Ratchet, onion routing |
+| 🔐 [`docs/CRYPTOGRAPHY.md`](docs/CRYPTOGRAPHY.md) | Identity, Noise handshake, Double Ratchet, MLS, PQXDH, onion routing |
 | 🛡️ [`docs/THREAT-MODEL.md`](docs/THREAT-MODEL.md) | Adversaries, assets, attacks, mitigations, non-goals |
 | 🆘 [`docs/FEATURES.md`](docs/FEATURES.md) | SOS, disaster bulletin, offline maps, resource board, chat |
 | 🗣️ [`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md) | Indic languages, low-literacy UX, low-end devices |
 | 📻 [`docs/HARDWARE-LORA.md`](docs/HARDWARE-LORA.md) | LoRa gateway spec, India 865–868 MHz band, node design |
 | 📦 [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md) | De-Googled builds, F-Droid, APK, iOS, reproducibility |
+| 🔁 [`docs/REPRODUCIBLE-BUILD.md`](docs/REPRODUCIBLE-BUILD.md) | Pinned toolchain, build steps, what's actually verified reproducible |
 | ⚖️ [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) | Licence, non-profit stewardship, contribution model |
 | 📜 [`docs/LEGAL.md`](docs/LEGAL.md) | Positioning doctrine, Indian law, compliance, risk |
 | 🗺️ [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phased delivery plan and milestones |
@@ -73,29 +74,49 @@ every contributor is expected to follow.
 
 ## 📈 Status
 
-**Design / pre-alpha, Phase 1 in progress.** The research and technical specification are
-complete (`WHITEPAPER.md` + `docs/`). The shared Rust core (`core/`) is underway: identity,
-Noise `XX` handshake (with the Double-Ratchet handoff wired up), Double Ratchet, MLS groups
-(RFC 9420, via the `openmls` crate rather than hand-rolled — TreeKEM is a different order of
-complexity from this project's other hand-rolled primitives), envelope wire format with a
-hand-rolled Bloom-filter summary vector (`docs/ROUTING-PROTOCOL.md` §3's compact gossip summary,
-no new dependency), a store-carry-forward engine that now survives a restart (in-memory index
-backed by encrypted-at-rest storage, wired together via `DurableStore`), a mesh engine loop
-(gossip-on-contact + epidemic relay, per-peer rate limiting, and an optional Hashcash-style
-client puzzle — transport-agnostic, tested with a simulated multi-node mesh, no hardware
-needed), a UniFFI callback interface for the radio transport boundary, the mesh engine wired to
-that transport end to end (`FfiMeshNode`), and a UniFFI surface covering most of the above are
-implemented and unit-tested (**86 tests passing**). Encryption-at-rest uses `redb` +
-AEAD rather than the design docs' SQLCipher — a deliberate, documented substitution after
-SQLCipher's OpenSSL dependency proved unbuildable in this dev environment (see
-`docs/PROGRESS.md`). **The Android app now builds for real** — SDK, NDK r27c, and Gradle 8.11.1
-installed, `mesh-core` cross-compiled to real `.so` libraries for arm64-v8a/armeabi-v7a/x86_64,
-`./gradlew assembleDebug` produces a working debug APK, and it now **runs** — verified on a real
-Android emulator (API 35, x86_64), the identity-generation screen works end to end through the
-Rust core. Not yet verified: a physical device, and no real BLE/Wi-Fi/LoRa driver exists yet. Nothing here has been independently security-audited — see
-[`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for the exact, current,
-component-by-component picture, and [`docs/PROGRESS.md`](docs/PROGRESS.md) for the dated log of
-how it got there. Contributions to both the design and the code are welcome — see
+**Pre-alpha, Phase 1 nearly complete.** Full detail, component-by-component, in
+[`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) — this is the short version.
+
+**Rust core (`core/`, 191 tests passing):** identity (Ed25519 + X25519), Noise `XX` handshake →
+Double Ratchet for 1:1 messaging, X3DH and hybrid post-quantum PQXDH (ML-KEM-1024 + classical,
+via the `ml-kem` crate) for async first-contact bootstrap when both parties are never online at
+once, MLS groups (RFC 9420, via `openmls`) for larger groups, Argon2id passphrase-derived
+Channels, envelope wire format + Bloom-filter gossip summaries, a store-carry-forward mesh engine
+(gossip-on-contact, epidemic relay, TTL, rate limiting, an optional client puzzle), envelope-size
+padding (metadata protection against relay traffic analysis) wired into every addressing mode,
+encryption-at-rest (`redb` + AEAD — a deliberate substitution for the design docs' SQLCipher,
+whose OpenSSL dependency wouldn't build in this dev environment), and a full UniFFI surface
+covering all of it. A [DTN simulation harness](core/src/dtn_sim.rs) drives the real relay engine
+through scripted contact schedules with no hardware needed — building it surfaced and fixed a real
+TTL-decrement gap in the gossip-relay path. A [wire-parser fuzzing harness](core/fuzz/) covers
+every untrusted-bytes-in parser (can't execute on this Windows dev box — a documented MSVC/`cdylib`
+linker conflict, needs Linux/CI).
+
+**Android app:** builds and installs a real, running APK (`./gradlew assembleDebug`, SDK/NDK
+r27c/Gradle 8.11.1, `mesh-core` cross-compiled to arm64-v8a/armeabi-v7a/x86_64). Real
+`android.bluetooth.*` BLE driver (dual-role GATT, foreground service, verified starting/
+advertising on a real emulator) and a Wi-Fi Direct driver (compiles clean, no hardware/emulator
+support available to verify further) composed behind one transport. All four messaging modes have
+a real, on-device-verified UI — Direct (Noise → Double Ratchet, plus an offline/async bootstrap
+via the hybrid prekey bundle), Broadcast, Channel, and Group (MLS) — and **identity, Direct
+contacts, joined Channels, MLS group state, and the prekey pool all persist across restarts**,
+Keystore-wrapped where they hold real secrets. SOS, a disaster bulletin board, a community
+resource board, and an offline-map screen (MapLibre, a real GL surface, zero network calls) round
+out the civic features. A real on-device QA pass (not just `assembleDebug` succeeding) found and
+fixed two genuine bugs this pass: a silently-stale native library after a toolchain-pinning
+regression, and a metadata leak where the prekey bundle's raw bytes rendered as garbled text in
+the plain chat feed — both documented in [`docs/PROGRESS.md`](docs/PROGRESS.md) with how they were
+found, not just that they were fixed.
+
+**Not yet done, stated plainly:** no physical-device or two-device verification (this dev
+environment has no spare hardware and can't run two emulators at once); no member-removal/
+leave-group/leave-channel UI; no QR-code trust establishment; translations are English-only by
+design (community-contributed, per [`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md)); no
+independent security audit (a hard release gate, not attempted here — see
+[`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) §3); F-Droid metadata and reproducible-build tooling
+exist but no real submission has been made yet.
+
+Contributions to both the design and the code are welcome — see
 [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md).
 
 ## 🗂️ Repository layout
@@ -103,30 +124,36 @@ how it got there. Contributions to both the design and the code are welcome — 
 ```
 mesh/
 ├── WHITEPAPER.md, README.md    — design docs (see table above)
+├── LICENSE                     — AGPL-3.0-or-later
 ├── docs/                       — specifications, live status, and progress log
+├── metadata/                   — F-Droid build-recipe metadata
 ├── core/                       — mesh-core: the shared Rust core
+│   ├── fuzz/                   — cargo-fuzz targets for every wire-format parser
 │   └── src/
-│       ├── identity.rs         — Ed25519 + X25519 identity, fingerprint
-│       ├── crypto/              — Noise XX handshake, Double Ratchet
-│       ├── groups.rs            — MLS groups (RFC 9420, via openmls)
-│       ├── envelope.rs         — wire format, content-derived envelope IDs
-│       ├── bloom.rs            — Bloom filter (compact gossip summary vectors)
-│       ├── engine.rs           — in-memory store, dedup, TTL, priority eviction
-│       ├── persistence.rs      — encrypted-at-rest envelope store (redb + AEAD)
-│       ├── durable.rs          — engine.rs + persistence.rs wired together (restart-safe)
-│       ├── puzzle.rs           — client puzzle (optional proof-of-work anti-flood)
-│       ├── relay.rs            — mesh engine loop: gossip, relay, rate limiting, puzzle
-│       ├── transport.rs        — radio abstraction trait (no native driver yet)
-│       ├── ffi.rs              — UniFFI-exported surface: identity, crypto, store
-│       ├── ffi_transport.rs    — UniFFI callback interface for the transport trait
-│       └── ffi_node.rs         — relay.rs wired to the transport, over UniFFI
-└── android/                    — Android app skeleton (Kotlin/Compose), in progress
+│       ├── identity.rs           — Ed25519 + X25519 identity, fingerprint
+│       ├── crypto/                — Noise XX, Double Ratchet, X3DH, PQXDH, Channels, padding
+│       ├── groups.rs              — MLS groups (RFC 9420, via openmls)
+│       ├── envelope.rs            — wire format, content-derived envelope IDs
+│       ├── bloom.rs                — Bloom filter (compact gossip summary vectors)
+│       ├── engine.rs               — in-memory store, dedup, TTL, priority eviction
+│       ├── persistence.rs          — encrypted-at-rest envelope store (redb + AEAD)
+│       ├── durable.rs               — engine.rs + persistence.rs wired together (restart-safe)
+│       ├── puzzle.rs                — client puzzle (optional proof-of-work anti-flood)
+│       ├── relay.rs                 — mesh engine loop: gossip, relay, rate limiting, puzzle
+│       ├── dtn_sim.rs                — DTN simulation harness (scripted contact schedules)
+│       ├── transport.rs              — radio abstraction trait
+│       ├── ffi.rs, ffi_groups.rs,     — UniFFI-exported surface: identity, crypto, MLS,
+│       │   ffi_transport.rs,         —   transport callbacks, prekey/PQXDH, mesh node
+│       │   ffi_node.rs, ffi_prekey.rs
+└── android/                    — Android app (Kotlin/Compose): BLE + Wi-Fi Direct drivers,
+                                   Direct/Broadcast/Channel/Group messaging, SOS/bulletin/
+                                   resource board, offline maps
 ```
 
 ## 🛠️ Building
 
 ```sh
-cargo test                       # mesh-core: run the full Rust test suite
+cargo test                       # mesh-core: run the full Rust test suite (191 tests)
 cargo run --release --bin uniffi-bindgen -- generate --library target/release/mesh_core.dll \
   --language kotlin --out-dir core/generated                # regenerate Kotlin bindings
 
@@ -136,17 +163,17 @@ cargo ndk -o android/app/src/main/jniLibs -t arm64-v8a -t armeabi-v7a -t x86_64 
 cd android && ./gradlew assembleDebug                        # build the APK
 ```
 
-No Android SDK/NDK is required to build or test `core/` — it's a plain Rust crate. The Android
-app itself builds (`./gradlew assembleDebug` succeeds, native library packaged in) but hasn't
-been run on a device or emulator yet — see
-[`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for exactly what's verified vs.
-not.
+`rust-toolchain.toml` pins the exact Rust version this project builds with. No Android SDK/NDK is
+required to build or test `core/` — it's a plain Rust crate. See
+[`docs/REPRODUCIBLE-BUILD.md`](docs/REPRODUCIBLE-BUILD.md) for the full pinned toolchain and what
+reproducibility has actually been verified (same-machine, not yet cross-machine), and
+[`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md) for exactly what's verified
+on-device vs. compile-only.
 
 ## ⚖️ Licence
 
-Documentation: **CC BY-SA 4.0**. Intended source-code licence: **GPLv3 or AGPLv3** (copyleft, to
-keep forks open) — see [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) for the rationale and final
-decision process.
+Code: **[AGPL-3.0-or-later](LICENSE)** (copyleft, keeps forks open — see
+[`docs/GOVERNANCE.md`](docs/GOVERNANCE.md) for the rationale). Documentation: **CC BY-SA 4.0**.
 
 ## 🕊️ A note on scope and honesty
 
