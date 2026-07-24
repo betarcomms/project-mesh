@@ -1720,3 +1720,49 @@ instruction).
   leave/forget-channel and leave-group/member-removal UI (needs new MLS self-update/
   external-commit Rust work, not just UI wiring), QR-code trust establishment, and physical/
   two-device hardware verification — all stated honestly as out of scope, not silently skipped.
+
+## 2026-07-25 — LICENSE, security review, and a real on-device QA pass that found two real bugs
+
+Ahead of a GitHub release: added `LICENSE` (AGPL-3.0-or-later) and `rust-toolchain.toml` (pins
+1.96.0), ran a security-review pass (`security-review` skill: one candidate finding — one-time-
+prekey reuse if the process dies mid-persist — verified and scored 2/10 confidence, filtered out
+as theoretical/non-attacker-controlled, not concretely actionable), then persisted `HybridPrekeyPool`
+and MLS group state across restarts (see their own detail above) and actually installed the
+resulting APK on a real emulator instead of trusting `assembleDebug`'s success alone.
+
+**Two real bugs found and fixed, neither hypothetical:**
+
+1. **`rust-toolchain.toml` silently broke `cargo ndk` cross-compilation.** `rustup`'s Android
+   targets are installed per-toolchain-identity; pinning to `1.96.0` (different from the ambient
+   `stable` the targets were added under) broke every subsequent `cargo ndk` build with
+   `error[E0463]: can't find crate for std`. This went unnoticed for two consecutive rebuilds
+   because the invocations piped through `tail` without `set -o pipefail`, so the failing
+   `cargo ndk` still reported exit code 0. Net effect: the app shipped a 40-minute-stale native
+   library missing that pass's new FFI exports, and `adb install` + launch crashed immediately
+   with `UnsatisfiedLinkError` — caught only by actually installing and running the APK, not by
+   any build step "succeeding." Fixed: reinstalled the Android targets, rebuilt with
+   `set -o pipefail` this time (verified: fresh timestamps, new symbols present via `strings`),
+   confirmed `gradlew assembleDebug`'s `mergeDebugNativeLibs`/`mergeDebugJniLibFolders` actually
+   *executed* (not `UP-TO-DATE`) before trusting it again.
+2. **The prekey bundle broadcast leaked into the plain chat feed as garbled binary noise.**
+   `DirectMessenger.publishPrekeyBundle` sends the hybrid bundle as `Addressing::Broadcast` with a
+   `MAGIC_PREKEY_BUNDLE` (`0xF4`) prefix, but `BroadcastMessenger`'s exclusion filter
+   (`isCivicMagic`) only knew about the three civic-post magic bytes (`0xF1`-`0xF3`). Real
+   ML-KEM-1024/X25519 key material and a signature rendered as `�`-laced mojibake in the Broadcast
+   feed on every single launch. Reproduced identically across a full app uninstall and a complete
+   emulator data wipe (ruling out stale state — a fresh identity republishes a fresh bundle every
+   launch via `DirectMessenger.init`), which is what made the root cause obvious once traced.
+   Fixed: moved `MAGIC_PREKEY_BUNDLE` into `CivicPost.kt`'s shared magic-byte registry (rather than
+   a private constant in `DirectMessaging.kt`) and renamed the check to
+   `isReservedBroadcastMagic`, specifically so the exclusion list can't silently miss a reserved
+   magic byte the same way again. Verified clean on a fresh install after the fix.
+
+**Verified working end-to-end on the (now-fixed) real emulator, not just compiled:** identity
+screen (real fingerprint/safety-string); Broadcast feed clean post-fix; MLS group creation —
+confirmed the Keystore-wrapped signer and AEAD-sealed snapshot file were actually written, then
+confirmed the snapshot file grew after sending an application message (proving the
+state-advance-then-resnapshot path genuinely executes); SOS/bulletin/resource-board category
+selection; offline map screen renders a real GL surface. Channel-passphrase and Group-welcome text
+entry via ADB remain blocked by the same `input text` flakiness this project already documented —
+not a regression, ruled out by cross-referencing the exact same limitation noted in an earlier
+session's `IMPLEMENTATION-STATUS.md` entry.

@@ -21,11 +21,22 @@ actually been verified so far — not what's aspired to.
 Every Android dependency in `android/app/build.gradle.kts` is pinned to an exact version already
 (no `+`/range selectors) — confirmed by reading the file, not assumed.
 
-**Not yet pinned, a real gap:** nothing in the repo *enforces* these versions (no
-`rust-toolchain.toml`, no NDK version check in `build.gradle.kts`). A future contributor building
-with a different Rust/NDK/AGP version wouldn't be stopped or warned. Tracked as a follow-up, not
-fixed this pass — pinning via `rust-toolchain.toml` is straightforward; enforcing the NDK/AGP/
-Gradle versions from within the build is more involved and wasn't attempted here.
+**`rust-toolchain.toml` added** (later pass, pins `channel = "1.96.0"`, verified: `rustup`/`cargo`
+resolve it exactly). **Real regression this pin caused, found via an actual on-device QA pass, not
+a hypothetical:** `rustup`'s Android cross-compile targets (`aarch64-linux-android` etc.) are
+installed per-toolchain, not shared across toolchain identities — pinning to `1.96.0` (a different
+identity from the ambient `stable` the targets were originally added under) silently broke
+`cargo ndk`'s builds with `error[E0463]: can't find crate for `std``. Worse, this went unnoticed
+for two consecutive "successful" rebuilds in the same session, because the invocation piped
+through `| tail -N` without `set -o pipefail`, so a failing `cargo ndk` inside the pipe still
+reported exit code 0 (`tail`'s own exit code) — the app kept shipping a 40-minutes-stale native
+library that crashed on launch (`UnsatisfiedLinkError`, missing symbols for that pass's new FFI
+exports) while every build step *reported* success. Fixed by reinstalling the targets
+(`rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android`) and, going
+forward, always piping `cargo ndk`'s output through `set -o pipefail` (or checking `${PIPESTATUS[0]}`)
+rather than trusting a piped command's reported exit code. **Still not enforced:** no NDK/AGP/Gradle
+version check inside the build itself — a contributor with a different NDK wouldn't be
+stopped/warned, only `rustc`/`cargo` are pinned so far.
 
 ## 2. Build steps
 
