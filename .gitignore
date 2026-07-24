@@ -2,6 +2,9 @@
 /target
 /core/generated
 
+# Personal/local scratch -- demo artifacts, notes, anything not meant for the repo history.
+/local/
+
 # Android
 /android/.gradle/
 /android/build/

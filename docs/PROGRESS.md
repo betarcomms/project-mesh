@@ -1288,3 +1288,49 @@ Newest entry at the bottom (chronological), each dated.
   the UniFFI-exported surface (`decode_kv_pairs` is `groups.rs`-internal, not itself exported yet;
   `DirectMessaging.kt`'s change is Kotlin-only), so no cdylib rebuild / Kotlin binding
   regeneration / Android cross-compile was needed this time.
+
+## 2026-07-24 — Channel messaging UI: `ChannelMessenger` + Compose screen, verified on-device
+
+- First item of the (C) Phase 1 punch list. `FfiChannel` (exported earlier this session) made this
+  possible; this pass wires it into an actual screen. New
+  `messaging/ChannelMessaging.kt`: `ChannelSession` (fixed `label`/`channel`/`selectorHex` for the
+  session's life, mutable `posts`) and `ChannelMessenger`, which — unlike `BroadcastMessenger`'s
+  single global feed — supports **multiple simultaneously-joined channels**, the same
+  multi-session shape `DirectMessenger` already uses for contacts, since joining a channel is an
+  explicit user action (a relief coordinator might track "north-gate-42" and "relief-camp-1" at
+  once). `join(passphrase)` is idempotent — re-entering an already-joined passphrase returns the
+  existing session rather than duplicating it. Reuses `envelopePack`/`envelopeUnpack`'s existing
+  `addressingTag=1` path with no new Rust surface, exactly as designed when `FfiChannel` landed.
+- `MeshApplication.kt`: added `channelMessenger` alongside the other lazily-constructed messengers.
+  `MessagingScreen.kt`: new `ChannelSection`/`ChannelThread` composables mirroring
+  `DirectSection`/`ContactThread`'s join-list-then-thread-view shape; module doc comment and
+  `messaging_subtitle` string updated (both previously said "Channel... needs its own UniFFI
+  export pass," now stale). New strings: `channel_title`, `channel_passphrase_label`,
+  `channel_join_button`, `channel_session_row`.
+- **The `checkXmlComments` guard added a few sessions ago caught a real live instance of the exact
+  bug it was built for**, immediately: writing the new `channel_title` comment block in
+  `strings.xml` used `--` as a prose dash out of habit, and `./gradlew assembleDebug` failed at
+  the `checkXmlComments` task with an exact file:line before it ever reached the manifest merger —
+  worth noting as the guard's first real catch, not just a passing test.
+- **Verified on a real emulator (`mesh_test`), not just compiled.** Booted headless, installed,
+  launched — one unrelated crash appeared in logcat (`com.google.android.bluetooth`'s HCI stack
+  aborting with a hardware-error event, a known AVD Bluetooth-stack flakiness issue, confirmed
+  it's a *different process* than `india.projectmesh.app` and our app's own process stayed alive
+  and in the foreground throughout, `pidof`/`dumpsys activity` both confirmed). Used
+  `uiautomator dump` to get exact on-screen element bounds rather than eyeballing screenshot
+  coordinates after the first couple of taps landed wrong (the keyboard opening reflows the
+  screen, shifting where a field/button actually sits — a real lesson for any future on-device UI
+  automation in this project, not just this pass). Joined a channel by passphrase
+  ("north-gate-42"), confirmed the joined session survived an accidental activity exit/relaunch
+  intact (proving `ChannelMessenger`'s app-scoped state, not activity-scoped, actually works as
+  designed — this wasn't planned as a test case, it happened by accident and turned out to prove
+  something real). Opened the thread, posted a message, watched it round-trip through the full
+  compose→store→poll→decode→display pipeline, identical verification method to Broadcast/SOS/
+  Bulletin in earlier sessions. Checked logcat for the app's own PID afterward: zero
+  exceptions/fatals, only benign emulator graphics/IME-animation warnings.
+- **Not done, stated plainly:** no two-device test (same host-capacity limit as BLE/Wi-Fi Direct);
+  no channel/session persistence (lost on restart, mirrors every other messenger's identity-tied
+  non-persistence); unsigned (same `FfiIdentity.sign`-not-exported gap everything else has); no
+  leave/forget-channel action.
+- Both `IMPLEMENTATION-STATUS.md`'s Messaging UI row and Channels row updated to reflect the UI
+  now existing and being verified, not just the FFI export.
