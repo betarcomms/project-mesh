@@ -298,6 +298,14 @@ impl PrekeyPool {
         self.available.len()
     }
 
+    /// The one-time prekey [`current_bundle`](Self::current_bundle) would reference right now,
+    /// without building a whole bundle — lets a caller composing a *different* bundle shape
+    /// around the same pool (e.g. [`crate::crypto::pqxdh::HybridPrekeyPool`]) reuse this pool's
+    /// bookkeeping instead of duplicating "peek the next available one-time prekey" logic.
+    pub fn current_one_time_prekey(&self) -> Option<&OneTimePrekey> {
+        self.available.first()
+    }
+
     /// True once the pool has dropped to or below `threshold` — the native/app layer's signal to
     /// call [`top_up`](Self::top_up). Not enforced automatically: when and how often to check is
     /// a native-layer/UX policy, same as prekey rotation cadence (see [`SignedPrekey`]'s doc).

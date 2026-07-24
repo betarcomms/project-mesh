@@ -285,11 +285,23 @@ pub struct FfiSealed {
 
 /// An established Double Ratchet session (`docs/CRYPTOGRAPHY.md` §5) — forward secrecy and
 /// post-compromise security for ongoing 1:1 messaging. Obtained from
-/// [`FfiHandshake::finish_as_initiator`] / [`FfiHandshake::finish_as_responder`], never
-/// constructed directly.
+/// [`FfiHandshake::finish_as_initiator`] / [`FfiHandshake::finish_as_responder`] (interactive
+/// Noise `XX` handshake) or `ffi_prekey.rs`'s hybrid async bootstrap — never constructed
+/// directly from outside this crate.
 #[derive(uniffi::Object)]
 pub struct FfiSession {
     ratchet: Mutex<DoubleRatchet>,
+}
+
+impl FfiSession {
+    /// Wrap an already-established ratchet — used by `ffi_prekey.rs`'s async (X3DH/PQXDH)
+    /// bootstrap paths, which construct a `DoubleRatchet` directly rather than deriving one from
+    /// a completed Noise handshake.
+    pub(crate) fn from_ratchet(ratchet: DoubleRatchet) -> Self {
+        Self {
+            ratchet: Mutex::new(ratchet),
+        }
+    }
 }
 
 #[uniffi::export]

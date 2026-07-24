@@ -24,6 +24,7 @@ pub mod error;
 pub mod ffi;
 pub mod ffi_groups;
 pub mod ffi_node;
+pub mod ffi_prekey;
 pub mod ffi_transport;
 pub mod groups;
 pub mod identity;

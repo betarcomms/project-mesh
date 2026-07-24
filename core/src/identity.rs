@@ -6,6 +6,8 @@ use rand_core::OsRng;
 use x25519_dalek::{PublicKey as XPublicKey, StaticSecret};
 use zeroize::ZeroizeOnDrop;
 
+use crate::error::{MeshError, Result};
+
 /// Long-term identity key pair, generated entirely on-device at first launch.
 /// Never leaves the device; never touches a server.
 #[derive(ZeroizeOnDrop)]
@@ -85,6 +87,30 @@ impl Identity {
 impl PublicIdentity {
     pub fn verify(&self, message: &[u8], sig: &Signature) -> bool {
         self.verifying.verify(message, sig).is_ok()
+    }
+
+    /// Export for wire transport (e.g. carried in an async-bootstrap first message alongside a
+    /// prekey initiator's ephemeral public key — `crate::crypto::prekey`/`pqxdh`'s "out-of-band
+    /// framing this module doesn't specify" note; a native-layer/FFI concern, not this crate's).
+    /// `[verifying_key:32][agreement_key:32]`.
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut out = [0u8; 64];
+        out[..32].copy_from_slice(self.verifying.as_bytes());
+        out[32..].copy_from_slice(self.agreement.as_bytes());
+        out
+    }
+
+    /// Parse untrusted wire bytes. Rejects a structurally invalid Ed25519 verifying key (a real
+    /// check `VerifyingKey::from_bytes` performs — not every 32-byte value is a valid curve
+    /// point); any 32 bytes are a structurally valid X25519 public key, so the agreement half
+    /// can't be rejected by format alone. **Does not verify anything about this being the
+    /// identity it claims to be** — that's what a signature over these bytes (already present in
+    /// `PrekeyBundle`/`HybridBundle`) or an out-of-band fingerprint comparison is for.
+    pub fn from_bytes(bytes: &[u8; 64]) -> Result<Self> {
+        let verifying = VerifyingKey::from_bytes(bytes[..32].try_into().unwrap())
+            .map_err(|_| MeshError::Malformed("invalid identity verifying key"))?;
+        let agreement = XPublicKey::from(<[u8; 32]>::try_from(&bytes[32..]).unwrap());
+        Ok(Self { verifying, agreement })
     }
 
     /// BLAKE3 hash of (verifying_key || agreement_key) — the canonical identity fingerprint.
@@ -175,6 +201,25 @@ mod tests {
         let sig = id.sign(msg);
         assert!(id.public().verify(msg, &sig));
         assert!(!id.public().verify(b"tampered", &sig));
+    }
+
+    #[test]
+    fn public_identity_to_bytes_from_bytes_roundtrip() {
+        let id = Identity::generate();
+        let public = id.public();
+        let restored = PublicIdentity::from_bytes(&public.to_bytes()).unwrap();
+        assert_eq!(restored, public);
+    }
+
+    #[test]
+    fn public_identity_from_bytes_rejects_invalid_verifying_key() {
+        // `[0x00; 31] || [0xFF]` sets every reserved high bit of the compressed-point encoding
+        // without a corresponding valid curve point -- empirically confirmed invalid via
+        // `VerifyingKey::from_bytes` directly (not guessed from the spec).
+        let mut bytes = [0u8; 64];
+        bytes[31] = 0xFF;
+        bytes[32..].copy_from_slice(XPublicKey::from([0u8; 32]).as_bytes());
+        assert!(PublicIdentity::from_bytes(&bytes).is_err());
     }
 
     #[test]
