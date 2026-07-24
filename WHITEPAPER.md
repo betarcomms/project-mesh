@@ -3,8 +3,11 @@
 **A technical white paper**
 
 Stewardship: Konko Maji (research + open source)
-Status: Design / pre-alpha — v0.1 draft
-Licence: CC BY-SA 4.0
+Status: Phase 1 (core, Android-first) implemented and released as `v0.1.0-prealpha`
+(debug-signed APK, 191 passing core tests, on-device QA pass) — pre-alpha, no independent
+security audit yet. This document was written at the design stage; §5–§9 now describe a real,
+tested implementation, not a plan. Live status: [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md).
+Licence: CC BY-SA 4.0 (this document); the code is AGPL-3.0-or-later (`LICENSE`)
 
 ---
 
@@ -269,7 +272,7 @@ Project Mesh uses a **shared portable core with thin native front-ends**.
         │                     Shared core  (Rust)                            │
         │  identity · Noise handshake · Double Ratchet · sealing/opening ·  │
         │  packet format · store-carry-forward engine · dedup · TTL/expiry · │
-        │  channel/group logic · onion routing · persistence (SQLCipher)     │
+        │  channel/group logic · onion routing · encrypted persistence       │
         └───────────────┬───────────────────────────────────┬──────────────┘
                         │           radio abstraction        │
         ┌───────────────┴──────────┐        ┌────────────────┴─────────────┐
@@ -463,9 +466,15 @@ in-person verification. Trust is rooted in human verification, never in a server
 
 ### 8.4 At rest
 
-All local storage (messages, keys, contacts) is encrypted at rest (e.g. **SQLCipher**), with the
-database key protected by the device keystore / Secure Enclave where available, and an optional
-passphrase and **duress/panic** mechanism for the coercive-seizure scenario.
+All local storage (messages, keys, contacts) is encrypted at rest with AEAD
+(ChaCha20-Poly1305 over **redb**, a pure-Rust embedded store — a deliberate deviation from an
+earlier SQLCipher plan, since `rusqlite`'s SQLCipher backend needs an OpenSSL build this
+project's toolchain couldn't produce; same encrypted-at-rest security property, different
+engine, see `docs/PROGRESS.md`), with the database key protected by the device keystore / Secure
+Enclave where available (Android Keystore-wrapped identity, prekey pool, and MLS group state are
+implemented; iOS Secure Enclave equivalent is Phase 2), and an optional passphrase and
+**duress/panic** mechanism (implemented at the core-library level; no native-layer UI to trigger
+it yet) for the coercive-seizure scenario.
 
 ---
 
@@ -488,7 +497,8 @@ substrate. Full detail in [`docs/FEATURES.md`](docs/FEATURES.md).
 - **Messaging.** Direct, group (bounded membership), passphrase channels, and public
   "everyone nearby" broadcast, all end-to-end encrypted, with store-and-forward delivery.
 - **Voice notes and small images** (bandwidth-permitting, transport-dependent), important for
-  low-literacy users.
+  low-literacy users — **not yet implemented**; Phase 1 shipped text-only messaging across all
+  four addressing modes.
 
 Emergency and safety traffic is prioritized by the routing engine over ordinary messaging.
 
@@ -523,7 +533,12 @@ Full detail in [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
   custom-ROM devices and in environments with no Google connectivity.
 - **Android delivery** via **F-Droid**, **IzzyOnDroid**, and direct signed **APK**, with an
   optional Play listing built from the same source. **Reproducible builds** so that anyone can
-  verify the published binary matches the public source — essential for a security tool.
+  verify the published binary matches the public source — essential for a security tool. Current
+  state: the first GitHub release (`v0.1.0-prealpha`) ships a direct, **debug-signed** APK;
+  F-Droid build metadata and a pinned toolchain exist (`metadata/`,
+  [`docs/REPRODUCIBLE-BUILD.md`](docs/REPRODUCIBLE-BUILD.md)), with same-machine build
+  reproducibility actually verified (byte-identical SHA-256 across a clean rebuild), but no
+  F-Droid submission has been made yet and cross-machine reproducibility is untested.
 - **iOS delivery** via the App Store / TestFlight (an unavoidable centralization point that we
   document honestly).
 
@@ -533,9 +548,11 @@ Full detail in [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
 
 Full detail in [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md).
 
-- **Licence.** A copyleft licence (**GPLv3** or **AGPLv3**) is preferred over a permissive one so
-  that improvements to public-good infrastructure remain open. (ProtestChat's MIT choice permits
-  closed forks; for civic commons we lean copyleft.) Documentation is CC BY-SA 4.0.
+- **Licence.** Decided and shipped: **AGPL-3.0-or-later** (`LICENSE`, canonical GNU text) — a
+  copyleft licence over a permissive one so that improvements to public-good infrastructure
+  remain open, and the network-use clause specifically closes the "run it as a hosted service
+  without sharing changes" gap a plain GPL leaves. (ProtestChat's MIT choice permits closed
+  forks; for civic commons we lean copyleft.) Documentation is CC BY-SA 4.0.
 - **Stewardship.** Konko Maji stewards the project as a transparent, named, non-profit-style
   initiative with a public mission centred on disaster and rural connectivity — which is also the
   correct legal posture (§13).
@@ -590,14 +607,20 @@ doctrine:
 | Indic-language, low-literacy UX | No | No | Partial | No | No | **Yes** |
 | Fully de-Googled distribution | No | No | Yes | Partial | Yes | **Yes** |
 
-The comparison is against *stated design goals*; Project Mesh is at the design stage, and the
-"Yes" entries in its column are commitments to be proven by implementation and audit, not
-completed facts.
+Phase 1 (phone-to-phone core) is now implemented and released (`v0.1.0-prealpha`), verified on a
+real Android emulator, not only unit-tested in isolation — 191 core tests, plus a DTN simulation
+harness (`core/src/dtn_sim.rs`) that drives the real relay engine through scripted contact
+schedules rather than a reimplemented protocol. The "Yes" entries for phone-level rows (forward
+secrecy, Android↔iOS BLE bridge groundwork, civic features, offline maps, de-Googled
+distribution) reflect that real, tested code; **no independent security audit has been done**,
+and the LoRa backbone (Phase 3) row remains a design commitment, not yet built.
 
-Planned evaluation once code exists: delivery ratio and latency versus node density in
-simulation and field trials; battery cost of relay on representative low-end Android hardware;
-LoRa range and throughput in the IN865 band across representative terrain; and an independent
-security audit before any general-availability release.
+Evaluation still pending: delivery ratio and latency versus node density in real (not simulated)
+field trials; battery cost of relay on representative low-end Android hardware; a genuine
+two-device over-the-air exchange (blocked so far by this project's dev environment having no
+spare hardware and no capacity to run two emulators at once); LoRa range and throughput in the
+IN865 band across representative terrain; and an independent security audit before any
+general-availability release.
 
 ---
 
@@ -629,9 +652,16 @@ These are documented, not hidden, in keeping with goal G8.
 
 The phased plan is maintained in [`docs/ROADMAP.md`](docs/ROADMAP.md). In brief:
 
-- **Phase 1 — Core (Android-first).** Rust core; BLE mesh; store-carry-forward engine;
-  identity, Noise, Double Ratchet; SOS, disaster bulletin, offline maps, resource board, and
-  messaging; Indic localization foundation; F-Droid distribution.
+- **Phase 1 — Core (Android-first). Implemented and released as `v0.1.0-prealpha`.** Rust core
+  (identity, Noise → Double Ratchet, PQXDH hybrid post-quantum bootstrap, MLS groups, Argon2id
+  channels, store-carry-forward engine, envelope padding, encryption at rest — 191 tests); real
+  BLE GATT + Wi-Fi Direct drivers; SOS, disaster bulletin, offline map rendering, resource board,
+  and all four messaging modes, verified on-device. **Not yet done from the original Phase 1
+  scope:** Indic-language translations (deliberately deferred — community-contributed, by
+  design), a real F-Droid submission (build metadata and reproducible-build groundwork exist;
+  no submission made yet), physical-device/two-device verification, offline map *data*
+  (OpenStreetMap tile packs — the rendering pipeline is done, the tile data is not), and an
+  independent security audit.
 - **Phase 2 — Reach and hardening.** iOS front-end (with the honest background model); more
   languages; performance tuning for low-end devices; onion-routing option; independent security
   audit.
