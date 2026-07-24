@@ -12,7 +12,7 @@ use rand_core::OsRng;
 use sha2::Sha256;
 use x25519_dalek::{PublicKey as XPublicKey, StaticSecret};
 
-use crate::crypto::{aead_open_once, aead_seal_once};
+use crate::crypto::{aead_open_once, aead_seal_once, padding};
 use crate::error::{MeshError, Result};
 
 /// Bound on stored out-of-order message keys — a flood/memory-exhaustion guard, per
@@ -101,6 +101,10 @@ impl DoubleRatchet {
         self.dh_self_pub
     }
 
+    /// **Pads the plaintext to a size bucket first** (`crypto::padding`, `docs/CRYPTOGRAPHY.md`
+    /// §7.2), same as `crypto::channel::Channel::seal` — a relay watching Direct-message envelope
+    /// lengths shouldn't be able to distinguish message content length any more finely than the
+    /// bucket it falls in.
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<(Header, Vec<u8>)> {
         let chain = self
             .send_chain
@@ -115,7 +119,8 @@ impl DoubleRatchet {
         };
         self.send_n += 1;
 
-        let ct = aead_seal_once(&mk, &header.to_bytes(), plaintext)?;
+        let padded = padding::pad_to_bucket(plaintext)?;
+        let ct = aead_seal_once(&mk, &header.to_bytes(), &padded)?;
         Ok((header, ct))
     }
 
@@ -130,7 +135,8 @@ impl DoubleRatchet {
         }
 
         let mk = self.message_key_for(header.n)?;
-        aead_open_once(&mk, &header.to_bytes(), ciphertext)
+        let padded = aead_open_once(&mk, &header.to_bytes(), ciphertext)?;
+        padding::unpad(&padded)
     }
 
     fn dh_ratchet(&mut self, remote_pub: XPublicKey) {
@@ -247,6 +253,25 @@ mod tests {
         let alice = DoubleRatchet::init_initiator(shared_secret, bob_ratchet_pub);
         let bob = DoubleRatchet::init_responder(shared_secret, bob_ratchet_key);
         (alice, bob)
+    }
+
+    #[test]
+    fn messages_in_the_same_size_bucket_produce_equal_length_ciphertext() {
+        // Same point as `crypto::channel`'s equivalent test: a relay watching Direct-message
+        // envelope lengths shouldn't be able to distinguish a short message from a longer one
+        // in the same bucket.
+        let (mut alice, _bob) = paired_ratchets();
+        let (_h1, ct1) = alice.encrypt(b"hi").unwrap();
+        let (_h2, ct2) = alice.encrypt(b"a somewhat longer but still short message").unwrap();
+        assert_eq!(ct1.len(), ct2.len());
+    }
+
+    #[test]
+    fn crossing_a_bucket_boundary_still_roundtrips_correctly() {
+        let (mut alice, mut bob) = paired_ratchets();
+        let long = vec![b'x'; 5000]; // well past the smallest bucket
+        let (h, ct) = alice.encrypt(&long).unwrap();
+        assert_eq!(bob.decrypt(&h, &ct).unwrap(), long);
     }
 
     #[test]

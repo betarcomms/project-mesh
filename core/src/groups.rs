@@ -58,7 +58,7 @@ use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
 use tls_codec::{Deserialize as TlsDeserialize, Serialize as TlsSerialize};
 
-use crate::crypto::{aead_open, aead_seal};
+use crate::crypto::{aead_open, aead_seal, padding};
 use crate::envelope::{Addressing, Envelope, Priority};
 use crate::error::{MeshError, Result};
 use crate::identity::Identity;
@@ -265,10 +265,18 @@ impl MlsGroupHandle {
 
     /// Seal an application message (already-plaintext application content — this module does
     /// not know or care what the bytes mean) for the current group. Returns wire bytes.
+    ///
+    /// **Pads the plaintext to a size bucket first** (`crypto::padding`, `docs/CRYPTOGRAPHY.md`
+    /// §7.2), same rationale as `crypto::channel::Channel::seal`/`crypto::ratchet`'s Double
+    /// Ratchet: a relay watching Group-addressed envelope lengths shouldn't be able to
+    /// distinguish message content length any more finely than the bucket it falls in. MLS's own
+    /// framing (epoch/sender/authenticated-data overhead) rides on top unpadded — this only
+    /// normalizes the application-content length that framing wraps.
     pub fn seal(&mut self, plaintext: &[u8]) -> Result<Vec<u8>> {
+        let padded = padding::pad_to_bucket(plaintext)?;
         let message = self
             .group
-            .create_message(&self.member.provider, &self.member.signer, plaintext)
+            .create_message(&self.member.provider, &self.member.signer, &padded)
             .map_err(|e| group_err("creating application message", e))?;
         message
             .tls_serialize_detached()
@@ -287,7 +295,7 @@ impl MlsGroupHandle {
             .process_message(&self.member.provider, protocol_message)
             .map_err(|e| group_err("processing application message", e))?;
         match processed.into_content() {
-            ProcessedMessageContent::ApplicationMessage(app) => Ok(app.into_bytes()),
+            ProcessedMessageContent::ApplicationMessage(app) => padding::unpad(&app.into_bytes()),
             _ => Err(MeshError::Group("expected an application message".into())),
         }
     }
@@ -496,6 +504,34 @@ mod tests {
         let sealed = alice_group.seal(b"hi bob, this is alice").unwrap();
         let opened = bob_group.open(&sealed).unwrap();
         assert_eq!(opened, b"hi bob, this is alice");
+    }
+
+    #[test]
+    fn application_messages_in_the_same_size_bucket_produce_equal_length_wire_output() {
+        // Same point as `crypto::channel`/`crypto::ratchet`'s equivalent tests: a relay watching
+        // Group-addressed envelope lengths shouldn't be able to distinguish a short application
+        // message from a longer one in the same padding bucket.
+        let alice = MlsMember::new(&Identity::generate()).unwrap();
+        let mut alice_group = alice.create_group().unwrap();
+
+        let short = alice_group.seal(b"hi").unwrap();
+        let also_short = alice_group.seal(b"a somewhat longer but still short message").unwrap();
+        assert_eq!(short.len(), also_short.len());
+    }
+
+    #[test]
+    fn application_message_crossing_a_bucket_boundary_still_roundtrips_correctly() {
+        let alice = MlsMember::new(&Identity::generate()).unwrap();
+        let mut alice_group = alice.create_group().unwrap();
+
+        let bob = MlsMember::new(&Identity::generate()).unwrap();
+        let bob_key_package = bob.key_package().unwrap();
+        let output = alice_group.add_member(bob_key_package).unwrap();
+        let mut bob_group = bob.join_from_welcome(&output.welcome_bytes).unwrap();
+
+        let long = vec![b'x'; 5000]; // well past the smallest bucket
+        let sealed = alice_group.seal(&long).unwrap();
+        assert_eq!(bob_group.open(&sealed).unwrap(), long);
     }
 
     #[test]
