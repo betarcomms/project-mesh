@@ -1397,3 +1397,96 @@ Newest entry at the bottom (chronological), each dated.
   export-then-UI split every other FFI addition in this project has gone through, tracked
   separately. `IMPLEMENTATION-STATUS.md`'s MLS groups row, UniFFI bindings row, and Messaging UI
   row all updated to match.
+
+## 2026-07-24 — Punch-list items 3-7: Keystore master key, prekey pool, bundle transport, padding wiring, offline maps
+
+User asked to run through the rest of the Phase 1 punch list in order, batching one commit at the
+end instead of per item. Each item below was still built, tested, and (where it touches the
+native library or app) verified on-device individually — batching only changed when the commit
+happens, not the verification bar.
+
+**Item 3 — Android Keystore-backed master key.** New `android/.../KeystoreMasterKey.kt`:
+`FfiMeshNode.open`'s 32-byte master key is still an ordinary `SecureRandom` value (Rust needs raw
+extractable bytes), but now key-wrapped under a hardware-backed (TEE/StrongBox, device-dependent)
+non-extractable AES-256-GCM key generated in `AndroidKeyStore`, replacing the old scheme where the
+key sat as plain base64 in `SharedPreferences`. `setUserAuthenticationRequired(false)` — usable
+without a biometric prompt since `MeshRelayService` opens the store automatically in the
+background; protects against offline extraction (root, ADB backup), not a compromised-while-
+unlocked device, same boundary `THREAT-MODEL.md` already draws elsewhere.
+- **Real, live secret found and fixed along the way:** a device that ran the old code has a real
+  plaintext key still sitting in `SharedPreferences`, unused by the new code but not gone just
+  because it's unread. Added one-time migration cleanup that explicitly removes it, verified via
+  `run-as`+`cat` on the actual prefs XML before and after.
+- **Real bug found and fixed at the root, not just worked around:** `DurableStore::open`
+  (`core/src/durable.rs`) used to propagate a single envelope's AEAD decrypt failure as a fatal
+  `Err`, aborting the *entire* store open — unreachable before this pass in practice, but this
+  Keystore work is exactly the kind of change that makes a master key legitimately change out from
+  under existing on-disk data (and a future Keystore reset would do it again). Fixed to drop just
+  the undecryptable envelope and continue, matching this crate's existing best-effort semantics
+  elsewhere (Bloom-filter false positives self-heal, a disabled client puzzle silently accepts).
+  1 new regression test proves `open()` now succeeds instead of erroring when reloading under a
+  different key.
+- **Verified on a real emulator across two full install cycles:** confirmed via `run-as`+`cat`
+  that the wrapped ciphertext is what's actually stored (not plaintext), that it's byte-for-byte
+  identical across a reinstall (proving both the Keystore key and the wrapped blob genuinely
+  persist rather than being silently regenerated — GCM never produces identical ciphertext from a
+  fresh encrypt), and that the migration-cleanup log line fires with the legacy entry actually gone
+  afterward.
+
+**Item 4 — Prekey pool manager.** New `PrekeyPool` in `core/src/crypto/prekey.rs`: local
+bookkeeping over a batch of one-time prekeys (`available_count`, `needs_top_up`/`top_up`,
+`consume` retiring a specific OTPK by public key and rejecting reuse, `rotate_signed_prekey`).
+Module doc comment states plainly what this does and doesn't solve: it prevents a single device
+from reusing an OTPK locally, but does **not** solve the distributed race where the same published
+bundle reaches two initiators before rotation — inherent to publishing one bundle to many
+potential peers in a store-and-forward mesh, not something local bookkeeping alone can fix.
+7 new tests incl. a full X3DH bootstrap driven through the pool end to end (`current_bundle` →
+`initiate` → `consume` → `respond`), not just bookkeeping tested in isolation.
+
+**Item 5 — Prekey bundle transport decision.** Actually decided, not left open: a device's current
+`PrekeyBundle` travels as a magic-byte-prefixed **Broadcast** envelope, the same pattern the civic
+post classes (SOS/bulletin/resource board) already use — written up with full reasoning in
+`docs/ROUTING-PROTOCOL.md` §5.1 (in-person exchange can't be the *only* transport since it requires
+being simultaneously in range, defeating X3DH's actual point; Broadcast's "signed, not encrypted"
+property is exactly right since the bundle is already self-authenticating via its own signature;
+short TTL is appropriate since a stale bundle fails safely rather than dangerously). Added the
+concrete prerequisite any transport needs: `PrekeyBundle::to_bytes`/`from_bytes` wire format.
+4 new tests incl. one proving a bundle survives serialize → "gossip" → parse → real X3DH bootstrap,
+not just a symmetric roundtrip in isolation. **Not done:** no magic-byte class or Kotlin messenger
+actually composing/broadcasting a bundle in the app yet — the decision and the primitive are made,
+wiring them into the app is the next increment.
+
+**Item 6 — Padding primitive wiring.** `crypto::padding`'s `pad_to_bucket`/`unpad` had existed
+since an earlier session with zero call sites. Wired into `Channel::seal`/`Channel::open`
+(`crypto/channel.rs`) — chosen deliberately over the other candidates because Channels are exactly
+the "public community board" case where a relay-visible ciphertext length correlating with a known
+safety-term vocabulary (short "Trapped" vs. longer "Water available at well 3") is a real metadata
+leak, and because `ChannelMessenger`'s working, on-device-verified UI meant this could be checked
+against a real usage path, not just unit tests. Reachable from Kotlin automatically through
+`FfiChannel` — no FFI signature changed, so no binding regeneration needed, only a native-library
+rebuild. 2 new tests (equal-length ciphertext for same-bucket messages, a bucket-boundary-crossing
+roundtrip). **Not done:** not yet wired into `aead_seal`/ratchet `encrypt`/MLS `seal` — Channels was
+the first call site, not the only one intended eventually.
+
+**Item 7 — Offline maps (MapLibre).** Added `org.maplibre.gl:android-sdk:11.13.0` and new
+`MapScreen.kt`. **Real scoping decision, not a silent partial claim:** "offline maps" per
+`FEATURES.md` §3 means real OpenStreetMap vector tiles from downloaded MBTiles/PMTiles regional
+packs — this dev environment has no way to source actual geographic tile data, so that's honestly
+out of reach this pass. What *is* real: the SDK integrates cleanly (first clean build, no
+API-guessing cycle) and renders using a hand-written minimal style (`OFFLINE_BLANK_STYLE`, a
+complete valid MapLibre style with an empty `sources` object and one `background` layer) loaded via
+`Style.Builder().fromJson(...)` rather than a remote style URL — genuinely zero network calls,
+matching this app's deliberate absence of the `INTERNET` permission. **Verified on a real
+emulator, not just compiled:** installed, launched, no crash, scrolled to the map section and
+confirmed the style's background color actually renders on a real GL surface — not a placeholder
+claim. **Not done, stated plainly:** no vector tiles, no MBTiles/PMTiles loading or sideloading, no
+Wi-Fi-Direct-based tile-pack sharing (`FEATURES.md`'s "one downloaded map seeds a whole area" — a
+natural fit for the Wi-Fi Direct driver already built this session, once real tile data exists to
+share), no pin-drop-over-mesh protocol. This is the rendering pipeline, not the feature.
+
+**Totals for this batch:** core Rust test count 133 → 146 (13 new: 1 durable.rs, 7 prekey pool,
+4 prekey wire format, 2 channel padding — MLS's 8 from the previous entry already counted).
+Rebuilt the release cdylib, re-ran the full Android cross-compile after every Rust change, and
+reconfirmed `./gradlew assembleDebug` after every change including the new MapLibre dependency.
+`docs/IMPLEMENTATION-STATUS.md` updated for all five items; `docs/ROUTING-PROTOCOL.md` gained a
+new §5.1 for the bundle-transport decision.

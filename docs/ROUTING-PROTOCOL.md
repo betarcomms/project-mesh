@@ -119,6 +119,42 @@ Naïve epidemic routing is expensive and trivially floodable. Controls:
 
 Cryptographic detail for each is in `CRYPTOGRAPHY.md`.
 
+### 5.1 Prekey bundle transport
+
+**Decided:** a device's current `PrekeyBundle` (`CRYPTOGRAPHY.md` §4.2 — signed prekey + at most
+one one-time prekey, the whole point being to let someone bootstrap a session with a peer who is
+never simultaneously in range) travels as an ordinary **Broadcast** envelope, magic-byte-prefixed
+exactly like the civic-post classes (SOS/bulletin/resource board) already are, rather than as a
+new `Addressing` variant. Reasoning:
+
+- In-person exchange (alongside the identity fingerprint, for trust verification) only works
+  when both parties *are* simultaneously in range — which defeats the actual point of X3DH, so it
+  can establish trust in a fingerprint but can't be the sole way a *current* rotating bundle
+  reaches someone later.
+- Broadcast already has exactly the properties this needs: no setup, reaches everyone the
+  epidemic relay touches, and a bundle is meant to be discoverable by anyone who might want to
+  initiate contact — not access-controlled like a Channel or Direct message would imply.
+- The bundle is self-authenticating (the signed prekey's signature verifies against the identity
+  key embedded in the bundle itself — see `PrekeyBundle::verify_signed_prekey`), so Broadcast's
+  "signed, not encrypted" property is exactly right: no confidentiality is needed or wanted for a
+  public bootstrap artifact, only tamper-evidence, which the signature already provides
+  independent of the transport layer.
+- A **shorter TTL** than other broadcast civic classes is appropriate — a stale prekey bundle
+  either fails signature verification against a *rotated* signed prekey (harmless, `initiate`
+  just returns an error) or, worse, references a one-time prekey the publisher already consumed
+  responding to someone else (also harmless — `respond` simply won't have that secret, and X3DH
+  degrades to three DH terms rather than failing outright per `CRYPTOGRAPHY.md` §4.2's design).
+  Neither failure mode is dangerous, but propagating a long-stale bundle wastes relay bandwidth on
+  something increasingly unlikely to still be useful — a native-layer/UX-tunable cadence (re-
+  broadcast periodically, similar order of magnitude to the BLE link-identifier rotation interval
+  in `CRYPTOGRAPHY.md` §7.1), not a hard protocol requirement.
+
+**Not yet implemented:** `core/src/crypto/prekey.rs`'s `PrekeyBundle` has a wire format
+(`to_bytes`/`from_bytes`) as of this pass, but no magic-byte class, UniFFI export, or Kotlin
+messenger exists yet to actually compose/broadcast/receive one in the app — those are the next
+increments, tracked in `docs/IMPLEMENTATION-STATUS.md`, not bundled silently into "the decision is
+made" here.
+
 ## 6. LoRa considerations
 
 The LoRa backbone has a tiny bit-rate, so over LoRa the engine:

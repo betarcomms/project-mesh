@@ -29,7 +29,7 @@
 use hkdf::Hkdf;
 use sha2::Sha256;
 
-use crate::crypto::{aead_open, aead_seal, passphrase};
+use crate::crypto::{aead_open, aead_seal, padding, passphrase};
 use crate::error::Result;
 
 pub struct Channel {
@@ -55,13 +55,21 @@ impl Channel {
 
     /// Seal a message for this channel. Uses the many-use AEAD wrapper (fresh random nonce per
     /// call — a channel key is, by design, reused across every message posted to it) with the
-    /// selector bound in as associated data.
+    /// selector bound in as associated data. **Pads the plaintext to a size bucket first**
+    /// (`crypto::padding`, `docs/CRYPTOGRAPHY.md` §7.2) — the first sealing call site this
+    /// primitive is actually wired into (chosen because Channels are exactly the "public
+    /// community board" case where a relay-visible ciphertext length correlating with a known
+    /// safety-term vocabulary, e.g. "Trapped" vs. "Water available," is a real metadata leak the
+    /// primitive exists to close). Every message in the same bucket now produces
+    /// equal-length ciphertext regardless of its true content length.
     pub fn seal(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
-        aead_seal(&self.key, &self.selector, plaintext)
+        let padded = padding::pad_to_bucket(plaintext)?;
+        aead_seal(&self.key, &self.selector, &padded)
     }
 
     pub fn open(&self, sealed: &[u8]) -> Result<Vec<u8>> {
-        aead_open(&self.key, &self.selector, sealed)
+        let padded = aead_open(&self.key, &self.selector, sealed)?;
+        padding::unpad(&padded)
     }
 }
 
@@ -124,5 +132,24 @@ mod tests {
         let a = c.seal(b"hello").unwrap();
         let b = c.seal(b"hello").unwrap();
         assert_ne!(a, b); // random nonce -> different ciphertext for identical plaintext
+    }
+
+    #[test]
+    fn messages_in_the_same_size_bucket_produce_equal_length_ciphertext() {
+        // The actual point of wiring `crypto::padding` in here: a relay watching sealed lengths
+        // shouldn't be able to distinguish a short safety-critical word from a longer one.
+        let c = Channel::from_passphrase(b"north-gate-42").unwrap();
+        let short = c.seal(b"help").unwrap();
+        let also_short = c.seal(b"a somewhat longer but still short post").unwrap();
+        assert_eq!(short.len(), also_short.len());
+    }
+
+    #[test]
+    fn crossing_a_bucket_boundary_still_roundtrips_correctly() {
+        let c = Channel::from_passphrase(b"relief-camp-1").unwrap();
+        let short = b"hi".to_vec();
+        let long = vec![b'x'; 5000]; // well past the smallest bucket
+        assert_eq!(c.open(&c.seal(&short).unwrap()).unwrap(), short);
+        assert_eq!(c.open(&c.seal(&long).unwrap()).unwrap(), long);
     }
 }

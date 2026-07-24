@@ -29,13 +29,32 @@ impl DurableStore {
     /// disk during reload rather than kept around forever. If `capacity` is smaller than what's
     /// on disk (e.g. the store was resized down), the lowest-priority reloaded envelopes are
     /// evicted and removed from disk, exactly as [`Store::accept`] would evict a live one.
+    ///
+    /// **A single envelope that fails to decrypt under `master_key` does not fail the whole
+    /// open.** This is reachable in practice, not just theoretically: a native caller's master
+    /// key can legitimately change out from under a store that already has data on disk (a
+    /// platform-Keystore-wrapped key getting regenerated after a Keystore reset, an app upgrade
+    /// that switches key-storage schemes, key material recovered from a partial backup). Per
+    /// this crate's existing best-effort mesh semantics elsewhere (a Bloom-filter false positive
+    /// self-heals on next contact, a disabled client puzzle silently accepts), an unreadable
+    /// stored envelope is dropped — it can never become readable again under the current key —
+    /// rather than aborting every other envelope's reload along with it.
     pub fn open(path: &Path, master_key: [u8; 32], capacity: usize, now: u64) -> Result<Self> {
         let disk = EncryptedStore::open(path, master_key)?;
         let mut memory = Store::new(capacity);
 
         for id in disk.all_ids()? {
-            let Some(envelope) = disk.get(&id)? else {
-                continue; // removed by a concurrent/prior pass; nothing to reload
+            let envelope = match disk.get(&id) {
+                Ok(Some(envelope)) => envelope,
+                Ok(None) => continue, // removed by a concurrent/prior pass; nothing to reload
+                Err(_) => {
+                    // Undecryptable under the current master key -- see this method's doc
+                    // comment. Best-effort cleanup only: if the remove itself fails, the entry
+                    // is simply retried (and re-skipped) on the next open, not a correctness
+                    // problem either way.
+                    let _ = disk.remove(&id);
+                    continue;
+                }
             };
             let (outcome, evicted) = memory.accept(envelope, now);
             if let Some(evicted_id) = evicted {
@@ -151,6 +170,28 @@ mod tests {
         assert_eq!(reopened.len(), 2);
         assert_eq!(reopened.get(&a.id), Some(&a));
         assert_eq!(reopened.get(&b.id), Some(&b));
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn reload_with_wrong_master_key_drops_undecryptable_envelopes_instead_of_failing_open() {
+        let path = temp_db_path("wrongkey-reload");
+        let _ = std::fs::remove_file(&path);
+        let key_a = [3u8; 32];
+        let key_b = [4u8; 32];
+        let a = env(Priority::Normal, 8, 9_999_999_999, 1);
+
+        {
+            let mut store = DurableStore::open(&path, key_a, 10, 0).unwrap();
+            assert_eq!(store.accept(a.clone(), 0).unwrap(), Accept::New);
+        }
+
+        // A different master key can't decrypt what key_a wrote -- open() must still succeed,
+        // just with that envelope silently dropped, not a fatal error for the whole store.
+        let reopened = DurableStore::open(&path, key_b, 10, 0).unwrap();
+        assert_eq!(reopened.len(), 0);
+        assert_eq!(reopened.get(&a.id), None);
 
         let _ = std::fs::remove_file(&path);
     }
