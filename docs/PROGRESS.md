@@ -1059,3 +1059,61 @@ Newest entry at the bottom (chronological), each dated.
   remaining scope of this doc's §1, not silently declared done. Also not done: Noto font
   bundling, complex-script shaping, RTL support, icon-led navigation, voice notes, TTS — every
   one of these is its own separate, larger effort than string externalization.
+
+## 2026-07-24 — Localization commit pushed; Wi-Fi Direct transport driver written
+
+- Verified the working tree was clean and `core/` still passed all 118 tests, then pushed the
+  pending localization commit (`37ce0f4`) to `origin/main` — it had been sitting local-only for a
+  session boundary. Confirmed `git status` reports up to date afterward.
+- Started the next `IMPLEMENTATION-STATUS.md` Phase 1 gap: the Wi-Fi Direct driver
+  (`docs/TRANSPORT.md` §4), for payloads too large for comfortable BLE transfer. New package
+  `android/app/src/main/java/india/projectmesh/app/wifidirect/`:
+  - `WifiDirectConfig.kt` — DNS-SD instance/registration-type constants, TXT record key, fixed
+    socket port, connection cap, max-frame-size guard.
+  - `WifiPeerRegistry.kt` — same shape as `ble/BlePeerRegistry.kt` but keyed by a connected
+    socket's remote IP rather than a BLE device address — **deliberate simplification, flagged**:
+    correlating an accepted socket back to a specific `WifiP2pDevice` needs a second
+    `requestGroupInfo` round trip, not done this pass. Peer identity beyond "this connection" was
+    already out of scope for BLE's registry too (the crypto/identity layer's job).
+  - `SocketFraming.kt` — length-prefixed (4-byte big-endian) framing for TCP's stream semantics.
+    Genuinely different problem from BLE's `Fragmentation.kt` (ATT-MTU-bounded chunking +
+    reassembly) even though both exist to turn one opaque frame into wire bytes and back — TCP
+    already guarantees ordered, complete delivery within a connection, so only a message boundary
+    is needed, not chunk/reassemble logic.
+  - `WifiDirectTransportDriver.kt` — implements `FfiMeshTransport` same as `BleTransportDriver`.
+    Uses Wi-Fi Direct **Service Discovery (DNS-SD)** rather than plain `discoverPeers()`, so this
+    driver only connects to devices advertising a TXT record with a matching `serviceId` — the
+    Wi-Fi Direct equivalent of BLE's service-UUID scan filter, and necessary since plain P2P
+    discovery finds every nearby Wi-Fi-Direct-capable device regardless of app. Once a P2P group
+    forms, the group owner runs a `ServerSocket` on a fixed port; the other side connects out to
+    `WifiP2pInfo.groupOwnerAddress`. Connection-race tie-break mirrors BLE's `sessionIdIsLower`
+    pattern exactly, but compares the real `WifiP2pDevice.deviceAddress` (available here) instead
+    of a synthetic session ID (BLE needed one because `BluetoothAdapter.getAddress()` returns a
+    dummy value on modern Android — that constraint doesn't apply to this API).
+  - Added the manifest permissions Wi-Fi Direct needs: `ACCESS_WIFI_STATE`, `CHANGE_WIFI_STATE`,
+    `NEARBY_WIFI_DEVICES` (API 33+, `neverForLocation` — P2P discovery here doesn't derive
+    physical location from results), and extended `ACCESS_FINE_LOCATION`'s existing
+    `maxSdkVersion` from 30 to 32 (the framework requires it for Wi-Fi Direct discovery on API
+    29-32, same permission BLE's legacy path already declared for a different API range) — one
+    `uses-feature` line for `android.hardware.wifi.direct`.
+  - **Hit the project's own recurring mistake a fourth time while editing the manifest**: a `--`
+    inside an XML comment (this time in a freshly-added comment explaining the
+    `ACCESS_FINE_LOCATION` ceiling change) breaks the manifest parser — the exact bug from two
+    Android-toolchain sessions ago (`AndroidManifest.xml` ×2) and the localization pass just
+    before this one (`strings.xml`). Caught immediately by the real `processDebugMainManifest`
+    build failure, fixed the same way (reworded to avoid the double hyphen). Worth remembering as
+    a standing habit now, not a one-off lesson each time.
+  - `./gradlew assembleDebug` → `BUILD SUCCESSFUL`, `compileDebugKotlin` actually ran (not
+    cached), confirming the new package compiles clean against the real Android SDK/`android.jar`
+    and the UniFFI-generated `FfiMeshTransport`/`FfiException` types.
+- **Not done, stated plainly (also recorded in `IMPLEMENTATION-STATUS.md`):** not run against
+  real Wi-Fi Direct hardware or radios — no physical device in this dev environment, and Wi-Fi
+  Direct has no meaningful AVD emulator support (no virtual P2P radio), so this is "compiles
+  clean," not "verified," matching the honesty bar `IMPLEMENTATION-STATUS.md` sets. Not wired into
+  `MeshCoordinator` or any UI — `MeshCoordinator` still hardwires `BleTransportDriver` as the sole
+  `FfiMeshTransport`; running BLE and Wi-Fi Direct together needs a multiplexing transport that
+  dispatches `send()` by which link owns a peer handle, a distinct integration pass. No
+  BLE-bootstrapped discovery (`TRANSPORT.md` §4's suggested pattern — this driver's DNS-SD
+  discovery runs independently), no short-lived connect/exchange/disconnect cycle, no
+  backoff/fairness for dense crowds, no foreground-service integration, no Wi-Fi-disabled recovery
+  flow.
