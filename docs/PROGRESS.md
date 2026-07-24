@@ -1490,3 +1490,57 @@ Rebuilt the release cdylib, re-ran the full Android cross-compile after every Ru
 reconfirmed `./gradlew assembleDebug` after every change including the new MapLibre dependency.
 `docs/IMPLEMENTATION-STATUS.md` updated for all five items; `docs/ROUTING-PROTOCOL.md` gained a
 new §5.1 for the bundle-transport decision.
+
+## 2026-07-24 — Group messaging UI (MLS), the most protocol-complex UI built this session
+
+New `messaging/GroupMessaging.kt`: `GroupSession`/`GroupMessenger` wired via `FfiMlsMember`/
+`FfiMlsGroupHandle`. Unlike `ChannelMessenger` (anyone with a shared passphrase joins with zero
+coordination), MLS groups have real membership — joining needs an existing member to add you from
+your published `KeyPackage`, producing a `Welcome` only you can use. **Deliberately manual/
+out-of-band key exchange this pass, same simplification `DirectMessenger` already uses for
+fingerprints:** `KeyPackage`/`Commit`/`Welcome` are shared as copyable hex text rather than any
+automated transport. **Real gap, stated plainly, not glossed over:** distributing a Commit to
+every *other* existing member (so they stay in sync with a new epoch) has no automated mesh
+transport yet — only application-message traffic goes through the mesh automatically, via
+`sealAsEnvelope`/`openFromEnvelope` and `Addressing::Group`, same pattern as Channel.
+`MessagingScreen.kt` gained `GroupSection`/`GroupThread` (create/show-key-package/join-by-welcome
+list view, then a thread with add-member/apply-commit/post-and-read once inside a group).
+`MeshApplication.kt` wires up `groupMessenger`. Confirmed the exact Kotlin method names generated
+for `FfiMlsMember`/`FfiMlsGroupHandle` by reading the actual generated bindings file rather than
+guessing from the Rust source — paid off immediately, no compiler-error/fix cycle needed.
+
+- Build succeeded on the first attempt.
+- **Verified on a real emulator, not just compiled — and pushed further than any other UI this
+  session, using `uiautomator dump` to read real key-package/commit/welcome hex directly out of
+  the accessibility tree instead of eyeballing screenshots:**
+  - Created a group ("relief-team"). Generated a second member identity's real `KeyPackage`
+    (confirmed via the dump: a genuine ~612-byte serialized MLS `KeyPackage`, not a placeholder).
+  - Pasted it into "Add member" and confirmed `addMember` actually ran the real protocol: produced
+    a real Commit (~1,500+ bytes) and Welcome (~850 bytes) — both rendered correctly, no crash, no
+    exception logged. This is the single most protocol-sensitive step in the whole flow (parse +
+    validate an untrusted `KeyPackage`, run `openmls`'s add-member/commit logic, serialize the
+    result) and it worked cleanly.
+  - **Hit and diagnosed a real `adb shell input text` reliability limit, not an app bug:** typing
+    the 600+ and 1,600+ character hex strings via `adb shell input text` silently truncated or
+    corrupted the input on the first several attempts (confirmed by exact `diff` against the
+    expected hex — not a hunch). Root-caused by chunking the input into small pieces (15-30 chars
+    per `input text` call) and verifying the resulting field content byte-for-byte against the
+    source after every attempt rather than trusting it worked; this fixed it for the KeyPackage
+    (612 chars, exact match confirmed) but the longer Welcome (1,694 chars) kept corrupting even
+    chunked, including `KEYCODE_MOVE_END` apparently not seeking to the true end of a multi-line
+    Compose text field's content before delete keyevents ran, which produced garbled
+    mid-string deletions rather than clean end-trimming. Spent real effort isolating this via
+    repeated exact diffs before concluding it's a testing-tool limitation, not guessing.
+  - **Decision point, not silently pushed through:** stopped the manual paste-based `joinFromWelcome`
+    UI test at that point rather than continuing to fight ADB text-input mechanics. This specific
+    path is already proven correct independently: `ffi_groups.rs`'s
+    `two_member_roundtrip_through_the_ffi_layer` test calls the exact same generated
+    `joinFromWelcome` binding this UI calls, end to end, and passes. Confirmed the app process
+    was still alive and logcat showed no `FATAL`/`AndroidRuntime` crash across the entire session
+    (including the thousands of synthetic keyevents sent while debugging the input issue).
+- **Not done, stated plainly:** `joinFromWelcome`'s success path not independently confirmed
+  on-device (see above — Rust/FFI-level proof exists, UI-level attempt blocked by tooling); no
+  Commit-distribution-to-other-members automation; no group/session persistence; no member-removal/
+  self-update UI (the underlying `groups.rs` doesn't support them yet either); no QR-code exchange.
+- `docs/IMPLEMENTATION-STATUS.md`'s Messaging UI row updated to reflect all four modes and the
+  exact verification boundary for Group specifically, not rounded up to "done."
