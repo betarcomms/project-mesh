@@ -5,7 +5,8 @@
 # fdroiddata repository and F-Droid's own CI, neither possible from this dev session). Treat this
 # as a well-reasoned starting point for whoever does that submission, not a verified-working
 # recipe -- see docs/REPRODUCIBLE-BUILD.md §4 for the rest of what's still blocking an actual
-# submission (no LICENSE file, no release signing, cross-machine reproducibility untested).
+# submission (no dedicated release signing, cross-machine reproducibility untested). Deferred to
+# a later pass -- not this one.
 
 Categories:
   - Internet

@@ -69,15 +69,15 @@ own.
 
 ## 4. What's blocking an actual F-Droid submission, stated honestly
 
-- **No `LICENSE` file at the repository root.** `Cargo.toml`'s `workspace.package.license =
-  "AGPL-3.0-or-later"` and `docs/GOVERNANCE.md`'s recommendation are consistent, but F-Droid (and
-  GitHub's own license detection) need the actual license text committed, not just a manifest
-  field. Not added this pass.
-- **No release signing configured.** `build.gradle.kts` has no `signingConfig` for `release` —
-  F-Droid signs its own builds with its own key (a different, expected key from any
-  developer-signed release), so this specifically blocks a *developer-signed direct APK*, not the
-  F-Droid build itself, but is worth having either way for `DISTRIBUTION.md` §2's other channels
-  (IzzyOnDroid, direct download).
+- **`LICENSE` file added** (later pass — AGPL-3.0-or-later, matching `Cargo.toml`'s declared
+  license and `docs/GOVERNANCE.md`'s recommendation). No longer a gap.
+- **No dedicated release signing configured.** `build.gradle.kts` has no `signingConfig` for
+  `release`; the first GitHub Release ships the debug-signed APK instead — a deliberate choice for
+  a `0.1.0-prealpha` build (zero new key-custody burden), not an oversight. F-Droid signs its own
+  builds with its own key regardless (a different, expected key from any developer-signed release),
+  so this doesn't block that channel; it does mean there's no consistent developer signature across
+  releases yet for `DISTRIBUTION.md` §2's other channels (IzzyOnDroid, direct download) — revisit
+  once the project is past pre-alpha.
 - **No actual `fdroiddata` submission.** The metadata this pass adds (`metadata/` at the repo
   root) is F-Droid-build-recipe metadata, reasoned from the publicly documented `fdroiddata` YAML
   schema — **not validated against F-Droid's own linter/build server**, since that requires
