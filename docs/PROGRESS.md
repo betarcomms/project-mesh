@@ -1893,3 +1893,63 @@ locale override cleared back to default afterward.
 one emulator, not the independent security audit, two-device hardware test, or CI-run fuzzing that
 `IMPLEMENTATION-STATUS.md` still lists as open gates. Those need an external party, physical
 devices, or a Linux/CI runner this dev session doesn't have, and are not being claimed done here.
+
+## 2026-07-26 — The real Betar screens, built and verified on-device, plus a signed release
+
+Everything below built on the design system and shared components from earlier the same day.
+Dispatched across parallel agents by screen area, then integrated, debugged, and verified by
+hand, not trusted from each agent's own report.
+
+**48 screens became real screens.** Onboarding (language picker, three-panel intro, nickname,
+permissions explainer, battery guidance), `BetarScaffold` (the mesh ribbon, five-tab bottom nav,
+persistent SOS button), and the full emergency flow (category pick, detail, slide to send, live
+status) replace the old single-scrolling-column debug skeleton in `MainActivity.kt`. Chats, Board,
+and Emergency wire to the exact same `DirectMessenger`/`ChannelMessenger`/`GroupMessenger`/
+`SosMessenger`/`BulletinMessenger`/`ResourceMessenger` the old debug screens used, not a new mock
+layer. The old `MapScreen.kt`, `MessagingScreen.kt`, and `CivicScreens.kt` were retired outright
+once confirmed nothing else still referenced them, not left as dead code alongside their
+replacements.
+
+**A real on-device walkthrough, not just a build, found two real bugs.** Installed fresh, went
+through the entire onboarding chain including the real system permission dialogs (granted),
+reached the main shell, opened the emergency picker: its close button did nothing. Root cause,
+found by reading the actual code rather than guessing: both the mesh ribbon and the emergency
+flow's header render underneath the system status bar, a bare `Surface`/`Scaffold` composition
+that never called `.statusBarsPadding()`, so the close button's tap target sat where the system
+status bar itself intercepts touches. Fixed in both places, rebuilt, reinstalled, re-tapped,
+confirmed the button now actually dismisses.
+
+**The real adaptive launcher icon replaced the tricolor glyph.** Built inverted per
+`DESIGN-BRIEF.md` §7 exactly as specified: background layer solid brand blue, foreground layer
+the two wire bars in the off-white ground colour, geometry copied from `betar-logo.svg`, not
+redrawn by eye. Confirmed rendering correctly on a real emulator (a genuine circle-masked blue
+icon with the wire-bar cutout, not the old tricolor mesh glyph). The app label (`app_name`) was
+also renamed to Betar, both languages; the Android package id stays untouched on purpose, that's
+`BETAR-TRANSITION.md` Part 5's one deliberately-still-open, irreversible decision.
+
+**A real signed release build now exists**, closing a gap `REPRODUCIBLE-BUILD.md` had flagged
+since the first F-Droid pass. Generated a real `CN=Betar` RSA-4096 keystore (no individual named,
+matching the project's attribution rule), wired `android/app/build.gradle.kts` to read it from
+`android/keystore.properties`, both gitignored and never committed, the key exists only on this
+machine. `./gradlew assembleRelease` now produces a genuinely `CN=Betar`-signed APK, confirmed with
+`apksigner verify --print-certs`, not a debug certificate, and confirmed launching without a crash
+on a real emulator. **A real, unrelated bug surfaced along the way:** `assembleRelease`'s mandatory
+lint check crashed outright (`IncompatibleClassChangeError` in a LiveData detector this project
+doesn't even need, an AGP 8.7.2/Kotlin 2.1.20 lint-analysis incompatibility), fixed by disabling
+that one detector, the exact workaround the crash's own error message suggested.
+
+**Documentation and site updated to match, not left describing the old skeleton:** README gained
+a real screenshots section (actual on-device captures, not mockups) and a user guide walkthrough
+of the real screens; `docs/index.html` gained the same screenshots; `docs/ARCHITECTURE.md` gained
+a diagram of the actual screen graph; `docs/IMPLEMENTATION-STATUS.md` and
+`docs/REPRODUCIBLE-BUILD.md` both updated with honest status for the new UI and the signing setup,
+including everything still stubbed (no Nearby peer-list backend, no Map pin-over-mesh transport,
+no QR/camera library, no voice-note audio capture). Released as
+[`v0.1.2-prealpha`](https://github.com/konkomaji/project-mesh/releases/tag/v0.1.2-prealpha) with
+the signed APK attached and its SHA-256 published in the release notes.
+
+**Still true, still not done, said plainly rather than re-litigated each time it comes up:**
+independent security audit, two-device hardware verification, CI-run wire-parser fuzzing, and
+cross-machine build reproducibility all need resources (an external auditor, physical devices, a
+Linux/CI runner, a second machine) this dev session doesn't have. Onion routing is Phase 2 per
+`ROADMAP.md`, not a Phase 1 requirement, and was not started here.
