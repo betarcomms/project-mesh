@@ -1861,3 +1861,35 @@ correctly (verified by reading their actual diffs afterward, not by trusting the
 at least one silently did not, most importantly `WHITEPAPER.md`, which looked untouched hours
 later and needed a full pass by hand. Treat "dispatched" and "done" as different claims until a
 diff has actually been read.
+
+## 2026-07-26 — Bengali as the second default language, a code review, and a real on-device check
+
+**Language scope narrowed and made concrete.** `docs/DESIGN-BRIEF.md` and
+`docs/LOCALIZATION-UX.md` previously listed Bengali, Assamese, Hindi and Bodo as priority
+languages with English second. Narrowed to what is actually being committed to: English and
+Bengali ship by default, every other language stays community-contributed, not part of the
+default install. `android/app/src/main/res/values-bn/strings.xml` added: a first-pass translation
+of every string currently in `values/strings.xml`, flagged in the file's own header as not yet
+reviewed by a native Bengali speaker, since `LOCALIZATION-UX.md`'s own stance is that a
+confident-sounding but possibly-wrong translation of a safety-critical term is worse than shipping
+none.
+
+**Code review of this session's own Kotlin/Gradle changes** (`Color.kt`, `Shape.kt`, `Theme.kt`,
+`Type.kt`, `MainActivity.kt`'s theme wiring, both `build.gradle.kts` files): read in full, nothing
+found. The dark/high-contrast colour role pairings and the polar shape math both check out against
+the source they were transcribed from.
+
+**Verified on a real emulator, not just compiled:** installed the debug APK fresh, launched
+`MainActivity`, confirmed `BetarTheme` actually renders (deep-blue pill-shaped buttons, not the
+bare default `MaterialTheme`) and the process doesn't crash, via a real screenshot and a logcat
+check for `FATAL`/`AndroidRuntime`, not assumed from a clean build. Then switched the app's
+language to Bengali using Android's own per-app language API
+(`cmd locale set-app-locales india.projectmesh.app --locales bn-IN`), relaunched, and confirmed
+every string on screen rendered in Bengali with correct conjuncts and no mojibake or missing-glyph
+boxes, using the device's system font since Noto Sans Bengali isn't bundled with the app yet. App
+locale override cleared back to default afterward.
+
+**What this QA pass does not cover, stated plainly:** this is one screen's worth of a smoke test on
+one emulator, not the independent security audit, two-device hardware test, or CI-run fuzzing that
+`IMPLEMENTATION-STATUS.md` still lists as open gates. Those need an external party, physical
+devices, or a Linux/CI runner this dev session doesn't have, and are not being claimed done here.
