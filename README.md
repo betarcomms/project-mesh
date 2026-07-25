@@ -1,9 +1,11 @@
 <div align="center">
 <img src="docs/assets/betar-logo.svg" width="120" height="120" alt="Betar logo, a wire cut out of a solid blue field, broken in the middle">
 
-# 🕸️ Betar
+# Betar
 
 **Connect with no network.**
+
+*Connecting India, phone to phone, when nothing else can.*
 
 *Messaging and community safety for remote areas, cyclones, floods, and any place or moment*
 *the network goes dark.*
@@ -15,6 +17,7 @@
 [![Code licence](https://img.shields.io/badge/code%20licence-AGPL--3.0--or--later-lightgrey)](LICENSE)
 [![Docs licence](https://img.shields.io/badge/docs%20licence-CC%20BY--SA%204.0-lightgrey)](docs/GOVERNANCE.md)
 [![Platform](https://img.shields.io/badge/platform-Android%20(iOS%20planned)-success)](docs/ROADMAP.md)
+[![Made in India](https://img.shields.io/badge/made%20in-%F0%9F%87%AE%F0%9F%87%B3%20India-138808)](docs/RESEARCH-FINDINGS.md)
 
 **[⬇️ Download the latest APK](https://github.com/konkomaji/project-mesh/releases/latest)**,
 pre-alpha, debug-signed, `minSdk` 26 (Android 8.0+)
@@ -70,6 +73,50 @@ never described as just a chat app, that would shrink it to its smallest part. A
 messaging is what people open the app for on an ordinary day, so Chats is the first tab, the
 default screen, and gets the most design care of anything in the app. See
 [`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md) for the full framing and design rules.
+
+## 📱 Screenshots
+
+Real screens from a real on-device run, not mockups, English shown here; Bengali ships as an
+equal default language (see [`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md)).
+
+<div align="center">
+
+| Onboarding | Chats | Emergency |
+|---|---|---|
+| <img src="docs/assets/screenshots/onboarding-language.png" width="220" alt="Language picker screen: English and Bengali tiles, no other language, Continue button"> | <img src="docs/assets/screenshots/chats-empty.png" width="220" alt="Chats tab empty state: mesh ribbon reading Looking for phones nearby, How a message travels teaching copy, five-tab bottom nav, persistent red SOS button"> | <img src="docs/assets/screenshots/emergency-picker.png" width="220" alt="Emergency category picker: Medical, Trapped, Fire, Violence, Other tiles, each its own shape, honest alert-travel explanation"> |
+
+</div>
+
+## 📖 User guide
+
+1. **Install.** [Download the APK](https://github.com/konkomaji/project-mesh/releases/latest) and
+   install it, `minSdk` 26 (Android 8.0 and up). It is debug-signed pre-alpha, Android will warn
+   about installing from outside a store, that warning is expected at this stage.
+2. **Pick a language.** English or Bengali, no account, no phone number, no login screen.
+3. **Skim the three intro panels**, set a nickname or let one be generated for you, allow the
+   three permissions (nearby devices, location while using, microphone/notifications), and decide
+   on battery-optimization exemption. Under a minute end to end.
+4. **You land on Chats**, empty at first. The strip at the top is the **mesh ribbon**: it reads
+   Off, Looking for phones nearby, or Connected with a count, this is the one thing that is always
+   telling the truth about whether you can currently reach anyone.
+5. **Add somebody** from the new-conversation menu: paste their fingerprint for now (in-person
+   QR/camera scanning isn't wired yet, see the gaps below), then verify in person once you are
+   next to them, no cryptographic jargon on that screen, just a short code both phones show.
+6. **Send a message.** Delivery is shown honestly as Waiting → Travelling → Spreading →
+   Delivered, never a checkmark that promises something the mesh can't guarantee.
+7. **Board tab**: alerts, notices, and a have/need supplies board, all broadcast to whoever is
+   nearby right now and whoever comes into range later.
+8. **The red SOS button never moves and never hides.** Tap it, pick a category (medical,
+   trapped, fire, danger, other), optionally add detail, then slide to send, a deliberate gesture
+   so it cannot fire by accident in a pocket.
+9. **You tab**: your identity card, language switcher, a pre-storm readiness checklist, appearance
+   (light/dark/sunlight), and the privacy/panic-wipe controls.
+
+**Known rough edges in this pre-alpha build**, stated plainly rather than discovered the hard
+way: no per-device list on the Nearby tab yet (no backend for it yet), no QR-code scanning (manual
+fingerprint entry works), no voice-note audio capture yet (the recording gesture is real, the
+microphone backend isn't), and no two-device testing has been possible in this dev environment.
+Full detail in [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md).
 
 ## 📚 Documentation map
 
@@ -132,10 +179,16 @@ regression, and a metadata leak where the prekey bundle's raw bytes rendered as 
 the plain chat feed, both documented in [`docs/PROGRESS.md`](docs/PROGRESS.md) with how they were
 found, not just that they were fixed.
 
-The app is renaming to **Betar**: the wordmark and logo are locked (`docs/assets/betar-logo*.svg`),
-the full design brief is written ([`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md)), and the Compose
-design-system foundation (colours, category shapes, type scale) is wired into the app. The full
-screen-by-screen redesign is a later pass; today's UI is still the debug skeleton described above.
+The app is renaming to **Betar**: the wordmark, logo and adaptive launcher icon are locked and
+built (`docs/assets/betar-logo*.svg`), the full design brief is written
+([`docs/DESIGN-BRIEF.md`](docs/DESIGN-BRIEF.md)), and the real screen-by-screen redesign is built
+on top of the Compose design-system foundation (colours, category shapes, type scale): onboarding,
+the five-tab shell (Chats/Nearby/Board/Map/You) with the mesh ribbon and persistent SOS button,
+and the emergency flow are all real, on-device-verified screens now, not the old single-column
+debug skeleton. See the screenshots below. App label still reads "Betar" at the OS level; the
+Android package id (`india.projectmesh.app`) is the one deliberately not-yet-changed piece, see
+[`docs/BETAR-TRANSITION.md`](docs/BETAR-TRANSITION.md) Part 5 for why that's a separate,
+irreversible decision.
 
 **[v0.1.0-prealpha](https://github.com/konkomaji/project-mesh/releases/tag/v0.1.0-prealpha) is
 the first published build**, debug-signed, pre-alpha, exactly what's described on this page.

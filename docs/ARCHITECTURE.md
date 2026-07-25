@@ -48,6 +48,44 @@ Detailed system architecture for Project Mesh. Companion to `WHITEPAPER.md` §5.
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### 2.1 Android UI navigation
+
+The presentation layer's actual screen graph, `android/app/src/main/java/india/projectmesh/app/ui/`:
+
+```mermaid
+flowchart TD
+    A[MainActivity] --> B[BetarTheme]
+    B --> C{BetarApp: onboarded?}
+    C -- no --> D[OnboardingFlow]
+    D --> D1[Language: English / Bengali]
+    D1 --> D2[Intro pager, 3 panels]
+    D2 --> D3[Nickname]
+    D3 --> D4[Permissions explainer]
+    D4 --> D5[Battery guidance]
+    D5 --> C
+    C -- yes --> E[BetarScaffold]
+    E --> F[MeshRibbon: Off / Looking / Connected]
+    E --> G{Bottom nav}
+    G --> H[Chats tab]
+    G --> I[Nearby tab]
+    G --> J[Board tab]
+    G --> K[Map tab]
+    G --> L[You tab]
+    E --> M[Persistent SOS button]
+    M --> N[EmergencyFlow: pick, detail, slide-to-send, live status]
+    H --> H1[DirectMessenger / ChannelMessenger / GroupMessenger]
+    J --> J1[SosMessenger / BulletinMessenger / ResourceMessenger]
+    K --> K1[MapLibre offline render]
+    L --> L1[Identity, Language, Readiness, Appearance, Privacy, Documents]
+```
+
+Every leaf under Chats/Board wires to the same real Rust-core-backed messengers
+`MeshApplication` exposes, not a separate mock data layer; Nearby's per-device list and Map's
+pin-over-mesh sharing are the two spots without a real backend yet, stated plainly in each
+screen's own code comments rather than faked as live (`docs/IMPLEMENTATION-STATUS.md` tracks
+both). See `docs/DESIGN-BRIEF.md` §8-9 for what each screen is for and `docs/PROGRESS.md`'s
+2026-07-26 entries for how this pass was actually verified on-device.
+
 ## 3. The radio abstraction
 
 The core defines a transport-agnostic interface the native layer implements. Conceptually:

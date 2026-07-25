@@ -94,13 +94,21 @@ own.
 
 - **`LICENSE` file added** (later pass, AGPL-3.0-or-later, matching `Cargo.toml`'s declared
   license and `docs/GOVERNANCE.md`'s recommendation). No longer a gap.
-- **No dedicated release signing configured.** `build.gradle.kts` has no `signingConfig` for
-  `release`; the first GitHub Release ships the debug-signed APK instead, a deliberate choice for
-  a `0.1.0-prealpha` build (zero new key-custody burden), not an oversight. F-Droid signs its own
-  builds with its own key regardless (a different, expected key from any developer-signed release),
-  so this doesn't block that channel; it does mean there's no consistent developer signature across
-  releases yet for `DISTRIBUTION.md` §2's other channels (IzzyOnDroid, direct download), revisit
-  once the project is past pre-alpha.
+- **Release signing configured** (later pass): `android/app/build.gradle.kts` reads a
+  `signingConfigs.release` from `android/keystore.properties`, both gitignored, never committed,
+  the key itself (`android/keystore/betar-release.jks`, RSA-4096, self-signed, 30-year validity,
+  `CN=Betar` with no individual named per the project's attribution rule) lives only on this
+  machine. `./gradlew assembleRelease` produces a real `CN=Betar`-signed APK now, verified with
+  `apksigner verify --print-certs`, not a debug certificate. **Real, unrelated bug hit and fixed
+  along the way:** `assembleRelease`'s mandatory `lintVitalAnalyzeRelease` check crashed
+  (`IncompatibleClassChangeError` in `NonNullableMutableLiveDataDetector`, AGP 8.7.2's bundled
+  lint against the newer Kotlin 2.1.20 analysis-api shape, this project doesn't even use
+  LiveData), fixed by disabling that one detector (`lint { disable += "NullSafeMutableLiveData" }`),
+  the exact workaround the crash message itself suggested. **What this does not solve:** the
+  signing key exists on one machine only, with no backup, no secondary custodian, and no key
+  rotation plan, losing it means Betar can never be updated under the same identity again on any
+  channel that expects a consistent signature (F-Droid signs its own builds with its own key
+  regardless, so that channel is unaffected either way).
 - **No actual `fdroiddata` submission.** The metadata this pass adds (`metadata/` at the repo
   root) is F-Droid-build-recipe metadata, reasoned from the publicly documented `fdroiddata` YAML
   schema, **not validated against F-Droid's own linter/build server**, since that requires

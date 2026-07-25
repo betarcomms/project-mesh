@@ -12,3 +12,11 @@
 /android/local.properties
 # Cross-compiled native libs: build artifacts, regenerable via cargo-ndk (see jniLibs/README.md)
 /android/app/src/main/jniLibs/*/*.so
+
+# Release signing key and its credentials -- this is a real secret, losing it means Betar can
+# never be updated under the same identity again, leaking it means anyone could sign a malicious
+# update. Never committed, never should be.
+/android/keystore/
+/android/*.jks
+/android/*.keystore
+/android/keystore.properties

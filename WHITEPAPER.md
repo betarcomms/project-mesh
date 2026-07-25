@@ -306,7 +306,9 @@ despite their development-speed appeal, because:
 - The security-critical logic is already shared (in Rust); the remaining per-platform work is
   UI and radio, which is precisely what should be native.
 
-Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Full detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), including §2.1's diagram of the
+actual Android screen graph (onboarding, the five-tab shell, the emergency flow) built on top of
+this layering, not just the layering itself.
 
 ---
 
