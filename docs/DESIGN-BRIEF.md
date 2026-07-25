@@ -112,8 +112,10 @@ same place.
   small screens, Android 8 and up, often cracked, often at fifteen percent battery.
 - A wide range of reading ability. Being able to read must not be a requirement for
   calling for help, understanding an alert or sending a message.
-- Many languages. Bengali, Assamese, Hindi and Bodo first, English second. Indic scripts
-  must shape correctly, with proper conjuncts and matras.
+- Two languages ship by default: English and Bengali. Every other language, Hindi, Assamese,
+  Bodo and so on, is community-contributed, added only once a contributor provides a real
+  translation, not part of the default install. Bengali's script must shape correctly, with
+  proper conjuncts and matras.
 - Emergency conditions. One handed, panicking, outdoors in glare, wet hands, worried
   about battery, possibly hurt.
 - Relief workers and camp coordinators as a second audience, who need density and speed.
