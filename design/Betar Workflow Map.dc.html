@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 26px;max-width:1080px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Workflow map</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">Every screen in the app as a node: what opens it, where it can go, how you get back, and what happens when it goes wrong. Screen names match the frame titles in the other files exactly, so a name here is findable there.</div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:20px">
+    <sc-for list="{{ legend }}" as="l" hint-placeholder-count="5">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:18px;height:18px;border-radius:5px;flex:none;background:{{ l.color }}"></div>
+        <div style="font-size:14.5px;color:#1E2C36">{{ l.label }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:0 56px 20px;max-width:1080px">
+  <div style="background:#F7FAFD;border-radius:26px;padding:22px 24px;display:flex;flex-direction:column;gap:14">
+    <div style="font-size:17px;font-weight:800">Rules that hold everywhere on this map</div>
+    <sc-for list="{{ globalRules }}" as="r" hint-placeholder-count="6">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:11px;height:11px;margin-top:6px;flex:none;background:#4BA3E0;clip-path:{{ shapes.cookie9 }}"></div>
+        <div style="font-size:16px;line-height:1.55;color:#1E2C36;flex:1">{{ r }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:20px 56px 72px">{{ flows }}</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+const S={cookie9:lobed(9,.84,.16,0),diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'};
+const C={ground:'#EEF4F9',lift:'#F7FAFD',tint:'#DCE9F5',ink:'#101A22',muted:'#4A5B67',deep:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700'};
+
+const KIND={
+  entry:{bg:'#DCEEDC',bar:'#2E7D32',label:'entry point'},
+  screen:{bg:'#EEF4F9',bar:'#4BA3E0',label:'screen'},
+  destination:{bg:'#DCE9F5',bar:'#12608F',label:'bottom bar destination'},
+  emergency:{bg:'#FBEDEF',bar:'#C8102E',label:'emergency flow'},
+  fallback:{bg:'#F6EBD2',bar:'#9A6700',label:'error or empty state'}
+};
+
+function node(n){
+  const k=KIND[n.kind]||KIND.screen;
+  return h('div',{width:264,flex:'none',background:k.bg,borderRadius:20,padding:'0 0 14px',display:'flex',flexDirection:'column',overflow:'hidden',boxSizing:'border-box'},[
+    h('div',{height:6,background:k.bar},null,'bar'),
+    h('div',{padding:'12px 15px 0',display:'flex',flexDirection:'column',gap:9},[
+      h('div',{fontSize:16,fontWeight:800,lineHeight:1.3},n.name,'t'),
+      n.file?h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:10,color:C.muted,letterSpacing:'.02em'},n.file,'f'):null,
+      h('div',{display:'flex',flexDirection:'column',gap:7},(n.lines||[]).map((l,i)=>
+        h('div',{display:'flex',gap:9,alignItems:'flex-start'},[
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:9.5,fontWeight:700,color:l[2]||C.deep,minWidth:58,flex:'none',paddingTop:2,letterSpacing:'.04em',whiteSpace:'nowrap'},l[0],'k'),
+          h('div',{fontSize:13.5,lineHeight:1.45,color:'#1E2C36',flex:1},l[1],'v')],'l'+i)),'lines')
+    ],'body')
+  ]);
+}
+const arrow=(label)=>h('div',{width:74,flex:'none',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,alignSelf:'center'},[
+  label?h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:9.5,color:C.muted,textAlign:'center',lineHeight:1.35},label,'l'):null,
+  h('div',{display:'flex',alignItems:'center',width:'100%'},[
+    h('div',{flex:1,height:2,background:'#B6C8D6'},null,'line'),
+    h('div',{width:0,height:0,borderLeft:'8px solid #B6C8D6',borderTop:'6px solid transparent',borderBottom:'6px solid transparent'},null,'head')],'a')]);
+
+function track(items){
+  const out=[];
+  items.forEach((it,i)=>{
+    if(i>0) out.push(arrow(it.via));
+    out.push(node(it));
+  });
+  return h('div',{display:'flex',alignItems:'stretch',gap:0,flexWrap:'nowrap'},out);
+}
+
+function flowBlock(f){
+  return h('div',{background:'#F7FAFD',borderRadius:28,padding:'24px 26px',marginBottom:20,display:'flex',flexDirection:'column',gap:18,width:'max-content',minWidth:900},[
+    h('div',{display:'flex',flexDirection:'column',gap:6},[
+      h('div',{display:'flex',alignItems:'baseline',gap:12},[
+        h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:12,fontWeight:700,color:C.deep,letterSpacing:'.08em'},f.tag,'g'),
+        h('div',{fontSize:21,fontWeight:800,lineHeight:1.25,flex:1},f.title,'t')],'head'),
+      h('div',{fontSize:16,lineHeight:1.55,color:'#2A3B47',maxWidth:900},f.intro,'i')],'top'),
+    h('div',{display:'flex',flexDirection:'column',gap:16},(f.tracks||[]).map((tr,i)=>
+      h('div',{display:'flex',flexDirection:'column',gap:9},[
+        tr.label?h('div',{fontSize:14.5,fontWeight:700,color:C.muted},tr.label,'l'):null,
+        track(tr.nodes)],'tr'+i))),
+    f.branches?h('div',{display:'flex',gap:14,flexWrap:'wrap',maxWidth:1100},f.branches.map((b,i)=>
+      h('div',{flex:'1 1 300px',background:b.kind==='fallback'?'#F6EBD2':C.ground,borderRadius:20,padding:'16px 18px',display:'flex',flexDirection:'column',gap:8},[
+        h('div',{display:'flex',gap:10,alignItems:'center'},[
+          h('div',{width:16,height:16,flex:'none',background:b.kind==='fallback'?C.amber:C.brand,clipPath:b.kind==='fallback'?S.diamond:S.cookie9},null,'i'),
+          h('div',{fontSize:15.5,fontWeight:800,color:b.kind==='fallback'?'#5C3D00':C.ink,lineHeight:1.3,flex:1},b.title,'t')],'h'),
+        h('div',{fontSize:14.5,lineHeight:1.5,color:b.kind==='fallback'?'#5C3D00':'#1E2C36'},b.body,'b')],'b'+i))):null
+  ]);
+}
+
+class Component extends DCLogic {
+  renderVals(){
+    const F='Chats and Onboarding', B='Board Map and Nearby', G='Group and Settings', D='Documents', E='Design System', X='Density and Error States';
+
+    const flows=[
+      {tag:'FLOW 1',title:'Install to first message',
+        intro:'The only linear sequence in the app. Every step after the language can be skipped, and no step waits on anything outside the phone. Target is under thirty seconds from install to a written message.',
+        tracks:[{nodes:[
+          {kind:'entry',name:'App opens, first run',file:E,lines:[['OPENS','Install finishes, user taps the icon'],['NOTE','Keys are generated here, silently and never mentioned',C.green]]},
+          {kind:'screen',name:'1 · Language',file:F,via:'tap a tile',lines:[['BACK','none — this is the first screen'],['NEXT','arrow button, always enabled'],['STATE','tile fill plus a hexagon, never colour alone']]},
+          {kind:'screen',name:'2 · What this is',file:F,via:'arrow',lines:[['BACK','swipe right through the panels'],['SKIP','top right, jumps straight to nickname'],['ALSO','read aloud on every panel']]},
+          {kind:'screen',name:'3 · Nickname',file:F,via:'arrow on panel 3',lines:[['BACK','arrow returns to panel 3'],['SKIP','keeps the generated name'],['NEXT','Start using Betar']]},
+          {kind:'screen',name:'4 · Permissions',file:F,via:'start',lines:[['BACK','none — forward only from here'],['NEXT','Allow these, then system dialogs'],['DENY','continues anyway, see branch below',C.amber]]},
+          {kind:'screen',name:'5 · Battery',file:F,via:'permissions done',lines:[['BACK','arrow to permissions'],['NEXT','Open settings, or Later'],['NOTE','picks the manufacturer walkthrough']]},
+          {kind:'destination',name:'Chats · empty, teaching',file:F,via:'later, or\nreturn from settings',lines:[['LANDS','the app opens here forever after'],['NEXT','FAB, or SOS'],['TEACHES','how a message travels']]}
+        ]}],
+        branches:[
+          {kind:'fallback',title:'A permission is denied',body:'Nothing blocks. The app lands on Chats as normal; the affected screen carries an amber card naming the one permission and a single tap to fix it. Nearby permission denied means the ribbon reads Off with a fix action.'},
+          {kind:'fallback',title:'Battery walkthrough skipped',body:'Later is a first class choice. The readiness checklist in You then shows "Betar can stay awake" as amber, which is the pre-storm reminder to come back to it.'},
+          {title:'Language changed later',body:'You → Language reuses the same tiles as step 1, so the screen is already familiar. Switches instantly, nothing is fetched.'}
+        ]},
+
+      {tag:'FLOW 2',title:'Adding somebody, and verifying them in person',
+        intro:'The one moment the app asks two people to stand together. Two entry points converge on the same verification screen, and the trust chip it produces is visible everywhere that person appears afterwards.',
+        tracks:[
+          {label:'From Chats',nodes:[
+            {kind:'destination',name:'Chats',file:F,lines:[['OPENS','app launch, or Chats tab'],['NEXT','FAB, bottom right'],['ALSO','tapping any existing row opens its thread']]},
+            {kind:'screen',name:'New conversation · FAB menu',file:F,via:'tap FAB',lines:[['BACK','tap the scrim, or the close button'],['NEXT','one of three labelled routes'],['NOTE','list stays visible and dimmed behind']]},
+            {kind:'screen',name:'Scan a code',file:F,via:'scan a code',lines:[['BACK','arrow to Chats'],['NEXT','a successful read opens verification'],['ALT','Show my code instead, or type six characters'],['FAIL','camera not allowed → amber card',C.amber]]},
+            {kind:'screen',name:'Verify in person',file:F,via:'code read',lines:[['BACK','Not now — thread opens unverified'],['NEXT','Yes, they match'],['SHOWS','52px code plus a scannable square'],['FAIL','codes differ → mismatch screen',C.amber]]},
+            {kind:'screen',name:'Thread · met in person',file:F,via:'confirm',lines:[['BACK','arrow to Chats'],['STATE','green chip, hexagon, and the words'],['NEXT','write, or hold the mic']]}
+          ]},
+          {label:'From Nearby, the same destination',nodes:[
+            {kind:'destination',name:'Nearby',file:B,lines:[['OPENS','Nearby tab'],['NEXT','tap any device card']]},
+            {kind:'screen',name:'Device detail sheet',file:B,via:'tap a card',lines:[['BACK','swipe down, or the scrim'],['NEXT','Message, or Check again'],['SHOWS','link, signal in words, what they carry for you']]},
+            {kind:'screen',name:'Verify in person',file:F,via:'check again',lines:[['SAME','identical screen as the Chats route'],['NOTE','one verification screen, two ways in']]}
+          ]}
+        ],
+        branches:[
+          {kind:'fallback',title:'Codes do not match',body:'Amber, both codes shown, one struck through. Do not confirm. The person stays reachable and the chip stays amber — a mismatch never deletes a conversation or blocks writing.'},
+          {kind:'fallback',title:'Camera not allowed',body:'Amber card explaining the single use, plus a route to typing six characters, so the flow never dead ends on a permission.'},
+          {title:'Never verified at all',body:'Perfectly valid. The thread carries a permanent amber banner with a Check action. Nothing else is withheld.'}
+        ]},
+
+      {tag:'FLOW 3',title:'Sending an emergency alert',
+        intro:'The highest stakes path. Reachable from every screen in the app in one tap, and the only flow that takes over the whole screen with no bottom bar and one way out.',
+        tracks:[{nodes:[
+          {kind:'entry',name:'SOS pill',file:E,lines:[['WHERE','every screen, right side, above the bottom bar'],['NEVER','scrolls away, collapses, or hides in a menu',C.red]]},
+          {kind:'emergency',name:'Category picker',file:E,via:'tap SOS',lines:[['BACK','✕ closes, returns to where you were'],['NEXT','tap one of five tiles'],['ALSO','long press speaks the label'],['NO NAV','bottom bar is gone here']]},
+          {kind:'emergency',name:'Detail',file:E,via:'pick a category',lines:[['BACK','arrow to the picker'],['NEXT','Continue'],['DEFAULT','location off, with the tradeoff written out'],['OPTIONAL','voice note, words']]},
+          {kind:'emergency',name:'Slide to send',file:E,via:'continue',lines:[['BACK','arrow to detail'],['SEND','drag the thumb the full width'],['GUARD','release early snaps back, nothing sent']]},
+          {kind:'emergency',name:'Live status',file:E,via:'slide completes',lines:[['SHOWS','real carrier and acknowledgement counters'],['NEXT','I am safe now, or Cancel this alert'],['NEVER','the word delivered, or a tick',C.red],['ALONE','zero carriers → its own screen',C.amber]]},
+          {kind:'screen',name:'Resolved, or withdrawn',file:X,via:'safe, or cancel',lines:[['SAFE','marked resolved, hero turns green'],['CANCEL','stops the spread and asks carriers to drop it'],['THEN','back to the screen you came from']]}
+        ]}],
+        branches:[
+          {kind:'fallback',title:'Nobody nearby when you send',body:'Zero is shown honestly as zero, with the three things that actually help: move to open ground, keep the phone on, keep the screen awake. The alert keeps calling out every four seconds.'},
+          {kind:'fallback',title:'Bluetooth off at the moment of sending',body:'The alert is accepted and held, and the screen says so. It is never refused — refusing an emergency to teach a lesson about settings is not acceptable.'},
+          {title:'Somebody else\u2019s alert arrives',body:'Board → Alerts feed, red card, full width acknowledge. Acknowledging tells everyone else it is being handled, which is the whole point of the counter.'}
+        ]},
+
+      {tag:'FLOW 4',title:'The community surfaces',
+        intro:'Board and Map share one vocabulary: the same category grid, the same pictogram and shape pairing, learned once and reused. Composing anything starts with a picture, not a text field.',
+        tracks:[
+          {label:'Board',nodes:[
+            {kind:'destination',name:'Board · Alerts',file:B,lines:[['OPENS','Board tab, always on Alerts'],['NEXT','segmented control, or a card'],['EMPTY','no emergencies nearby is the good case',C.green]]},
+            {kind:'screen',name:'Notices feed',file:B,via:'segmented',lines:[['BACK','segmented back to Alerts'],['FILTER','category chips'],['NEXT','FAB to compose'],['SHOWS','amber expiry countdown per card']]},
+            {kind:'screen',name:'Help board',file:B,via:'segmented',lines:[['SWITCH','Have and Need button group'],['NEXT','a category, or Message somebody'],['GRID','pictogram, shape and word together']]},
+            {kind:'screen',name:'Compose a notice',file:B,via:'FAB',lines:[['BACK','✕ discards, with no confirm needed'],['ORDER','picture, then voice, then words'],['NEXT','Put it up'],['EXPIRY','set here, shown on the card']]}
+          ]},
+          {label:'Map',nodes:[
+            {kind:'destination',name:'Map',file:B,lines:[['OPENS','Map tab'],['NEXT','a pin, or the drop button'],['NONE','no map data → offer from a phone nearby',C.amber]]},
+            {kind:'screen',name:'Drop a pin',file:B,via:'drop button',lines:[['BACK','✕ to the map'],['GRID','same categories as the board'],['NEXT','Drop the pin'],['WARNS','everyone receiving the map sees it']]},
+            {kind:'screen',name:'No map data for this area',file:B,via:'pan to an unknown area',lines:[['OFFERS','take the map from a named phone nearby'],['SHOWS','size and a real time estimate'],['FAIL','they move away → resumes later',C.amber]]}
+          ]}
+        ],
+        branches:[
+          {kind:'fallback',title:'Map handover interrupted',body:'Partial is useful. It says how much arrived, confirms those pins work, and resumes from where it stopped rather than starting over.'},
+          {title:'Notice expires',body:'It leaves the feed on its own. Nobody has to tidy up, and an expired notice never becomes a stale instruction during an emergency.'},
+          {title:'Reading ability not required',body:'Every compose flow can be completed with a pictogram and a voice note, with no text entered at all.'}
+        ]},
+
+      {tag:'FLOW 5',title:'You, groups, and the documents',
+        intro:'Everything that is not a conversation or an alert. The readiness checklist is the screen somebody opens before a storm, so it is one tap from the tab, not buried in settings.',
+        tracks:[
+          {label:'You',nodes:[
+            {kind:'destination',name:'You',file:E,lines:[['OPENS','You tab'],['SHOWS','identity card, readiness, carrying, settings rows']]},
+            {kind:'screen',name:'Ready for a storm',file:G,via:'tap readiness',lines:[['BACK','arrow to You'],['SIX','Bluetooth, nearby, awake, notifications, space, battery'],['FIX','one tap per item, amber when not ready']]},
+            {kind:'screen',name:'Appearance',file:G,via:'settings row',lines:[['BACK','arrow to You'],['SETS','light, dark, follow phone'],['ALSO','sunlight mode as a first class toggle'],['DEFERS','text size and motion follow the phone']]},
+            {kind:'screen',name:'Privacy',file:G,via:'settings row',lines:[['BACK','arrow to You'],['HOLD','erase everything, three second hold'],['ALSO','decoy passphrase setup'],['NEVER','a tap can erase anything',C.red]]}
+          ]},
+          {label:'Private groups',nodes:[
+            {kind:'screen',name:'New conversation · FAB menu',file:F,lines:[['FROM','Chats'],['NEXT','Start a private group']]},
+            {kind:'screen',name:'Start a private group',file:G,via:'private group',lines:[['BACK','arrow to Chats'],['SHOWS','trust chip on every member before you create it'],['NEXT','Add somebody by code, then Make the group']]},
+            {kind:'screen',name:'Add somebody by code',file:G,via:'add by code',lines:[['BACK','arrow to the group'],['TWO WAYS','scan theirs, or read out yours'],['NEXT','Done']]},
+            {kind:'screen',name:'Group conversation',file:F,via:'make the group',lines:[['BACK','arrow to Chats'],['ACTIONS','long press → floating toolbar'],['OPEN GROUP','permanent warning if joined by name',C.amber]]}
+          ]},
+          {label:'Documents',nodes:[
+            {kind:'destination',name:'You',file:E,lines:[['NEXT','Documents row']]},
+            {kind:'screen',name:'Documents index',file:D,via:'documents',lines:[['BACK','arrow to You'],['SEVEN','each row says why you would open it'],['ORDER','privacy and safety first, about last']]},
+            {kind:'screen',name:'Any document page',file:D,via:'tap a row',lines:[['BACK','arrow to the index'],['SHAPE','summary card, then detail'],['ALWAYS','read aloud under the title'],['NOTHING','no page waits on anything external',C.green]]}
+          ]}
+        ],
+        branches:[
+          {kind:'fallback',title:'Carry space full',body:'Framed as the limit you set, not a failure. Oldest messages for other people are dropped first, and your own are never at risk. Amber, with Give more space or Leave it.'},
+          {kind:'fallback',title:'Low battery',body:'The app slows its scanning and says so plainly, with an override. The ribbon changes its wording, never its colour, so nobody reads it as a fault.'},
+          {title:'Relief worker density mode',body:'A toggle in Appearance. Applies to Chats, Alerts, Nearby and Board only — never Emergency, never onboarding, never documents.'}
+        ]}
+    ];
+
+    return {
+      shapes:S,
+      legend:Object.keys(KIND).map(k=>({color:KIND[k].bar,label:KIND[k].label})),
+      globalRules:[
+        'The SOS pill is on every screen except the emergency flow itself, which is already that flow. It never scrolls away and never collapses.',
+        'Every screen in the bottom bar keeps the mesh ribbon directly under the app bar. The ribbon changes wording and shape, never just colour.',
+        'No screen anywhere waits on a network, so no screen has a loading failure. What looks like an error is always a state with a fix.',
+        'Back is always the top left arrow or a swipe. Nothing is trapped, and no flow needs a confirm dialog to leave except the three second erase hold.',
+        'Every destructive or irreversible action is a hold or a slide, never a tap: erase everything, send an emergency alert.',
+        'Amber for anything not ready. Red only for a live emergency. Green only where something was genuinely confirmed by a person.'
+      ],
+      flows:h('div',null,flows.map((f,i)=>h('div',{key:i},flowBlock(f))))
+    };
+  }
+}
+</script>
+</body>
+</html>

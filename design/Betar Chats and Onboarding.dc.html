@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+@keyframes betar-ripple{0%{transform:scale(.45);opacity:.55}70%{opacity:0}100%{transform:scale(1.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 24px;max-width:1100px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Chats and onboarding</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">Install to first message, then the whole Chats surface. All 360 × 800, light theme. Decisions I took on the three open questions, flag any you want changed: the <b>brief geometry is canonical</b> for the logo wire — visual extents 20–46 and 62–88 with a 16 unit break, which with stroke 14 and round caps means paths <span style="font-family:'Noto Sans Mono',monospace;font-size:13px">M27,54 L39,54</span> and <span style="font-family:'Noto Sans Mono',monospace;font-size:13px">M69,54 L81,54</span>, exactly as in the file you uploaded; <b>cancel stops the spread and asks carrying phones to drop it</b>, and anyone who already saw it sees it marked withdrawn; the <b>SOS pill stays labelled always</b> and never collapses on scroll.</div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">A · INSTALL TO FIRST MESSAGE · UNDER THIRTY SECONDS, NO ACCOUNT</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ onboarding }}" as="f" hint-placeholder-count="5">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ f.title }}</div>
+        <div data-screen-label="{{ f.title }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ f.node }}</div>
+        <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">{{ f.note }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">B · CHATS · STARTING A CONVERSATION</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ starting }}" as="f" hint-placeholder-count="5">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ f.title }}</div>
+        <div data-screen-label="{{ f.title }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ f.node }}</div>
+        <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">{{ f.note }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:0 56px 72px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">C · CHATS · INSIDE A CONVERSATION</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ threads }}" as="f" hint-placeholder-count="5">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ f.title }}</div>
+        <div data-screen-label="{{ f.title }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ f.node }}</div>
+        <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">{{ f.note }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="margin-top:34px;font-size:16px;line-height:1.7;color:#3A4B57;max-width:820px">Next: Board, Map and the remaining Nearby states, then the document pages with final copy, then dark and sunlight. Bengali and Hindi proof screens go in as soon as strings arrive — every string here is marked in the handoff sheet.</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+function regular(n,rot){const p=[];for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(rot||0);p.push((50+Math.cos(a)*50).toFixed(2)+'% '+(50+Math.sin(a)*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const S={
+  cookie9:lobed(9,0.84,0.16,0), clover4:lobed(4,0.74,0.26,Math.PI/4), scallop12:lobed(12,0.88,0.12,0),
+  burst8:lobed(8,0.72,0.28,0), flower6:lobed(6,0.78,0.22,0), pentagon:regular(5,-Math.PI/2), hexagon:regular(6,-Math.PI/2),
+  diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)', square:'inset(6% round 26%)'
+};
+const C={ground:'#EEF4F9',lift:'#F7FAFD',ink:'#101A22',deep:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700',tint:'#DCE9F5',muted:'#4A5B67',line:'#E1EAF2'};
+
+function glyph(kind,size){
+  const col={waiting:'#4A5B67',travelling:C.deep,spreading:C.deep,delivered:C.green}[kind];
+  const sets={
+    waiting:{links:[],nodes:[[16,16,4.5,'none']]},
+    travelling:{links:[[10,20,22,12]],nodes:[[9,21,4,col],[23,11,4,'none']]},
+    spreading:{links:[[8,22,16,8],[8,22,25,20],[16,8,25,20]],nodes:[[8,23,3.6,col],[16,7,3.6,col],[26,20,3.6,'none']]},
+    delivered:{links:[[8,22,16,8],[16,8,25,20],[8,22,25,20]],nodes:[[8,23,3.6,col],[16,7,3.6,col],[26,20,5.6,col]]}
+  }[kind];
+  return h('svg',{width:size||18,height:size||18},[
+    ...sets.links.map((l,i)=>R.createElement('line',{key:'l'+i,x1:l[0],y1:l[1],x2:l[2],y2:l[3],stroke:col,strokeWidth:2.2,strokeLinecap:'round',opacity:.55})),
+    ...sets.nodes.map((n,i)=>R.createElement('circle',{key:'n'+i,cx:n[0],cy:n[1],r:n[2],fill:n[3],stroke:col,strokeWidth:2.2}))
+  ],{viewBox:'0 0 32 32','aria-hidden':'true'});
+}
+const deliveryWord={waiting:'Waiting',travelling:'Travelling',spreading:'Spreading',delivered:'Delivered'};
+
+const logo=(size,color)=>h('svg',null,[
+  R.createElement('defs',{key:'d'},R.createElement('mask',{id:'lm'+size+color.replace('#','')},[
+    R.createElement('rect',{key:'r',width:108,height:108,rx:28,fill:'#fff'}),
+    R.createElement('g',{key:'g',stroke:'#000',strokeWidth:14,strokeLinecap:'round'},[
+      R.createElement('path',{key:'a',d:'M27,54 L39,54'}),R.createElement('path',{key:'b',d:'M69,54 L81,54'})])])),
+  R.createElement('rect',{key:'r',width:108,height:108,rx:28,fill:color,mask:'url(#lm'+size+color.replace('#','')+')'})
+],{viewBox:'0 0 108 108',width:size,height:size,'aria-hidden':'true'});
+
+const shell=(kids)=>h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column',fontFamily:"'Noto Sans',sans-serif",color:C.ink},kids);
+
+const appBar=(title,left,right)=>h('div',{height:60,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 16px'},[
+  left||null,
+  h('div',{fontSize:24,fontWeight:800,flex:1,letterSpacing:'-.01em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},title,'t'),
+  right||null
+]);
+const iconBtn=(k,child,bg)=>h('div',{width:44,height:44,flex:'none',borderRadius:14,background:bg||C.tint,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:C.deep},child,k);
+const ribbon=(state)=>{
+  const cfg={connected:{bg:'#DCEEDC',fg:'#1B5E20',dot:C.green,label:'Connected · 3 phones nearby'},
+    looking:{bg:C.tint,fg:C.deep,dot:C.brand,label:'Looking for phones nearby'},
+    off:{bg:'#E7EDF2',fg:C.muted,dot:'#8A99A4',label:'Off · tap to start looking'}}[state];
+  return h('div',{height:38,flex:'none',display:'flex',alignItems:'center',gap:10,padding:'0 16px',background:cfg.bg},[
+    h('div',{width:16,height:16,position:'relative',flex:'none',display:'flex',alignItems:'center',justifyContent:'center'},[
+      h('div',{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid '+cfg.dot,animation:'betar-ripple 2.6s ease-out infinite'},null,'r'),
+      h('div',{width:7,height:7,borderRadius:'50%',background:cfg.dot},null,'d')],'w'),
+    h('div',{fontSize:14,fontWeight:600,color:cfg.fg,flex:1},cfg.label,'l'),
+    h('div',{display:'flex',alignItems:'center',gap:4,opacity:.6},[
+      h('div',{width:8,height:3,borderRadius:2,background:cfg.fg},null,'a'),h('div',{width:4},null,'s'),h('div',{width:8,height:3,borderRadius:2,background:cfg.fg},null,'b')],'m')
+  ]);
+};
+const navBar=(active)=>h('div',{height:82,flex:'none',background:C.lift,display:'flex',alignItems:'center',padding:'0 4px 6px'},
+  [['Chats',S.cookie9],['Nearby',S.scallop12],['Board',S.hexagon],['Map',S.clover4],['You',S.pentagon]].map(([label,clip])=>{
+    const on=label===active;
+    return h('div',{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5,paddingTop:8},[
+      h('div',{width:56,height:30,borderRadius:15,background:on?C.tint:'transparent',display:'flex',alignItems:'center',justifyContent:'center'},
+        h('div',{width:20,height:20,background:on?C.deep:'#5A6B77',clipPath:clip}),'p'),
+      h('div',{fontSize:12,fontWeight:on?700:500,color:on?C.deep:C.muted},label,'l')
+    ],label);
+  }));
+const sos=(bottom)=>h('div',{position:'absolute',right:16,bottom:bottom||96,height:56,borderRadius:20,background:C.red,display:'flex',alignItems:'center',gap:8,padding:'0 16px',boxShadow:'0 6px 18px rgba(200,16,46,.4)'},[
+  h('div',{width:20,height:20,background:'#fff',clipPath:S.burst8},null,'s'),
+  h('div',{fontSize:18,fontWeight:800,color:'#fff'},'SOS','t')]);
+const illo=(label,height)=>h('div',{height:height||200,flex:'none',borderRadius:26,background:'repeating-linear-gradient(135deg,#DCE9F5 0 10px,#E9F1F8 10px 20px)',display:'flex',alignItems:'center',justifyContent:'center'},
+  h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:12,color:C.deep,textAlign:'center',padding:'0 20px',lineHeight:1.5,whiteSpace:'pre-line'},label));
+const bigBtn=(label,bg,fg,extra)=>h('div',Object.assign({height:64,borderRadius:22,background:bg,color:fg,fontSize:19,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',gap:10},extra||{}),label);
+const slot=(id)=>h('span',{fontFamily:"'Noto Sans Mono',monospace",fontSize:12,background:C.tint,color:C.deep,borderRadius:6,padding:'1px 5px'},id);
+
+const bubble=(text,mine,meta,extra)=>h('div',{display:'flex',flexDirection:'column',alignItems:mine?'flex-end':'flex-start',gap:4},[
+  h('div',{maxWidth:264,background:mine?C.tint:C.lift,color:C.ink,borderRadius:mine?'22px 22px 6px 22px':'22px 22px 22px 6px',padding:'12px 15px',fontSize:18,lineHeight:1.45},text,'b'),
+  meta||null
+].concat(extra||[]));
+const meta=(kind,time)=>h('div',{display:'flex',alignItems:'center',gap:6,padding:'0 4px'},[
+  glyph(kind,16),
+  h('div',{fontSize:13,fontWeight:700,color:kind==='delivered'?'#1B5E20':C.muted},deliveryWord[kind],'w'),
+  h('div',{fontSize:13,color:C.muted},time,'t')]);
+
+class Component extends DCLogic {
+
+  // ---------- onboarding ----------
+  scrLanguage(){
+    const langs=[['বাংলা','Bangla'],['অসমীয়া','Assamese'],['हिन्दी','Hindi'],['बड़ो','Bodo · endonym to confirm with translator'],['English','English']];
+    return shell([
+      h('div',{padding:'44px 20px 12px',display:'flex',flexDirection:'column',alignItems:'center',gap:14,flex:'none'},[
+        logo(56,C.brand),
+        h('div',{fontSize:22,fontWeight:700,color:C.deep},'Betar','t')],'h'),
+      h('div',{flex:1,padding:'8px 16px',display:'flex',flexDirection:'column',gap:12,overflow:'hidden'},
+        langs.map(([native,en],i)=>h('div',{height:84,borderRadius:26,background:i===0?C.deep:C.lift,display:'flex',alignItems:'center',padding:'0 22px',gap:14},[
+          h('div',{fontSize:30,fontWeight:700,color:i===0?'#fff':C.ink,fontFamily:i<4?"'Noto Sans Bengali','Noto Sans Devanagari','Noto Sans',sans-serif":"'Noto Sans',sans-serif",flex:1},native,'n'),
+          h('div',{width:26,height:26,background:i===0?'#fff':'transparent',clipPath:S.hexagon},null,'c')
+        ],en)),'l'),
+      h('div',{padding:'0 16px 28px',flex:'none'},bigBtn('→',C.brand,'#0B3A57'),'f')
+    ]);
+  }
+  scrPanels(){
+    return shell([
+      h('div',{height:56,flex:'none',display:'flex',alignItems:'center',justifyContent:'flex-end',padding:'0 20px'},
+        h('div',{fontSize:17,fontWeight:700,color:C.muted},'Skip'),'s'),
+      h('div',{flex:1,padding:'0 20px',display:'flex',flexDirection:'column',gap:24},[
+        illo('illustration · two phones passing\na message across a river\n320 × 300',300),
+        h('div',{fontSize:32,fontWeight:800,lineHeight:1.2,textAlign:'center'},'Your phone passes messages for others','t'),
+        h('div',{display:'flex',justifyContent:'center'},
+          h('div',{display:'inline-flex',alignItems:'center',gap:10,height:56,borderRadius:20,background:C.tint,padding:'0 22px'},[
+            h('div',{width:20,height:30,borderRadius:10,background:C.deep},null,'m'),
+            h('div',{fontSize:18,fontWeight:700,color:C.deep},'Read this out','r')]),'ra')
+      ],'m'),
+      h('div',{padding:'0 20px 30px',display:'flex',alignItems:'center',gap:16,flex:'none'},[
+        h('div',{display:'flex',gap:8,flex:1},[0,1,2].map(i=>h('div',{width:i===1?26:10,height:10,borderRadius:5,background:i===1?C.deep:'#C4D3DE'},null,'d'+i)),'dots'),
+        h('div',{width:64,height:64,borderRadius:22,background:C.brand,color:'#0B3A57',fontSize:26,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},'→','n')
+      ],'f')
+    ]);
+  }
+  scrNickname(){
+    return shell([
+      appBar(''),
+      h('div',{flex:1,padding:'0 20px',display:'flex',flexDirection:'column',gap:18},[
+        h('div',{fontSize:32,fontWeight:800,lineHeight:1.2},'What should people call you?','t'),
+        h('div',{fontSize:18,lineHeight:1.5,color:C.muted},'Only phones near you ever see this. You can change it or leave it as it is.','s'),
+        h('div',{height:76,borderRadius:24,background:C.lift,display:'flex',alignItems:'center',padding:'0 20px',gap:12,border:'2px solid '+C.deep},[
+          h('div',{fontSize:24,fontWeight:700,flex:1},'Ruhi','v'),
+          h('div',{width:2,height:34,background:C.deep},null,'car')]),
+        h('div',{display:'flex',alignItems:'center',gap:10,padding:'0 4px'},[
+          h('div',{width:22,height:22,background:C.brand,clipPath:S.cookie9},null,'i'),
+          h('div',{fontSize:16,color:C.muted,flex:1},'We picked this one for you','x')]),
+        h('div',{background:C.tint,borderRadius:22,padding:'16px 18px',fontSize:16,lineHeight:1.5,color:'#2A3B47'},'No phone number. No email. Nothing to sign in to.','n')
+      ],'m'),
+      h('div',{padding:'0 20px 30px',display:'flex',flexDirection:'column',gap:12,flex:'none'},[
+        bigBtn('Start using Betar',C.deep,'#fff'),
+        h('div',{height:56,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:700,color:C.muted},'Skip this','k')
+      ],'f')
+    ]);
+  }
+  scrPermissions(){
+    const rows=[['Nearby devices','So your phone can see other phones and hand messages to them.',S.hexagon],
+      ['Location while using','Only to put your alert on the map. Off unless you turn it on.',S.clover4],
+      ['Microphone','So you can send a voice note instead of typing.',S.scallop12],
+      ['Notifications','So you hear an alert when the phone is in your pocket.',S.cookie9]];
+    return shell([
+      appBar('Three things to allow'),
+      h('div',{flex:1,padding:'0 16px',display:'flex',flexDirection:'column',gap:12,overflow:'hidden'},
+        rows.map(([t,b,clip])=>h('div',{background:C.lift,borderRadius:26,padding:16,display:'flex',gap:14,alignItems:'flex-start'},[
+          h('div',{width:44,height:44,flex:'none',background:C.tint,clipPath:clip},null,'s'),
+          h('div',{flex:1},[h('div',{fontSize:19,fontWeight:700},t,'t'),h('div',{fontSize:16,lineHeight:1.45,color:C.muted,marginTop:4},b,'b')],'x')
+        ],t)).concat([
+          h('div',{background:'#DCEEDC',borderRadius:26,padding:16,fontSize:16,lineHeight:1.5,color:'#1B5E20'},'Betar does not ask for internet at all. It cannot, and that is on purpose.','no')
+        ]),'m'),
+      h('div',{padding:'14px 16px 30px',flex:'none'},bigBtn('Allow these',C.deep,'#fff'),'f')
+    ]);
+  }
+  scrBattery(){
+    return shell([
+      appBar('Keep Betar awake',iconBtn('b','←')),
+      h('div',{flex:1,padding:'0 16px',display:'flex',flexDirection:'column',gap:14,overflow:'hidden'},[
+        h('div',{background:'#F6EBD2',borderRadius:24,padding:'14px 16px',display:'flex',gap:12,alignItems:'center'},[
+          h('div',{width:24,height:24,flex:'none',background:C.amber,clipPath:S.diamond},null,'i'),
+          h('div',{fontSize:16,lineHeight:1.45,color:'#5C3D00',flex:1},'Your phone stops apps to save battery. Betar has to stay awake to carry messages.','t')],'w'),
+        h('div',{fontSize:18,fontWeight:700},'On a Xiaomi phone','h'),
+        illo('screenshot · Settings › Apps › Betar\nBattery saver → No restrictions',210),
+        h('div',{display:'flex',flexDirection:'column',gap:10},[1,2,3].map(n=>h('div',{display:'flex',gap:12,alignItems:'flex-start'},[
+          h('div',{width:30,height:30,borderRadius:15,background:C.tint,color:C.deep,fontSize:16,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},String(n),'n'),
+          h('div',{fontSize:17,lineHeight:1.4,flex:1},['Open Settings, then Apps.','Find Betar and open Battery saver.','Choose No restrictions.'][n-1],'t')
+        ],'s'+n)),'steps'),
+        h('div',{fontSize:16,color:C.muted},'Different phone? Pick yours: Oppo · Vivo · realme · Samsung · OnePlus','o')
+      ],'m'),
+      h('div',{padding:'0 16px 30px',display:'flex',gap:10,flex:'none'},[
+        h('div',{flex:1},bigBtn('Open settings',C.deep,'#fff'),'a'),
+        h('div',{width:120},bigBtn('Later','#F7FAFD',C.muted),'b')
+      ],'f')
+    ]);
+  }
+
+  // ---------- starting a conversation ----------
+  scrEmpty(){
+    return shell([
+      appBar('Chats',logo(30,C.deep)),
+      ribbon('looking'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'18px 20px 150px',display:'flex',flexDirection:'column',gap:16},[
+        illo('illustration · a message hopping\nphone to phone to phone',190),
+        h('div',{fontSize:26,fontWeight:800,lineHeight:1.25},'How a message travels','t'),
+        h('div',{fontSize:18,lineHeight:1.5,color:'#2A3B47'},'You write it. Your phone holds it until another phone comes close and hands it over. It keeps going until it reaches the person you wrote to.','b'),
+        h('div',{background:C.tint,borderRadius:24,padding:'14px 18px',fontSize:17,lineHeight:1.45,color:'#2A3B47'},'Start by scanning somebody\u2019s code when you are standing next to them.','c')
+      ],'m'),
+      h('div',{position:'absolute',right:16,bottom:158,width:64,height:64,borderRadius:22,background:C.brand,boxShadow:'0 6px 18px rgba(18,96,143,.35)',display:'flex',alignItems:'center',justifyContent:'center'},[
+        h('div',{position:'absolute',width:26,height:3.5,background:'#0B3A57',borderRadius:2},null,'a'),
+        h('div',{position:'absolute',width:3.5,height:26,background:'#0B3A57',borderRadius:2},null,'b')],'fab'),
+      sos(),
+      navBar('Chats')
+    ]);
+  }
+  chatsBackdrop(){
+    const rows=[['Ruma didi','R','Are you home yet','14:20','delivered'],['Char Bagan village','C','Boat leaves at six','13:55','spreading'],
+      ['Anwar','A','Voice note · 0:12','12:40','travelling'],['Relief camp 2','R','Blankets came in','11:02','delivered'],
+      ['Shefali','S','I will bring water','09:48','waiting']];
+    return [
+      appBar('Chats',logo(30,C.deep)),
+      ribbon('connected'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'8px 12px 150px',display:'flex',flexDirection:'column',gap:8},
+        rows.map(([name,initial,snippet,time,kind])=>h('div',{background:C.lift,borderRadius:22,padding:'12px 14px',display:'flex',gap:12,alignItems:'center',minHeight:64},[
+          h('div',{width:48,height:48,flex:'none',background:C.tint,clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:700,color:C.deep},initial,'a'),
+          h('div',{flex:1,minWidth:0},[
+            h('div',{display:'flex',alignItems:'baseline',gap:8},[
+              h('div',{fontSize:18,fontWeight:700,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},name,'n'),
+              h('div',{fontSize:13,color:C.muted},time,'t')],'r1'),
+            h('div',{display:'flex',alignItems:'center',gap:7,marginTop:3},[
+              glyph(kind,17),
+              h('div',{fontSize:15,color:C.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',flex:1},snippet,'s')],'r2')],'x')
+        ],name)),'list'),
+      navBar('Chats')
+    ];
+  }
+  scrFabMenu(){
+    const items=[['Scan somebody\u2019s code',S.cookie9],['Join a group by name',S.hexagon],['Start a private group',S.clover4]];
+    return shell(this.chatsBackdrop().concat([
+      h('div',{position:'absolute',inset:0,background:'rgba(16,26,34,.45)'},null,'scrim'),
+      h('div',{position:'absolute',left:0,right:0,bottom:0,display:'flex',flexDirection:'column'},[
+        h('div',{padding:'0 16px 12px',display:'flex',flexDirection:'column',gap:12,alignItems:'flex-end'},
+          items.map(([label,clip])=>h('div',{display:'flex',alignItems:'center',gap:12},[
+            h('div',{background:'#fff',borderRadius:16,padding:'10px 16px',fontSize:17,fontWeight:700,color:C.ink,boxShadow:'0 4px 14px rgba(16,26,34,.2)'},label,'l'),
+            h('div',{width:56,height:56,borderRadius:20,background:C.lift,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 4px 14px rgba(16,26,34,.2)'},
+              h('div',{width:24,height:24,background:C.deep,clipPath:clip}),'i')
+          ],label)),'items'),
+        h('div',{padding:'0 16px 14px',display:'flex',justifyContent:'flex-end'},
+          h('div',{width:64,height:64,borderRadius:22,background:C.deep,display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,color:'#fff',fontWeight:300,transform:'rotate(45deg)'},'+'),'close'),
+        h('div',{height:82},null,'navspace')
+      ],'sheet')
+    ]));
+  }
+  scrScan(){
+    return shell([
+      appBar('Scan their code',iconBtn('b','←','#F7FAFD')),
+      h('div',{flex:1,padding:'0 20px',display:'flex',flexDirection:'column',gap:18,alignItems:'center'},[
+        h('div',{width:300,height:300,borderRadius:36,background:'#0B1A24',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center'},[
+          h('div',{width:196,height:196,border:'4px solid #fff',borderRadius:24,opacity:.9},null,'frame'),
+          h('div',{position:'absolute',bottom:14,fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:'#9FB6C6'},'camera preview','c')],'cam'),
+        h('div',{fontSize:19,fontWeight:700,textAlign:'center',lineHeight:1.35},'Hold their phone in the square','t'),
+        h('div',{fontSize:17,lineHeight:1.5,color:C.muted,textAlign:'center'},'Stand next to each other. This is the only way to be sure it is really them.','s')
+      ],'m'),
+      h('div',{padding:'0 20px 30px',display:'flex',flexDirection:'column',gap:12,flex:'none'},[
+        bigBtn('Show my code instead',C.tint,C.deep),
+        h('div',{fontSize:16,color:C.muted,textAlign:'center'},'Or type their six characters','t')
+      ],'f')
+    ]);
+  }
+  scrVerify(){
+    return shell([
+      appBar('Anwar'),
+      h('div',{flex:1,padding:'0 20px',display:'flex',flexDirection:'column',gap:20,alignItems:'center'},[
+        h('div',{fontSize:19,fontWeight:600,textAlign:'center',lineHeight:1.4,color:'#2A3B47'},'Hold the two phones together. Both should show the same thing.','t'),
+        h('div',{background:C.lift,borderRadius:32,padding:'26px 20px',width:'100%',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',gap:18},[
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:52,fontWeight:500,letterSpacing:'.1em',color:C.deep},'4K7 92M','code'),
+          h('div',{width:150,height:150,borderRadius:20,background:C.ground,display:'grid',gridTemplateColumns:'repeat(9,1fr)',gridTemplateRows:'repeat(9,1fr)',gap:2,padding:10,boxSizing:'border-box'},
+            Array.from({length:81},(_,i)=>h('div',{background:((i*13+i%9*5)%3===0||i<11||i>70)?C.ink:'transparent',borderRadius:2},null,'q'+i)),'qr')
+        ],'card'),
+        h('div',{display:'flex',alignItems:'center',gap:10,background:'#F6EBD2',borderRadius:20,padding:'12px 16px'},[
+          h('div',{width:20,height:20,flex:'none',background:C.amber,clipPath:S.diamond},null,'d'),
+          h('div',{fontSize:16,lineHeight:1.4,color:'#5C3D00',flex:1},'Different codes? Do not confirm. Ask them to show theirs again.','w')],'warn')
+      ],'m'),
+      h('div',{padding:'0 20px 30px',display:'flex',flexDirection:'column',gap:12,flex:'none'},[
+        bigBtn('Yes, they match',C.green,'#fff'),
+        h('div',{height:56,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:700,color:C.muted},'Not now','n')
+      ],'f')
+    ]);
+  }
+  scrJoinName(){
+    return shell([
+      appBar('Join a group by name',iconBtn('b','←','#F7FAFD')),
+      h('div',{flex:1,padding:'0 20px',display:'flex',flexDirection:'column',gap:16},[
+        h('div',{background:'#F6EBD2',borderRadius:26,padding:'18px 20px',display:'flex',flexDirection:'column',gap:10},[
+          h('div',{display:'flex',alignItems:'center',gap:10},[
+            h('div',{width:28,height:28,flex:'none',background:C.amber,clipPath:S.diamond},null,'d'),
+            h('div',{fontSize:20,fontWeight:800,color:'#5C3D00'},'Anyone can walk in','t')],'r'),
+          h('div',{fontSize:17,lineHeight:1.5,color:'#5C3D00'},'Anybody who knows this name and passphrase can read everything written in this group, including what was written before they joined. Use it for village notices, not for private things.','b')
+        ],'warn'),
+        h('div',{display:'flex',flexDirection:'column',gap:8},[
+          h('div',{fontSize:16,fontWeight:700,color:C.muted},'Group name','l'),
+          h('div',{height:68,borderRadius:22,background:C.lift,display:'flex',alignItems:'center',padding:'0 18px',fontSize:20,fontWeight:600},'char-bagan-village','v')],'n'),
+        h('div',{display:'flex',flexDirection:'column',gap:8},[
+          h('div',{fontSize:16,fontWeight:700,color:C.muted},'Passphrase','l'),
+          h('div',{height:68,borderRadius:22,background:C.lift,display:'flex',alignItems:'center',padding:'0 18px',fontSize:20,fontWeight:600,color:C.muted},'six words or more','v')],'p')
+      ],'m'),
+      h('div',{padding:'0 20px 30px',flex:'none'},bigBtn('Join this group',C.deep,'#fff'),'f')
+    ]);
+  }
+
+  // ---------- threads ----------
+  threadBar(name,chipBg,chipFg,chipText,chipClip,chipDot){
+    return h('div',{height:64,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 14px',background:C.ground},[
+      iconBtn('b','←','#F7FAFD'),
+      h('div',{flex:1,minWidth:0},[
+        h('div',{fontSize:20,fontWeight:800,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},name,'n'),
+        h('div',{display:'inline-flex',alignItems:'center',gap:6,background:chipBg,borderRadius:999,padding:'3px 10px 3px 7px',marginTop:3},[
+          h('div',{width:13,height:13,background:chipDot,clipPath:chipClip},null,'d'),
+          h('div',{fontSize:13,fontWeight:700,color:chipFg},chipText,'t')],'chip')],'x'),
+      iconBtn('m','⋮','#F7FAFD')
+    ]);
+  }
+  composer(opts){
+    opts=opts||{};
+    return h('div',{flex:'none',padding:'8px 12px 16px',background:C.ground,display:'flex',alignItems:'flex-end',gap:10},[
+      h('div',{flex:1,minHeight:56,borderRadius:24,background:C.lift,display:'flex',alignItems:'center',padding:'0 18px',fontSize:18,color:opts.text?C.ink:'#8A99A4'},opts.text||'Write a message','in'),
+      h('div',{width:52,height:52,borderRadius:18,background:C.tint,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},
+        h('div',{width:22,height:22,background:C.deep,clipPath:S.square}),'kb'),
+      h('div',{width:72,height:72,borderRadius:26,background:C.deep,display:'flex',alignItems:'center',justifyContent:'center',flex:'none',boxShadow:'0 4px 14px rgba(18,96,143,.3)'},
+        h('div',{width:24,height:38,borderRadius:12,background:'#fff'}),'mic')
+    ]);
+  }
+  scrUnverified(){
+    return shell([
+      this.threadBar('Anwar','#F6EBD2','#7A5100','Not met yet',S.diamond,C.amber),
+      h('div',{flex:'none',background:'#F6EBD2',padding:'12px 16px',display:'flex',alignItems:'center',gap:12},[
+        h('div',{fontSize:16,lineHeight:1.4,color:'#5C3D00',flex:1},'You have not stood next to this person yet, so nobody can be sure it is them.','t'),
+        h('div',{height:44,borderRadius:14,background:'#fff',color:'#7A5100',fontSize:15,fontWeight:700,display:'flex',alignItems:'center',padding:'0 14px',flex:'none'},'Check','b')],'banner'),
+      h('div',{flex:1,padding:'14px 14px 0',display:'flex',flexDirection:'column',gap:14,justifyContent:'flex-end',overflow:'hidden'},[
+        bubble('Are you at the ghat?',false,h('div',{fontSize:13,color:C.muted,padding:'0 4px'},'11:02'),null),
+        bubble('Leaving now, twenty minutes',true,meta('spreading','11:20')),
+        bubble('Bring the small boat if you can',true,meta('waiting','11:21'))
+      ],'m'),
+      this.composer()
+    ]);
+  }
+  scrVerified(){
+    return shell([
+      this.threadBar('Shefali','#DCEEDC','#1B5E20','Met in person',S.hexagon,C.green),
+      h('div',{flex:1,padding:'14px 14px 0',display:'flex',flexDirection:'column',gap:14,justifyContent:'flex-end',overflow:'hidden'},[
+        h('div',{alignSelf:'center',background:C.tint,borderRadius:16,padding:'6px 14px',fontSize:14,fontWeight:600,color:C.deep},'Only Shefali can read these','n'),
+        bubble('Water came up to the road',false,h('div',{fontSize:13,color:C.muted,padding:'0 4px'},'09:12')),
+        bubble('We are all fine. Staying at the school tonight',true,meta('delivered','09:40')),
+        h('div',{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4},[
+          h('div',{width:250,background:C.tint,borderRadius:'22px 22px 6px 22px',padding:'14px 16px',display:'flex',alignItems:'center',gap:12},[
+            h('div',{width:44,height:44,borderRadius:16,background:C.deep,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},
+              h('div',{width:0,height:0,borderLeft:'14px solid #fff',borderTop:'9px solid transparent',borderBottom:'9px solid transparent',marginLeft:4}),'p'),
+            h('div',{flex:1,display:'flex',alignItems:'center',gap:3,height:30},
+              [8,16,24,30,22,14,20,26,12,18,10,22,16,8,14].map((v,i)=>h('div',{width:4,height:v,borderRadius:2,background:C.deep,opacity:.75},null,'w'+i)),'wave'),
+            h('div',{fontSize:14,fontWeight:600,color:C.deep},'0:12','d')],'voice'),
+          meta('spreading','09:41')
+        ],'vn')
+      ],'m'),
+      this.composer()
+    ]);
+  }
+  scrRecording(){
+    return shell([
+      this.threadBar('Shefali','#DCEEDC','#1B5E20','Met in person',S.hexagon,C.green),
+      h('div',{flex:1,padding:'14px 14px 0',display:'flex',flexDirection:'column',gap:14,justifyContent:'flex-end',overflow:'hidden',opacity:.45},[
+        bubble('Water came up to the road',false,h('div',{fontSize:13,color:C.muted,padding:'0 4px'},'09:12')),
+        bubble('We are all fine',true,meta('delivered','09:40'))
+      ],'m'),
+      h('div',{flex:'none',padding:'16px 12px 16px',background:C.ground,display:'flex',flexDirection:'column',gap:14},[
+        h('div',{background:C.lift,borderRadius:26,padding:'16px 18px',display:'flex',alignItems:'center',gap:14},[
+          h('div',{width:14,height:14,borderRadius:7,background:C.red,flex:'none'},null,'rec'),
+          h('div',{flex:1,display:'flex',alignItems:'center',gap:3,height:40},
+            [10,22,34,28,40,18,30,24,38,16,26,34,20,30,12,24,36,22,14,28,18,32].map((v,i)=>h('div',{flex:1,height:v,borderRadius:2,background:C.deep,opacity:.8},null,'w'+i)),'wave'),
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:18,fontWeight:500,color:C.ink},'0:08','t')],'card'),
+        h('div',{display:'flex',alignItems:'center',gap:12,padding:'0 8px'},[
+          h('div',{fontSize:17,fontWeight:700,color:C.muted,flex:1},'← Slide to cancel','s'),
+          h('div',{fontSize:16,color:C.muted},'Let go to send','l')],'hint'),
+        h('div',{display:'flex',justifyContent:'flex-end'},
+          h('div',{width:96,height:96,borderRadius:34,background:C.deep,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 0 12px rgba(18,96,143,.15)'},
+            h('div',{width:30,height:48,borderRadius:15,background:'#fff'})),'mic')
+      ],'rec')
+    ]);
+  }
+  scrGroupActions(){
+    return shell([
+      this.threadBar('Char Bagan village','#DCE9F5','#12608F','Open group · 23 people',S.hexagon,C.deep),
+      h('div',{flex:1,padding:'14px 14px 0',display:'flex',flexDirection:'column',gap:12,justifyContent:'flex-end',overflow:'hidden'},[
+        h('div',{alignSelf:'center',background:'#F6EBD2',borderRadius:16,padding:'8px 14px',fontSize:14,fontWeight:600,color:'#5C3D00',textAlign:'center',lineHeight:1.4},'Anyone who knows the name and passphrase can read this','n'),
+        h('div',{display:'flex',flexDirection:'column',gap:4},[
+          h('div',{fontSize:14,fontWeight:700,color:C.deep,padding:'0 6px'},'Habib','a'),
+          bubble('Boat leaves at six from the ghat',false,h('div',{fontSize:13,color:C.muted,padding:'0 4px'},'13:55'))],'m1'),
+        h('div',{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6},[
+          h('div',{maxWidth:264,background:C.deep,color:'#fff',borderRadius:'22px 22px 6px 22px',padding:'12px 15px',fontSize:18,lineHeight:1.45,boxShadow:'0 0 0 3px rgba(18,96,143,.25)'},'I will bring two more people','b'),
+          meta('spreading','14:02')],'sel'),
+        h('div',{alignSelf:'flex-end',background:'#fff',borderRadius:22,padding:'8px 10px',display:'flex',gap:6,boxShadow:'0 8px 24px rgba(16,26,34,.22)',marginTop:2},
+          [['Send again',S.cookie9],['Copy',S.square],['Delete for me',S.diamond]].map(([label,clip])=>
+            h('div',{display:'flex',flexDirection:'column',alignItems:'center',gap:4,padding:'6px 10px',minWidth:66},[
+              h('div',{width:22,height:22,background:C.deep,clipPath:clip},null,'i'),
+              h('div',{fontSize:12,fontWeight:700,color:C.ink,textAlign:'center',lineHeight:1.2},label,'l')],label)),'toolbar')
+      ],'m'),
+      this.composer()
+    ]);
+  }
+
+  renderVals(){
+    return {
+      onboarding:[
+        {title:'1 · Language',node:this.scrLanguage(),note:'Each language in its own script. No English gate. Selected state is fill plus a hexagon, never colour alone.'},
+        {title:'2 · What this is · panel 2 of 3',node:this.scrPanels(),note:'Eight words or fewer. Read aloud is a labelled 56dp control, not an icon in a corner.'},
+        {title:'3 · Nickname',node:this.scrNickname(),note:'Pre-filled and skippable. Keys are already generated by now and never mentioned.'},
+        {title:'4 · Permissions',node:this.scrPermissions(),note:'Plain reasons before the system dialogs. The no-internet line is a green container because it is good news.'},
+        {title:'5 · Battery, per manufacturer',node:this.scrBattery(),note:'Amber, not red. Illustrated per phone brand; Xiaomi shown.'}
+      ],
+      starting:[
+        {title:'Chats · empty, teaching',node:this.scrEmpty(),note:'Teaches how messages travel instead of apologising. Ribbon reads Looking, which is a normal state, not an error.'},
+        {title:'New conversation · FAB menu',node:this.scrFabMenu(),note:'Three ways in, each labelled. Labels sit outside the buttons so they survive 200 percent font scaling.'},
+        {title:'Scan a code',node:this.scrScan(),note:'No cryptographic language. The reason is social: stand next to each other.'},
+        {title:'Verify in person',node:this.scrVerify(),note:'52px code, both phones, one confirm. Green only after a human comparison.'},
+        {title:'Join a group by name',node:this.scrJoinName(),note:'The warning is the first thing on the screen and cannot be dismissed.'}
+      ],
+      threads:[
+        {title:'One to one · not met yet',node:this.scrUnverified(),note:'Amber banner with a way to fix it. Delivery states shown: Spreading and Waiting.'},
+        {title:'One to one · met in person',node:this.scrVerified(),note:'Voice note as a first class message. Mic is bigger than the keyboard control.'},
+        {title:'Voice note · recording',node:this.scrRecording(),note:'Hold to record, slide to cancel, live waveform. Thread dims so the gesture is the only thing live.'},
+        {title:'Group · message actions',node:this.scrGroupActions(),note:'Floating toolbar on long press: resend, copy, delete for me. Open-group warning is permanent.'}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

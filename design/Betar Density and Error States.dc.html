@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+@keyframes betar-ripple{0%{transform:scale(.45);opacity:.55}70%{opacity:0}100%{transform:scale(1.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 28px;max-width:1080px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Density mode and error states</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">Two things the brief names but never specs. Density mode is for the second audience: camp coordinators working a list of forty people at speed. Error states are for the moments the app has to tell the truth without sounding like it broke.</div>
+  <div style="background:#F6EBD2;border-radius:22px;padding:16px 20px;margin-top:18px;max-width:820px;font-size:16px;line-height:1.55;color:#5C3D00">Density mode never touches the accessibility floor. Targets stay 56dp, body stays 18sp on anything that carries meaning. What shrinks is padding, decoration and the space between rows — not the text and not the hit areas.</div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">R · DENSITY MODE · COMFORTABLE BESIDE DENSE</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ density }}" as="f" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ f.title }}</div>
+        <div data-screen-label="{{ f.title }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ f.node }}</div>
+        <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">{{ f.note }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="background:#F7FAFD;border-radius:26px;padding:8px 24px;margin-top:26px;max-width:1080px">{{ densityTable }}</div>
+</section>
+
+<section style="padding:0 56px 72px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:6px">S · ERROR STATES · THE REST OF THEM</div>
+  <div style="font-size:16px;line-height:1.6;color:#3A4B57;max-width:820px;margin-bottom:20px">Rules these follow: amber, never red. Say what happened, then what the person can do, then what the app is doing meanwhile. Never blame the network, because there is no network. Never use the word failed where waited would be truthful.</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ errors }}" as="f" hint-placeholder-count="6">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ f.title }}</div>
+        <div data-screen-label="{{ f.title }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ f.node }}</div>
+        <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">{{ f.note }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+function regular(n,rot){const p=[];for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(rot||0);p.push((50+Math.cos(a)*50).toFixed(2)+'% '+(50+Math.sin(a)*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const S={cookie9:lobed(9,.84,.16,0),clover4:lobed(4,.74,.26,Math.PI/4),scallop12:lobed(12,.88,.12,0),burst8:lobed(8,.72,.28,0),
+  pentagon:regular(5,-Math.PI/2),hexagon:regular(6,-Math.PI/2),diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',square:'inset(6% round 26%)'};
+const C={ground:'#EEF4F9',lift:'#F7FAFD',tint:'#DCE9F5',ink:'#101A22',muted:'#4A5B67',deep:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700'};
+
+const shell=(kids)=>h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column',fontFamily:"'Noto Sans',sans-serif",color:C.ink},kids);
+const iconBtn=(k,ch)=>h('div',{width:44,height:44,flex:'none',borderRadius:14,background:C.lift,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:C.deep},ch,k);
+const appBar=(title,left,right)=>h('div',{minHeight:60,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'8px 16px'},[
+  left||null,h('div',{fontSize:24,fontWeight:800,flex:1,lineHeight:1.3},title,'t'),right||null]);
+const ribbon=(label,bg,fg,dot)=>h('div',{minHeight:38,flex:'none',display:'flex',alignItems:'center',gap:10,padding:'6px 16px',background:bg},[
+  h('div',{width:16,height:16,position:'relative',flex:'none',display:'flex',alignItems:'center',justifyContent:'center'},[
+    h('div',{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid '+dot,animation:'betar-ripple 2.6s ease-out infinite'},null,'r'),
+    h('div',{width:7,height:7,borderRadius:'50%',background:dot},null,'d')],'w'),
+  h('div',{fontSize:14,fontWeight:600,color:fg,flex:1,lineHeight:1.45},label,'l')]);
+const navBar=(active)=>h('div',{height:82,flex:'none',background:C.lift,display:'flex',alignItems:'center',padding:'0 4px 6px'},
+  [['Chats',S.cookie9],['Nearby',S.scallop12],['Board',S.hexagon],['Map',S.clover4],['You',S.pentagon]].map(([label,clip])=>{
+    const on=label===active;
+    return h('div',{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5,paddingTop:8},[
+      h('div',{width:56,height:30,borderRadius:15,background:on?C.tint:'transparent',display:'flex',alignItems:'center',justifyContent:'center'},
+        h('div',{width:20,height:20,background:on?C.deep:'#5A6B77',clipPath:clip}),'p'),
+      h('div',{fontSize:12,fontWeight:on?700:500,color:on?C.deep:C.muted},label,'l')],label);}));
+const sos=()=>h('div',{position:'absolute',right:16,bottom:96,height:56,borderRadius:20,background:C.red,display:'flex',alignItems:'center',gap:8,padding:'0 16px',boxShadow:'0 6px 18px rgba(200,16,46,.4)'},[
+  h('div',{width:20,height:20,background:'#fff',clipPath:S.burst8},null,'i'),h('div',{fontSize:18,fontWeight:800,color:'#fff'},'SOS','t')]);
+const glyph=(kind,col,size)=>{
+  const sets={waiting:{l:[],n:[[16,16,4.5,'none']]},travelling:{l:[[10,20,22,12]],n:[[9,21,4,col],[23,11,4,'none']]},
+    spreading:{l:[[8,22,16,8],[8,22,25,20],[16,8,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,3.6,'none']]},
+    delivered:{l:[[8,22,16,8],[16,8,25,20],[8,22,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,5.6,col]]}}[kind];
+  return h('svg',{width:size,height:size,flex:'none'},[
+    ...sets.l.map((v,i)=>R.createElement('line',{key:'l'+i,x1:v[0],y1:v[1],x2:v[2],y2:v[3],stroke:col,strokeWidth:2.2,strokeLinecap:'round',opacity:.6})),
+    ...sets.n.map((v,i)=>R.createElement('circle',{key:'n'+i,cx:v[0],cy:v[1],r:v[2],fill:v[3],stroke:col,strokeWidth:2.2}))],{viewBox:'0 0 32 32'});
+};
+const amberCard=(title,body,action)=>h('div',{background:'#F6EBD2',borderRadius:26,padding:'18px 20px',display:'flex',flexDirection:'column',gap:12},[
+  h('div',{display:'flex',gap:12,alignItems:'flex-start'},[
+    h('div',{width:26,height:26,marginTop:2,flex:'none',background:C.amber,clipPath:S.diamond},null,'i'),
+    h('div',{flex:1},[h('div',{fontSize:20,fontWeight:800,color:'#5C3D00',lineHeight:1.3},title,'t'),
+      h('div',{fontSize:17,lineHeight:1.5,color:'#5C3D00',marginTop:6},body,'b')],'x')],'head'),
+  action?h('div',{height:56,borderRadius:18,background:'#fff',color:'#7A5100',fontSize:17,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},action,'a'):null]);
+
+const CHATS=[['Ruma didi','Are you home yet','14:20','delivered',0,'NEARBY'],
+  ['Char Bagan village','Boat leaves at six','13:55','spreading',3,'GROUP'],
+  ['Anwar','Voice note · 0:12','12:40','travelling',0,'PRIVATE'],
+  ['Relief camp 2','Blankets came in','11:02','delivered',0,'GROUP'],
+  ['Shefali','I will bring water','09:48','waiting',0,'NEARBY'],
+  ['Habib','Two more families arrived','09:12','delivered',1,'PRIVATE'],
+  ['Boat crew','Tell me when you reach','Yest.','delivered',0,'PRIVATE'],
+  ['School shelter','Room for twelve more','Yest.','spreading',0,'GROUP'],
+  ['Nurse Rani','Send the list tonight','Yest.','delivered',2,'PRIVATE']];
+
+class Component extends DCLogic {
+  chats(dense){
+    const rows=dense?CHATS.slice(0,7):CHATS.slice(0,5);
+    return shell([
+      appBar('Chats',null,dense?h('div',{height:40,borderRadius:14,background:C.tint,color:C.deep,fontSize:14,fontWeight:800,display:'flex',alignItems:'center',padding:'0 12px'},'DENSE','m'):null),
+      ribbon('Connected · 3 phones nearby','#DCEEDC','#1B5E20',C.green),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:dense?'6px 10px 150px':'8px 12px 150px',display:'flex',flexDirection:'column',gap:dense?4:8},
+        rows.map(([name,snippet,time,kind,unread,tag],i)=>h('div',{background:C.lift,borderRadius:dense?16:22,padding:dense?'3px 12px':'12px 14px',display:'flex',gap:dense?10:12,alignItems:'center',minHeight:56,boxSizing:'border-box'},[
+          h('div',{width:dense?40:48,height:dense?40:48,flex:'none',background:C.tint,clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:dense?15:17,fontWeight:700,color:C.deep},name[0],'a'),
+          h('div',{flex:1,minWidth:0},[
+            h('div',{display:'flex',gap:8,alignItems:'baseline'},[
+              h('div',{fontSize:18,fontWeight:700,lineHeight:dense?1.25:1.45,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},name,'n'),
+              h('div',{fontSize:13,color:C.muted,flex:'none'},time,'t')],'r1'),
+            h('div',{display:'flex',alignItems:'center',gap:7,marginTop:dense?0:3,lineHeight:dense?1.2:1.4},[
+              glyph(kind,kind==='delivered'?C.green:C.deep,16),
+              h('div',{fontSize:dense?15:15,color:C.muted,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},snippet,'s'),
+              dense?h('div',{fontSize:10,fontWeight:800,color:C.muted,letterSpacing:'.04em',flex:'none'},tag,'g'):null],'r2')],'x'),
+          unread?h('div',{minWidth:22,height:22,borderRadius:11,background:C.deep,color:'#fff',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 6px',flex:'none'},String(unread),'u'):null,
+          !dense?h('div',{fontSize:11,fontWeight:700,color:C.muted,background:C.ground,borderRadius:8,padding:'3px 7px',flex:'none'},tag,'g'):null
+        ],i)),'list'),
+      sos(),navBar('Chats')
+    ]);
+  }
+  triage(){
+    const rows=[['Medical','900 m NE','12 min','2 ack',S.clover4,true],
+      ['Trapped','Location off','40 min','5 ack',S.pentagon,true],
+      ['Fire','2.1 km S','3 h','11 ack',S.burst8,false],
+      ['Medical','1.4 km E','4 h','3 ack',S.clover4,false],
+      ['Danger','600 m N','5 h','8 ack',S.diamond,false]];
+    return shell([
+      appBar('Alerts',null,h('div',{height:40,borderRadius:14,background:C.tint,color:C.deep,fontSize:14,fontWeight:800,display:'flex',alignItems:'center',padding:'0 12px'},'DENSE','m')),
+      ribbon('Connected · 3 phones nearby','#DCEEDC','#1B5E20',C.green),
+      h('div',{padding:'8px 10px',flex:'none',display:'flex',gap:6},
+        ['Newest','Nearest','Not handled'].map((l,i)=>h('div',{height:40,borderRadius:12,padding:'0 12px',display:'flex',alignItems:'center',fontSize:14,fontWeight:700,background:i===2?C.deep:C.tint,color:i===2?'#fff':C.deep},l,l)),'sort'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 10px 150px',display:'flex',flexDirection:'column',gap:4},
+        rows.map(([cat,dist,age,ack,clip,live],i)=>h('div',{background:live?'#FBEDEF':C.lift,borderRadius:16,padding:'8px 12px',display:'flex',gap:10,alignItems:'center',minHeight:56},[
+          h('div',{width:40,height:40,flex:'none',background:live?C.red:'#C4D3DE',clipPath:clip},null,'s'),
+          h('div',{flex:1,minWidth:0},[
+            h('div',{display:'flex',gap:8,alignItems:'baseline'},[
+              h('div',{fontSize:18,fontWeight:800,flex:1,color:live?'#8C0B20':C.ink},cat,'c'),
+              h('div',{fontSize:13,color:C.muted,flex:'none'},age,'a')],'r1'),
+            h('div',{display:'flex',gap:10,marginTop:1},[
+              h('div',{fontSize:15,color:C.muted},dist,'d'),
+              h('div',{fontSize:15,color:C.muted},ack,'k')],'r2')],'x'),
+          h('div',{height:44,borderRadius:14,background:live?C.red:C.tint,color:live?'#fff':C.deep,fontSize:15,fontWeight:800,display:'flex',alignItems:'center',padding:'0 14px',flex:'none'},live?'Take':'Seen','b')
+        ],i)),'list'),
+      sos(),navBar('Board')
+    ]);
+  }
+  roster(){
+    const rows=[['Anwar','Met','Bluetooth','strong',true],['Shefali','Met','Wi-Fi Direct','good',true],
+      ['Blue phone','Not met','Bluetooth','weak',false],['Habib','Met','Bluetooth','good',true],
+      ['Grey phone','Not met','Bluetooth','weak',false],['Nurse Rani','Met','Wi-Fi Direct','strong',true]];
+    return shell([
+      appBar('Nearby',null,h('div',{height:40,borderRadius:14,background:C.tint,color:C.deep,fontSize:14,fontWeight:800,display:'flex',alignItems:'center',padding:'0 12px'},'DENSE','m')),
+      ribbon('Connected · 6 phones nearby','#DCEEDC','#1B5E20',C.green),
+      h('div',{padding:'8px 10px',flex:'none',display:'flex',alignItems:'center',gap:10},[
+        h('div',{fontSize:16,fontWeight:700,flex:1},'6 phones · 4 met in person','c'),
+        h('div',{height:40,borderRadius:12,background:C.tint,color:C.deep,fontSize:14,fontWeight:700,display:'flex',alignItems:'center',padding:'0 12px'},'Select','s')],'head'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 10px 150px',display:'flex',flexDirection:'column',gap:4},
+        rows.map(([n,trust,link,sig,ok],i)=>h('div',{background:C.lift,borderRadius:16,padding:'8px 12px',display:'flex',gap:10,alignItems:'center',minHeight:56},[
+          h('div',{width:40,height:40,flex:'none',background:C.tint,clipPath:S.clover4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:700,color:C.deep},n[0],'a'),
+          h('div',{flex:1,minWidth:0},[
+            h('div',{fontSize:18,fontWeight:700},n,'n'),
+            h('div',{fontSize:15,color:C.muted,marginTop:1},link+' · '+sig,'l')],'x'),
+          h('div',{display:'inline-flex',alignItems:'center',gap:5,background:ok?'#DCEEDC':'#F6EBD2',borderRadius:999,padding:'4px 10px 4px 7px',flex:'none'},[
+            h('div',{width:12,height:12,background:ok?C.green:C.amber,clipPath:ok?S.hexagon:S.diamond},null,'d'),
+            h('div',{fontSize:13,fontWeight:700,color:ok?'#1B5E20':'#7A5100'},trust,'t')],'chip')
+        ],i)),'list'),
+      sos(),navBar('Nearby')
+    ]);
+  }
+
+  errBluetooth(){
+    return shell([
+      appBar('Nearby'),
+      ribbon('Off · your phone is not looking','#E7EDF2',C.muted,'#8A99A4'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'16px 16px 150px',display:'flex',flexDirection:'column',gap:16},[
+        h('div',{height:170,flex:'none',display:'flex',alignItems:'center',justifyContent:'center'},
+          h('div',{width:86,height:86,background:'#E1E8EE',clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,fontWeight:800,color:'#8A99A4'},'0'),'hero'),
+        amberCard('Bluetooth is switched off','Your phone cannot find anybody until it is back on. The 4 messages you have written are being kept, and go out as soon as it is.','Switch Bluetooth on')
+      ],'m'),
+      sos(),navBar('Nearby')
+    ]);
+  }
+  errCamera(){
+    return shell([
+      appBar('Scan their code',iconBtn('b','←')),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 20px 20px',display:'flex',flexDirection:'column',gap:18},[
+        h('div',{height:280,borderRadius:30,background:'#E1E8EE',display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},
+          h('div',{width:120,height:120,borderRadius:24,border:'4px dashed #A8BAC7'}),'box'),
+        amberCard('The camera is not allowed yet','Betar needs the camera only for this: reading the square on somebody else\u2019s phone. Nothing is recorded.','Allow the camera'),
+        h('div',{background:C.tint,borderRadius:24,padding:'16px 18px',display:'flex',alignItems:'center',gap:12},[
+          h('div',{flex:1,fontSize:17,lineHeight:1.45,color:'#12303F'},'Or add them by typing six characters instead.','t'),
+          h('div',{fontSize:20,color:C.deep},'›','c')],'alt')
+      ],'m')
+    ]);
+  }
+  errMismatch(){
+    return shell([
+      appBar('Anwar'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 20px 20px',display:'flex',flexDirection:'column',gap:18,alignItems:'center'},[
+        h('div',{background:C.lift,borderRadius:32,padding:'22px 20px',width:'100%',boxSizing:'border-box',display:'flex',flexDirection:'column',alignItems:'center',gap:10},[
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:44,fontWeight:500,letterSpacing:'.1em',color:C.muted,textDecoration:'line-through'},'4K7 92M','a'),
+          h('div',{fontSize:15,color:C.muted},'on this phone','b'),
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:44,fontWeight:500,letterSpacing:'.1em',color:'#7A5100'},'8P2 41C','c'),
+          h('div',{fontSize:15,color:'#7A5100'},'on theirs','d')],'codes'),
+        amberCard('These two do not match','Do not confirm. Either the phones are reading different people, or somebody is between you. Ask them to show their code again, standing beside you.','Try again'),
+        h('div',{fontSize:16,lineHeight:1.5,color:'#1E2C36',textAlign:'center'},'You can still write to them. The chip stays amber until the codes match.','n')
+      ],'m')
+    ]);
+  }
+  errGaveUp(){
+    return shell([
+      h('div',{height:64,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 14px'},[iconBtn('b','←'),
+        h('div',{flex:1},[h('div',{fontSize:20,fontWeight:800},'Habib','n'),
+          h('div',{display:'inline-flex',alignItems:'center',gap:6,background:'#DCEEDC',borderRadius:999,padding:'3px 10px 3px 7px',marginTop:3},[
+            h('div',{width:13,height:13,background:C.green,clipPath:S.hexagon},null,'d'),
+            h('div',{fontSize:13,fontWeight:700,color:'#1B5E20'},'Met in person','t')],'chip')],'x')],'bar'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',padding:'14px 14px 0',display:'flex',flexDirection:'column',gap:14,justifyContent:'flex-end'},[
+        h('div',{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4},[
+          h('div',{maxWidth:264,background:C.tint,borderRadius:'22px 22px 6px 22px',padding:'12px 15px',fontSize:18,lineHeight:1.45},'Are the roads open on your side','b'),
+          h('div',{display:'flex',alignItems:'center',gap:6,padding:'0 4px'},[glyph('delivered',C.green,16),
+            h('div',{fontSize:13,fontWeight:700,color:'#1B5E20'},'Delivered','w'),h('div',{fontSize:13,color:C.muted},'Monday','t')],'m')],'m1'),
+        h('div',{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6},[
+          h('div',{maxWidth:264,background:'#F6EBD2',borderRadius:'22px 22px 6px 22px',padding:'12px 15px',fontSize:18,lineHeight:1.45,color:'#5C3D00'},'Bring the spare rope if you can','b'),
+          h('div',{display:'flex',alignItems:'center',gap:6,padding:'0 4px'},[
+            h('div',{width:14,height:14,background:C.amber,clipPath:S.diamond},null,'i'),
+            h('div',{fontSize:13,fontWeight:700,color:'#7A5100'},'Stopped travelling','w')],'m')],'m2'),
+        h('div',{background:'#F6EBD2',borderRadius:22,padding:'14px 16px',marginBottom:6,display:'flex',flexDirection:'column',gap:10},[
+          h('div',{fontSize:16,lineHeight:1.5,color:'#5C3D00'},'This one waited seven days and never found a way to Habib. It is still on your phone. Nothing was lost.','t'),
+          h('div',{display:'flex',gap:10},[
+            h('div',{flex:1,height:52,borderRadius:16,background:'#fff',color:'#7A5100',fontSize:16,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},'Send it again','a'),
+            h('div',{width:110,height:52,borderRadius:16,background:'rgba(154,103,0,.12)',color:'#7A5100',fontSize:16,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'},'Let it go','b')],'acts')],'note')
+      ],'m'),
+      h('div',{flex:'none',padding:'8px 12px 16px',display:'flex',alignItems:'center',gap:10},[
+        h('div',{flex:1,minHeight:56,borderRadius:24,background:C.lift,display:'flex',alignItems:'center',padding:'0 18px',fontSize:18,color:'#8A99A4'},'Write a message','in'),
+        h('div',{width:72,height:72,borderRadius:26,background:C.deep,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},h('div',{width:24,height:38,borderRadius:12,background:'#fff'}),'mic')],'composer')
+    ]);
+  }
+  errAlertAlone(){
+    return shell([
+      h('div',{height:64,flex:'none',display:'flex',alignItems:'center',padding:'0 20px'},
+        h('div',{fontSize:24,fontWeight:800,color:'#8C0B20'},'Your alert is waiting'),'h'),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 16px 20px',display:'flex',flexDirection:'column',gap:14},[
+        h('div',{background:C.lift,borderRadius:28,padding:'22px 18px',display:'flex',flexDirection:'column',alignItems:'center',gap:14},[
+          h('div',{position:'relative',width:150,height:150,display:'flex',alignItems:'center',justifyContent:'center'},[
+            h('div',{position:'absolute',width:150,height:150,borderRadius:'50%',border:'2px solid #E2B9C1',animation:'betar-ripple 3.4s ease-out infinite'},null,'r'),
+            h('div',{width:104,height:104,background:C.red,clipPath:S.clover4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,fontWeight:800,color:'#fff'},'0','c')],'ring'),
+          h('div',{fontSize:22,fontWeight:800,textAlign:'center',lineHeight:1.3},'No phone has taken it yet','t'),
+          h('div',{fontSize:17,lineHeight:1.5,color:'#2A3B47',textAlign:'center'},'Your phone is holding the alert and calling out every few seconds. The moment somebody comes close, it goes.','s')],'hero'),
+        amberCard('What helps right now','Move to higher or more open ground if you safely can, and keep the phone on. Held 6 minutes, calling out every 4 seconds.',null)
+      ],'m'),
+      h('div',{padding:'0 16px 26px',flex:'none'},
+        h('div',{height:56,borderRadius:20,background:C.lift,color:'#8C0B20',fontSize:17,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},'Cancel this alert'),'f')
+    ]);
+  }
+  errMapStopped(){
+    return shell([
+      appBar('Map'),
+      ribbon('Connected · 1 phone nearby','#DCEEDC','#1B5E20',C.green),
+      h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'16px 16px 150px',display:'flex',flexDirection:'column',gap:16},[
+        h('div',{height:170,flex:'none',borderRadius:26,background:'repeating-linear-gradient(135deg,#E4EDE4 0 14px,#EAF1EA 14px 28px)',position:'relative',overflow:'hidden'},[
+          h('div',{position:'absolute',left:0,right:'38%',top:0,bottom:0,background:'rgba(220,233,245,.55)'},null,'done'),
+          h('div',{position:'absolute',left:'62%',top:0,bottom:0,width:2,background:C.amber},null,'edge'),
+          h('div',{position:'absolute',left:12,bottom:12,fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:'#5A6B77',background:'rgba(255,255,255,.85)',padding:'4px 8px',borderRadius:8},'62 percent of the tiles are here','c')],'map'),
+        amberCard('Anwar moved out of range','11 MB of 18 MB arrived, and those pins already work. The rest comes when the two phones are close again, starting where it stopped.','Keep the part I have')
+      ],'m'),
+      sos(),navBar('Map')
+    ]);
+  }
+
+  renderVals(){
+    const rows=[
+      ['Row height','64 comfortable','56 dense','never below 56, ever'],
+      ['Row gap','8','4','—'],
+      ['Row corner','22','16','—'],
+      ['Side padding','12','10','—'],
+      ['Avatar','48','40','decorative, so it may shrink'],
+      ['Name','18 / 700','18 / 700','unchanged'],
+      ['Snippet','15 / 400','15 / 400','unchanged'],
+      ['Rows on screen','5','7','the whole point'],
+      ['Extra per row','type tag','type tag, unread, distance','more information, not smaller'],
+      ['Buttons in rows','none','44 tall inline action','56 target with the row padding'],
+      ['Where it applies','—','Chats, Alerts, Nearby, Board','never Emergency, never onboarding, never documents']
+    ];
+    return {
+      density:[
+        {title:'Chats · comfortable · the default',node:this.chats(false),note:'Five rows visible. What a person in a village sees, always.'},
+        {title:'Chats · dense',node:this.chats(true),note:'Seven rows in the same space, at a true 56dp row. Padding, leading and the avatar shrink; the name, the snippet and the target do not.'},
+        {title:'Alerts · dense triage',node:this.triage(),note:'Sort by not handled. One tap to take an alert, so a coordinator can work down the list.'},
+        {title:'Nearby · dense roster',node:this.roster(),note:'Six phones on screen with trust and link visible, plus multi-select for messaging a group of people at once.'}
+      ],
+      densityTable:h('div',null,[
+        h('div',{display:'grid',gridTemplateColumns:'170px 1fr 1fr 1.4fr',gap:'0 18px',padding:'14px 0',borderBottom:'2px solid #DCE9F5',fontFamily:"'Noto Sans Mono',monospace",fontSize:11,letterSpacing:'.06em',color:C.muted,fontWeight:700},
+          ['PROPERTY','COMFORTABLE','DENSE','NOTE'].map((t,i)=>h('div',null,t,i)),'head')
+      ].concat(rows.map((r,i)=>h('div',{display:'grid',gridTemplateColumns:'170px 1fr 1fr 1.4fr',gap:'0 18px',padding:'11px 0',borderBottom:'1px solid #E7EFF6',alignItems:'baseline'},[
+        h('div',{fontSize:15,fontWeight:700},r[0],'a'),
+        h('div',{fontSize:15,color:'#1E2C36'},r[1],'b'),
+        h('div',{fontSize:15,color:'#1E2C36',fontWeight:600},r[2],'c'),
+        h('div',{fontSize:14.5,color:C.muted,lineHeight:1.45},r[3],'d')],'r'+i)))),
+      errors:[
+        {title:'Bluetooth switched off',node:this.errBluetooth(),note:'Not an error screen: a state with a fix. Says what is being kept meanwhile.'},
+        {title:'Camera not allowed',node:this.errCamera(),note:'Explains the single use, then offers the typed route so the flow never dead ends.'},
+        {title:'Verification codes do not match',node:this.errMismatch(),note:'The strongest warning in the app that is not an emergency. Still amber, still no jargon.'},
+        {title:'A message that stopped travelling',node:this.errGaveUp(),note:'Never the word failed. It waited, it is still yours, and you decide what happens next.'},
+        {title:'Alert sent with nobody nearby',node:this.errAlertAlone(),note:'The hardest screen in the app. Honest zero, plus the three things that actually help.'},
+        {title:'Map handover interrupted',node:this.errMapStopped(),note:'Partial is useful. Resumes where it stopped, and says what already works.'}
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

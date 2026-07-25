@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+@keyframes betar-ripple{0%{transform:scale(.45);opacity:.55}70%{opacity:0}100%{transform:scale(1.6);opacity:0}}
+@keyframes betar-spring-in{0%{transform:scale(.7);opacity:0}55%{transform:scale(1.06);opacity:1}75%{transform:scale(.98)}100%{transform:scale(1)}}
+@keyframes betar-morph{0%,100%{border-radius:26px}50%{border-radius:50%}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 28px;max-width:1080px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Handoff</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">Three things engineering asked for before they can start: measurements on the screens that are easy to get wrong, motion as numbers rather than adjectives, and an order to build in. All units are dp at the 360dp reference width.</div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">O · REDLINES · TOUCH TARGETS SHOWN AS DASHED BOXES</div>
+  <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ redlines }}" as="r" hint-placeholder-count="4">
+      <div style="background:#F7FAFD;border-radius:26px;padding:22px;width:452px;box-sizing:border-box;display:flex;flex-direction:column;gap:16">
+        <div style="font-size:17px;font-weight:800">{{ r.title }}</div>
+        <div style="background:#EEF4F9;border-radius:20px;padding:16px">{{ r.node }}</div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ r.specs }}" as="s" hint-placeholder-count="6">
+            <div style="display:flex;gap:12px;align-items:baseline">
+              <div style="font-family:'Noto Sans Mono',monospace;font-size:11.5px;color:#12608F;width:96px;flex:none">{{ s.key }}</div>
+              <div style="font-size:14.5px;line-height:1.45;color:#1E2C36;flex:1">{{ s.val }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:0 56px 40px;max-width:1080px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">P · MOTION · VALUES, NOT ADJECTIVES</div>
+  <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;margin-bottom:20px">{{ motionDemos }}</div>
+  <div style="background:#F7FAFD;border-radius:26px;padding:8px 24px">{{ motionTable }}</div>
+  <div style="background:#DCEEDC;border-radius:24px;padding:18px 22px;margin-top:16px;font-size:16px;line-height:1.6;color:#1B5E20">When the phone reports reduce motion, every spring becomes a 120ms fade and every ripple becomes a static ring. Nothing loses meaning, because no state is carried by movement alone.</div>
+</section>
+
+<section style="padding:0 56px 72px;max-width:1080px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">Q · BUILD ORDER</div>
+  {{ buildOrder }}
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+function regular(n,rot){const p=[];for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(rot||0);p.push((50+Math.cos(a)*50).toFixed(2)+'% '+(50+Math.sin(a)*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const S={cookie9:lobed(9,.84,.16,0),clover4:lobed(4,.74,.26,Math.PI/4),scallop12:lobed(12,.88,.12,0),burst8:lobed(8,.72,.28,0),
+  pentagon:regular(5,-Math.PI/2),hexagon:regular(6,-Math.PI/2),diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'};
+const C={ground:'#EEF4F9',lift:'#F7FAFD',tint:'#DCE9F5',ink:'#101A22',muted:'#4A5B67',deep:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700'};
+const target=(kids,label)=>h('div',{position:'relative',display:'flex'},[
+  kids,
+  h('div',{position:'absolute',inset:-4,border:'1.5px dashed '+C.red,borderRadius:10,pointerEvents:'none'},null,'o'),
+  h('div',{position:'absolute',top:-18,left:0,fontFamily:"'Noto Sans Mono',monospace",fontSize:10,color:C.red,whiteSpace:'nowrap'},label,'t')]);
+const glyph=(kind,col,size)=>{
+  const sets={waiting:{l:[],n:[[16,16,4.5,'none']]},spreading:{l:[[8,22,16,8],[8,22,25,20],[16,8,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,3.6,'none']]},
+    delivered:{l:[[8,22,16,8],[16,8,25,20],[8,22,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,5.6,col]]}}[kind];
+  return h('svg',{width:size,height:size,flex:'none'},[
+    ...sets.l.map((v,i)=>R.createElement('line',{key:'l'+i,x1:v[0],y1:v[1],x2:v[2],y2:v[3],stroke:col,strokeWidth:2.2,strokeLinecap:'round',opacity:.6})),
+    ...sets.n.map((v,i)=>R.createElement('circle',{key:'n'+i,cx:v[0],cy:v[1],r:v[2],fill:v[3],stroke:col,strokeWidth:2.2}))],{viewBox:'0 0 32 32'});
+};
+const spec=(key,val)=>({key,val});
+
+class Component extends DCLogic {
+  rlChatRow(){
+    return h('div',{width:360,background:C.ground,padding:'22px 12px 12px',boxSizing:'border-box'},
+      h('div',{background:C.lift,borderRadius:22,padding:'12px 14px',display:'flex',gap:12,alignItems:'center',minHeight:64},[
+        target(h('div',{width:48,height:48,background:C.tint,clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:700,color:C.deep},'R'),'48'),
+        h('div',{flex:1,minWidth:0},[
+          h('div',{display:'flex',gap:8,alignItems:'baseline'},[
+            h('div',{fontSize:18,fontWeight:700,flex:1},'Ruma didi','n'),
+            h('div',{fontSize:13,color:C.muted},'14:20','t')],'r1'),
+          h('div',{display:'flex',alignItems:'center',gap:7,marginTop:3},[
+            glyph('delivered',C.green,17),
+            h('div',{fontSize:15,color:C.muted},'Are you home yet','s')],'r2')],'x'),
+        h('div',{fontSize:11,fontWeight:700,color:'#1B5E20',background:'#DCEEDC',borderRadius:8,padding:'3px 7px'},'NEARBY','tag')]));
+  }
+  rlTile(){
+    return h('div',{width:360,padding:'22px 16px 12px',boxSizing:'border-box',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12},[
+      target(h('div',{height:132,width:'100%',borderRadius:26,background:C.lift,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10},[
+        h('div',{width:58,height:58,background:C.red,clipPath:S.clover4},null,'s'),
+        h('div',{fontSize:19,fontWeight:800},'Medical','l')]),'160 × 132'),
+      h('div',{height:132,borderRadius:26,background:C.lift,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10},[
+        h('div',{width:58,height:58,background:C.red,clipPath:S.pentagon},null,'s'),
+        h('div',{fontSize:19,fontWeight:800},'Trapped','l')],'b')]);
+  }
+  rlRibbon(){
+    return h('div',{width:360,background:C.ground,paddingTop:22},[
+      h('div',{height:60,display:'flex',alignItems:'center',gap:12,padding:'0 16px'},[
+        h('div',{fontSize:24,fontWeight:800,flex:1},'Chats','t'),
+        target(h('div',{width:44,height:44,borderRadius:14,background:C.tint},null),'44')],'bar'),
+      h('div',{height:38,display:'flex',alignItems:'center',gap:10,padding:'0 16px',background:'#DCEEDC'},[
+        h('div',{width:16,height:16,position:'relative',flex:'none',display:'flex',alignItems:'center',justifyContent:'center'},[
+          h('div',{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid '+C.green,animation:'betar-ripple 2.6s ease-out infinite'},null,'r'),
+          h('div',{width:7,height:7,borderRadius:'50%',background:C.green},null,'d')],'w'),
+        h('div',{fontSize:14,fontWeight:600,color:'#1B5E20',flex:1},'Connected · 3 phones nearby','l'),
+        h('div',{display:'flex',alignItems:'center',gap:4,opacity:.6},[h('div',{width:8,height:3,borderRadius:2,background:'#1B5E20'},null,'a'),h('div',{width:4},null,'g'),h('div',{width:8,height:3,borderRadius:2,background:'#1B5E20'},null,'b')],'m')],'ribbon')
+    ]);
+  }
+  rlSos(){
+    return h('div',{width:360,height:330,background:C.ground,position:'relative',overflow:'hidden'},[
+      h('div',{position:'absolute',left:12,right:12,top:12,height:74,background:C.lift,borderRadius:22,padding:14,boxSizing:'border-box',fontSize:15,color:C.muted,lineHeight:1.4},'last card of the scrolling column','card'),
+      h('div',{position:'absolute',left:12,right:12,top:98,height:150,border:'1.5px dashed '+C.deep,borderRadius:18,background:'rgba(75,163,224,.08)'},
+        h('div',{position:'absolute',left:12,top:10,fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:C.deep},'150 reserve · no content here'),'band'),
+      h('div',{position:'absolute',right:16,bottom:158,fontFamily:"'Noto Sans Mono',monospace",fontSize:10,color:C.red},'56 tall · 16 from edge','cap'),
+      h('div',{position:'absolute',right:16,bottom:96,height:56,borderRadius:20,background:C.red,display:'flex',alignItems:'center',gap:8,padding:'0 16px',boxShadow:'0 0 0 1.5px '+C.red},[
+        h('div',{width:20,height:20,background:'#fff',clipPath:S.burst8},null,'i'),
+        h('div',{fontSize:18,fontWeight:800,color:'#fff'},'SOS','t')],'sos'),
+      h('div',{position:'absolute',left:0,right:0,bottom:0,height:82,background:C.lift,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:C.muted},'bottom bar · 82','nav')
+    ]);
+  }
+
+  renderVals(){
+    const motion=[
+      ['mesh.ripple','spring · stiffness 380, damping 30','on state change only, then rest','ribbon dot, Nearby hero'],
+      ['message.send','spring · stiffness 420, damping 26','220ms settle, scale 0.92 → 1','outgoing bubble'],
+      ['message.arrive','spring · stiffness 420, damping 26','slide 12dp up with fade','incoming bubble'],
+      ['shape.morph','spring · stiffness 500, damping 34','180ms, cookie → circle','category tiles, FAB'],
+      ['delivery.advance','standard easing · 200ms','node fades in, link draws','delivery glyph'],
+      ['sheet.open','emphasised decelerate · 250ms','translate from bottom','device sheet, FAB menu'],
+      ['nav.switch','standard easing · 150ms','pill width and colour','bottom bar'],
+      ['sos.slide','follows the finger, no easing','snap back 250ms if released early','slide to send'],
+      ['loading.nearby','indeterminate ring · 1.6s loop','only where a scan is genuinely running','Nearby hero, scan screens']
+    ];
+    const releases=[
+      ['First release · the thing has to work at all',['Chats: list, one to one thread, voice notes, delivery states','Onboarding: language, three panels, nickname, permissions, battery','Emergency: category, detail, slide to send, live status, resolve','Nearby: list, ripple hero, relay toggle','You: identity, readiness, appearance','Documents: privacy, safety and limits, permissions, about'],C.deep,'#fff'],
+      ['Second release · community surfaces',['Board: alerts, notices, help with Have and Need','Compose flows with the pictogram grid','In person verification and trust chips everywhere','Private groups and adding by code','Storm guide and the remaining documents'],C.brand,'#0B3A57'],
+      ['Third release · depth',['Map: offline tiles, pins, map handover between phones','Sunlight mode and dark high contrast','Decoy passphrase','Assamese and Bodo','Relief worker density mode'],C.tint,C.deep]
+    ];
+    return {
+      redlines:[
+        {title:'Conversation row',node:this.rlChatRow(),specs:[
+          spec('row','min height 64, padding 12 / 14, corner 22, gap 8 between rows'),
+          spec('avatar','48 square, category silhouette, initial at 17 / 700'),
+          spec('name','18 / 700, single line, ellipsis. Timestamp 13 / 500, never wraps'),
+          spec('glyph','17 square, always paired with the snippet, never alone'),
+          spec('tag','11 / 700, corner 8, padding 3 / 7. Colour plus word, both'),
+          spec('target','the whole row is the target: 336 × 64 minimum')]},
+        {title:'Emergency category tile',node:this.rlTile(),specs:[
+          spec('tile','160 × 132 at 360dp, corner 26, two per row, 12 gap'),
+          spec('shape','58 square, one silhouette per category, never rotated'),
+          spec('label','19 / 800, centred, wraps to two lines before the tile grows'),
+          spec('press','scale 0.96 and morph to scallop over 180ms'),
+          spec('long press','speaks the label at 400ms, no visual change'),
+          spec('fifth tile','spans both columns, same height')]},
+        {title:'App bar and mesh ribbon',node:this.rlRibbon(),specs:[
+          spec('app bar','60 tall, title 24 / 800, 16 side padding'),
+          spec('ribbon','38 tall, full bleed, sits directly under the bar on every screen'),
+          spec('dot','16 square hit area, 7 dot, ripple ring 2 stroke'),
+          spec('label','14 / 600, one line, truncates the count before the state word'),
+          spec('cut wire','two 8 × 3 bars with a 4 gap, right aligned, permanent'),
+          spec('states','Off grey, Looking blue, Connected green. Word always present')]},
+        {title:'SOS and the bottom reserve',node:this.rlSos(),specs:[
+          spec('pill','56 tall, corner 20, 16 from the right edge, 96 from the bottom'),
+          spec('reserve','every scrolling column reserves 150 bottom padding'),
+          spec('never','no content may sit under the pill, in any theme or language'),
+          spec('label','always visible. The pill never collapses to an icon on scroll'),
+          spec('shadow','0 6 18 rgba(200,16,46,.4), the only red shadow in the app'),
+          spec('bottom bar','82 tall, five destinations, pill 56 × 30 on the active one')]}
+      ],
+      motionDemos:h('div',{display:'flex',gap:18,flexWrap:'wrap'},[
+        h('div',{background:'#F7FAFD',borderRadius:24,padding:'20px 22px',width:210,display:'flex',flexDirection:'column',alignItems:'center',gap:14},[
+          h('div',{width:70,height:70,position:'relative',display:'flex',alignItems:'center',justifyContent:'center'},[
+            h('div',{position:'absolute',width:70,height:70,borderRadius:'50%',border:'2px solid '+C.brand,animation:'betar-ripple 2.6s ease-out infinite'},null,'r1'),
+            h('div',{position:'absolute',width:70,height:70,borderRadius:'50%',border:'2px solid '+C.brand,animation:'betar-ripple 2.6s ease-out infinite .9s'},null,'r2'),
+            h('div',{width:24,height:24,borderRadius:12,background:C.brand},null,'d')],'a'),
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:C.muted,textAlign:'center'},'mesh.ripple','l')],'m1'),
+        h('div',{background:'#F7FAFD',borderRadius:24,padding:'20px 22px',width:210,display:'flex',flexDirection:'column',alignItems:'center',gap:14},[
+          h('div',{width:70,height:70,display:'flex',alignItems:'center',justifyContent:'center'},
+            h('div',{width:56,height:56,background:C.red,borderRadius:26,animation:'betar-morph 2.4s ease-in-out infinite'}),'a'),
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:C.muted,textAlign:'center'},'shape.morph','l')],'m2'),
+        h('div',{background:'#F7FAFD',borderRadius:24,padding:'20px 22px',width:210,display:'flex',flexDirection:'column',alignItems:'center',gap:14},[
+          h('div',{width:70,height:70,display:'flex',alignItems:'center',justifyContent:'center'},
+            h('div',{padding:'10px 14px',background:C.tint,borderRadius:'18px 18px 6px 18px',fontSize:14,fontWeight:600,color:C.deep,animation:'betar-spring-in 2.4s ease-out infinite'},'Sent'),'a'),
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:C.muted,textAlign:'center'},'message.send','l')],'m3')
+      ]),
+      motionTable:h('div',null,[
+        h('div',{display:'grid',gridTemplateColumns:'150px 210px 1fr 1fr',gap:'0 18px',padding:'14px 0',borderBottom:'2px solid #DCE9F5',fontFamily:"'Noto Sans Mono',monospace",fontSize:11,letterSpacing:'.06em',color:C.muted,fontWeight:700},
+          ['TOKEN','CURVE','DETAIL','WHERE'].map((t,i)=>h('div',null,t,i)),'head')
+      ].concat(motion.map((r,i)=>h('div',{display:'grid',gridTemplateColumns:'150px 210px 1fr 1fr',gap:'0 18px',padding:'12px 0',borderBottom:'1px solid #E7EFF6',alignItems:'baseline'},[
+        h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:12.5,color:C.deep},r[0],'a'),
+        h('div',{fontSize:15,fontWeight:600},r[1],'b'),
+        h('div',{fontSize:15,color:'#1E2C36',lineHeight:1.45},r[2],'c'),
+        h('div',{fontSize:15,color:C.muted,lineHeight:1.45},r[3],'d')],'r'+i)))),
+      buildOrder:h('div',{display:'flex',gap:18,flexWrap:'wrap',alignItems:'stretch'},
+        releases.map(([title,items,bg,fg],i)=>h('div',{flex:'1 1 300px',background:'#F7FAFD',borderRadius:26,padding:22,display:'flex',flexDirection:'column',gap:14},[
+          h('div',{display:'flex',alignItems:'center',gap:12},[
+            h('div',{width:36,height:36,borderRadius:18,background:bg,color:fg,fontSize:17,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},String(i+1),'n'),
+            h('div',{fontSize:17,fontWeight:800,lineHeight:1.3,flex:1},title,'t')],'head'),
+          h('div',{display:'flex',flexDirection:'column',gap:9},
+            items.map((it,j)=>h('div',{display:'flex',gap:10,alignItems:'flex-start'},[
+              h('div',{width:11,height:11,marginTop:6,flex:'none',background:bg,clipPath:S.cookie9},null,'d'),
+              h('div',{fontSize:15.5,lineHeight:1.5,color:'#1E2C36',flex:1},it,'t')],'i'+j)),'list')
+        ],'r'+i)))
+    };
+  }
+}
+</script>
+</body>
+</html>

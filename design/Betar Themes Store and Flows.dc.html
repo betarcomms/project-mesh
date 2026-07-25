@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+@keyframes betar-ripple{0%{transform:scale(.45);opacity:.55}70%{opacity:0}100%{transform:scale(1.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 28px;max-width:1080px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Themes, store listing and the three journeys</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">Dark, sunlight and dark sunlight for the three screens that matter most in bad conditions. Then the store listing, then the flows that decide whether any of this works.</div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:6px">I · THE SAME THREE SCREENS IN THREE THEMES</div>
+  <div style="font-size:16px;line-height:1.6;color:#3A4B57;max-width:820px;margin-bottom:20px">Sunlight mode is not just brighter. It drops tonal fills for solid ones, adds a hairline outline to every container, pushes body weight up one step and darkens the emergency red so it still reads as the loudest thing on a glaring screen.</div>
+  <sc-for list="{{ themeRows }}" as="row" hint-placeholder-count="3">
+    <div style="margin-bottom:34px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">{{ row.name }}</div>
+      <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+        <sc-for list="{{ row.frames }}" as="f" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+            <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;color:#4A5B67">{{ f.label }}</div>
+            <div data-screen-label="{{ f.label }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.22);position:relative;background:{{ f.bg }}">{{ f.node }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">J · STORE LISTING</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start;margin-bottom:24px">
+    <div style="background:#F7FAFD;border-radius:26px;padding:24px;width:420px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px">Adaptive icon, built backwards</div>
+      {{ iconSpec }}
+      <div style="font-size:15px;line-height:1.55;color:#3A4B57;margin-top:16px">An adaptive icon cannot have a true hole, because the foreground sits on the background, not on the wallpaper. So the launcher icon is inverted: background filled brand blue edge to edge, foreground drawing the two bars in off white blue. Identical to look at, backwards underneath.</div>
+    </div>
+    <div style="background:#F7FAFD;border-radius:26px;padding:24px;flex:1;min-width:420px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px">Listing copy</div>
+      {{ listingCopy }}
+    </div>
+  </div>
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;letter-spacing:.08em;color:#4A5B67;margin-bottom:12px">FEATURE GRAPHIC · 1024 × 500</div>
+  <div style="margin-bottom:26px">{{ featureGraphic }}</div>
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;letter-spacing:.08em;color:#4A5B67;margin-bottom:12px">SIX SCREENSHOT FRAMES · CAPTION ABOVE THE PHONE</div>
+  <div style="display:flex;gap:18px;flex-wrap:wrap">{{ storeFrames }}</div>
+</section>
+
+<section style="padding:0 56px 72px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:6px">K · THE THREE JOURNEYS THAT DECIDE WHETHER THIS APP WORKS</div>
+  <div style="font-size:16px;line-height:1.6;color:#3A4B57;max-width:820px;margin-bottom:22px">Annotated, with the failure each step is designed against.</div>
+  {{ flows }}
+  <div style="margin-top:36px;font-size:16px;line-height:1.7;color:#3A4B57;max-width:820px">That closes the deliverable list except for the Bengali and Hindi proof screens, which need your strings. Send them and I will run Chats and the emergency flow in both, and check the matras and conjuncts against the type scale.</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+function regular(n,rot){const p=[];for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(rot||0);p.push((50+Math.cos(a)*50).toFixed(2)+'% '+(50+Math.sin(a)*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const S={cookie9:lobed(9,.84,.16,0),clover4:lobed(4,.74,.26,Math.PI/4),scallop12:lobed(12,.88,.12,0),burst8:lobed(8,.72,.28,0),
+  pentagon:regular(5,-Math.PI/2),hexagon:regular(6,-Math.PI/2),diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',square:'inset(6% round 26%)'};
+
+const THEMES={
+  dark:{name:'Dark',ground:'#0B141B',lift:'#16242F',tint:'#1C3B52',ink:'#E3EBF2',muted:'#A8BAC7',primary:'#8FCBF2',onPrimary:'#06202F',
+    red:'#FF6E80',redContainer:'#4A0B16',onRed:'#2B0209',green:'#7FD285',greenContainer:'#123318',amber:'#E5B04A',amberContainer:'#3A2A08',
+    outline:'transparent',border:'none',weight:0},
+  sun:{name:'Light high contrast · sunlight',ground:'#FFFFFF',lift:'#FFFFFF',tint:'#D5E8F7',ink:'#000000',muted:'#26333D',primary:'#0A3F5E',onPrimary:'#FFFFFF',
+    red:'#9E0B21',redContainer:'#FFE3E7',onRed:'#FFFFFF',green:'#14591A',greenContainer:'#DDF3DE',amber:'#5C3D00',amberContainer:'#FFF0D2',
+    outline:'#0B1A24',border:'2px solid #0B1A24',weight:1},
+  darkhc:{name:'Dark high contrast · sunlight at night',ground:'#000000',lift:'#0A1218',tint:'#0E2A3C',ink:'#FFFFFF',muted:'#DCE9F5',primary:'#BFE2FA',onPrimary:'#000000',
+    red:'#FF9AA6',redContainer:'#2A0007',onRed:'#000000',green:'#9FE6A4',greenContainer:'#04220A',amber:'#FFD37A',amberContainer:'#241900',
+    outline:'#FFFFFF',border:'2px solid #FFFFFF',weight:1}
+};
+const L={ground:'#EEF4F9',lift:'#F7FAFD',tint:'#DCE9F5',ink:'#101A22',muted:'#4A5B67',primary:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700'};
+
+const card=(T,extra)=>Object.assign({background:T.lift,borderRadius:24,border:T.border,boxSizing:'border-box'},extra||{});
+const shell=(T,kids)=>h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column',fontFamily:"'Noto Sans',sans-serif",color:T.ink,background:T.ground},kids);
+const bw=(T,base)=>base+(T.weight?100:0);
+
+const appBar=(T,title,right)=>h('div',{height:60,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 16px'},[
+  h('div',{fontSize:24,fontWeight:800,flex:1,color:T.ink},title,'t'),right||null]);
+const ribbon=(T,label,dot,bg,fg)=>h('div',{height:38,flex:'none',display:'flex',alignItems:'center',gap:10,padding:'0 16px',background:bg,borderBottom:T.border},[
+  h('div',{width:16,height:16,position:'relative',flex:'none',display:'flex',alignItems:'center',justifyContent:'center'},[
+    h('div',{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid '+dot,animation:'betar-ripple 2.6s ease-out infinite'},null,'r'),
+    h('div',{width:7,height:7,borderRadius:'50%',background:dot},null,'d')],'w'),
+  h('div',{fontSize:14,fontWeight:700,color:fg,flex:1},label,'l'),
+  h('div',{display:'flex',alignItems:'center',gap:4,opacity:.7},[h('div',{width:8,height:3,borderRadius:2,background:fg},null,'a'),h('div',{width:4},null,'g'),h('div',{width:8,height:3,borderRadius:2,background:fg},null,'b')],'m')]);
+const navBar=(T,active)=>h('div',{height:82,flex:'none',background:T.lift,borderTop:T.border,display:'flex',alignItems:'center',padding:'0 4px 6px'},
+  [['Chats',S.cookie9],['Nearby',S.scallop12],['Board',S.hexagon],['Map',S.clover4],['You',S.pentagon]].map(([label,clip])=>{
+    const on=label===active;
+    return h('div',{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5,paddingTop:8},[
+      h('div',{width:56,height:30,borderRadius:15,background:on?T.tint:'transparent',display:'flex',alignItems:'center',justifyContent:'center'},
+        h('div',{width:20,height:20,background:on?T.primary:T.muted,clipPath:clip}),'p'),
+      h('div',{fontSize:12,fontWeight:on?800:600,color:on?T.primary:T.muted},label,'l')],label);}));
+const sosPill=(T)=>h('div',{position:'absolute',right:16,bottom:96,height:56,borderRadius:20,background:T.red,border:T.weight?'2px solid '+T.outline:'none',boxSizing:'border-box',display:'flex',alignItems:'center',gap:8,padding:'0 16px'},[
+  h('div',{width:20,height:20,background:T.onRed,clipPath:S.burst8},null,'s'),
+  h('div',{fontSize:18,fontWeight:800,color:T.onRed},'SOS','t')]);
+const glyph=(kind,col,size)=>{
+  const sets={waiting:{l:[],n:[[16,16,4.5,'none']]},travelling:{l:[[10,20,22,12]],n:[[9,21,4,col],[23,11,4,'none']]},
+    spreading:{l:[[8,22,16,8],[8,22,25,20],[16,8,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,3.6,'none']]},
+    delivered:{l:[[8,22,16,8],[16,8,25,20],[8,22,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,5.6,col]]}}[kind];
+  return h('svg',{width:size||18,height:size||18},[
+    ...sets.l.map((v,i)=>R.createElement('line',{key:'l'+i,x1:v[0],y1:v[1],x2:v[2],y2:v[3],stroke:col,strokeWidth:2.2,strokeLinecap:'round',opacity:.6})),
+    ...sets.n.map((v,i)=>R.createElement('circle',{key:'n'+i,cx:v[0],cy:v[1],r:v[2],fill:v[3],stroke:col,strokeWidth:2.2}))],{viewBox:'0 0 32 32'});
+};
+
+function chatsScreen(T){
+  const rows=[['Ruma didi','R','Are you home yet','14:20','delivered'],['Char Bagan village','C','Boat leaves at six','13:55','spreading'],
+    ['Anwar','A','Voice note · 0:12','12:40','travelling'],['Relief camp 2','R','Blankets came in','11:02','delivered'],
+    ['Shefali','S','I will bring water','09:48','waiting']];
+  return shell(T,[
+    appBar(T,'Chats'),
+    ribbon(T,'Connected · 3 phones nearby',T.green,T.greenContainer,T.green),
+    h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'8px 12px 150px',display:'flex',flexDirection:'column',gap:8},
+      rows.map(([name,initial,snippet,time,kind])=>h('div',card(T,{padding:'12px 14px',display:'flex',gap:12,alignItems:'center',minHeight:64}),[
+        h('div',{width:48,height:48,flex:'none',background:T.tint,clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:800,color:T.primary},initial,'a'),
+        h('div',{flex:1,minWidth:0},[
+          h('div',{display:'flex',gap:8,alignItems:'baseline'},[
+            h('div',{fontSize:18,fontWeight:bw(T,700),flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',color:T.ink},name,'n'),
+            h('div',{fontSize:13,color:T.muted},time,'t')],'r1'),
+          h('div',{display:'flex',alignItems:'center',gap:7,marginTop:3},[
+            glyph(kind,kind==='delivered'?T.green:T.primary,17),
+            h('div',{fontSize:15,color:T.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',flex:1},snippet,'s')],'r2')],'x')],name)),'list'),
+    sosPill(T),navBar(T,'Chats')
+  ]);
+}
+function alertsScreen(T){
+  return shell(T,[
+    appBar(T,'Board'),
+    ribbon(T,'Connected · 3 phones nearby',T.green,T.greenContainer,T.green),
+    h('div',{padding:'12px 12px 8px',flex:'none'},
+      h('div',{display:'flex',background:T.tint,borderRadius:999,padding:4,gap:4,border:T.border,boxSizing:'border-box'},
+        ['Alerts','Notices','Help'].map((l,i)=>h('div',{flex:1,height:44,borderRadius:999,background:i===0?T.primary:'transparent',color:i===0?T.onPrimary:T.primary,fontSize:16,fontWeight:i===0?800:600,display:'flex',alignItems:'center',justifyContent:'center'},l,l))),'seg'),
+    h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 12px 150px',display:'flex',flexDirection:'column',gap:12},[
+      h('div',{background:T.red,borderRadius:26,padding:13,display:'flex',flexDirection:'column',gap:10,border:T.weight?'2px solid '+T.outline:'none',boxSizing:'border-box'},[
+        h('div',{display:'flex',gap:12,alignItems:'flex-start'},[
+          h('div',{width:56,height:56,flex:'none',background:T.onRed,clipPath:S.clover4,display:'flex',alignItems:'center',justifyContent:'center'},
+            h('div',{width:22,height:22,borderRadius:11,border:'2px dashed '+T.red,fontFamily:"'Noto Sans Mono',monospace",fontSize:7,color:T.red,display:'flex',alignItems:'center',justifyContent:'center'},'MED'),'p'),
+          h('div',{flex:1},[h('div',{fontSize:20,fontWeight:800,color:T.onRed},'Medical','t'),
+            h('div',{fontSize:15,color:T.onRed,opacity:.85,marginTop:4},'900 m · north east · 12 minutes ago','m')],'x')],'head'),
+        h('div',{fontSize:16,lineHeight:1.45,color:T.onRed},'Elderly man, chest pain, cannot walk. Boat needed at the ghat.','b'),
+        h('div',{height:48,borderRadius:18,background:T.onRed,color:T.red,fontSize:17,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},'I am coming to help','a'),
+        h('div',{fontSize:14,color:T.onRed,opacity:.85},'2 people have acknowledged','k')],'c1'),
+      h('div',card(T,{padding:13,display:'flex',flexDirection:'column',gap:10}),[
+        h('div',{display:'flex',gap:12,alignItems:'flex-start'},[
+          h('div',{width:56,height:56,flex:'none',background:T.red,clipPath:S.pentagon,display:'flex',alignItems:'center',justifyContent:'center'},
+            h('div',{width:22,height:22,borderRadius:11,border:'2px dashed '+T.onRed,fontFamily:"'Noto Sans Mono',monospace",fontSize:7,color:T.onRed,display:'flex',alignItems:'center',justifyContent:'center'},'TRAP'),'p'),
+          h('div',{flex:1},[h('div',{fontSize:20,fontWeight:800,color:T.ink},'Trapped','t'),
+            h('div',{fontSize:15,color:T.muted,marginTop:4},'Location not shared · 40 minutes ago','m')],'x')],'head'),
+        h('div',{fontSize:16,lineHeight:1.45,color:T.ink},'Water rising, family of four on the roof near the school.','b'),
+        h('div',{height:48,borderRadius:18,background:T.red,color:T.onRed,fontSize:17,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},'I am coming to help','a')],'c2')
+    ],'list'),
+    sosPill(T),navBar(T,'Board')
+  ]);
+}
+function emergencyScreen(T){
+  return shell(T,[
+    h('div',{height:64,flex:'none',display:'flex',alignItems:'center',padding:'0 20px'},
+      h('div',{fontSize:24,fontWeight:800,color:T.red},'Your alert is travelling'),'h'),
+    h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'0 16px 20px',display:'flex',flexDirection:'column',gap:14},[
+      h('div',card(T,{borderRadius:28,padding:'22px 18px',display:'flex',flexDirection:'column',alignItems:'center',gap:14}),[
+        h('div',{position:'relative',width:150,height:150,display:'flex',alignItems:'center',justifyContent:'center'},[
+          h('div',{position:'absolute',width:150,height:150,borderRadius:'50%',border:'2px solid '+T.red,animation:'betar-ripple 2.6s ease-out infinite'},null,'r1'),
+          h('div',{position:'absolute',width:150,height:150,borderRadius:'50%',border:'2px solid '+T.red,animation:'betar-ripple 2.6s ease-out infinite .9s'},null,'r2'),
+          h('div',{width:104,height:104,background:T.red,clipPath:S.clover4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,fontWeight:800,color:T.onRed},'3','c')],'ring'),
+        h('div',{fontSize:22,fontWeight:800,textAlign:'center',color:T.ink},'Carried by 3 phones nearby','t'),
+        h('div',{fontSize:18,fontWeight:800,color:T.green,textAlign:'center'},'1 person has acknowledged','a')],'hero'),
+      h('div',card(T,{borderRadius:26,padding:'14px 18px',display:'flex',flexDirection:'column',gap:10}),
+        [['Your phone is holding it','now'],['Handed to a phone nearby','just now'],['Spreading further','in progress']].map((row,i)=>
+          h('div',{display:'flex',alignItems:'center',gap:12},[
+            h('div',{width:16,height:16,borderRadius:8,flex:'none',background:T.primary},null,'d'),
+            h('div',{flex:1,fontSize:16,fontWeight:700,color:T.ink},row[0],'l'),
+            h('div',{fontSize:14,color:T.muted},row[1],'v')],'r'+i)),'log'),
+      h('div',{background:T.redContainer,borderRadius:22,padding:'14px 16px',fontSize:15,lineHeight:1.5,color:T.red,border:T.border,boxSizing:'border-box'},'This count can go down as phones move away. It is what is true right now, not a promise.','n')
+    ],'m'),
+    h('div',{padding:'0 16px 26px',display:'flex',flexDirection:'column',gap:10,flex:'none'},[
+      h('div',{height:60,borderRadius:20,background:T.green,color:T.ground,fontSize:19,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'},'I am safe now','r'),
+      h('div',Object.assign(card(T,{height:56,borderRadius:20,display:'flex',alignItems:'center',justifyContent:'center'}),{color:T.red,fontSize:17,fontWeight:800}),'Cancel this alert','c')
+    ],'f')
+  ]);
+}
+
+const mono=(t,k,extra)=>h('div',Object.assign({fontFamily:"'Noto Sans Mono',monospace",fontSize:11,color:'#4A5B67',lineHeight:1.5},extra||{}),t,k);
+
+class Component extends DCLogic {
+  storeShot(caption,body){
+    return h('div',{width:250,display:'flex',flexDirection:'column',gap:0,borderRadius:22,overflow:'hidden',background:L.tint},[
+      h('div',{padding:'20px 20px 14px',fontSize:20,fontWeight:800,lineHeight:1.25,color:'#0B3A57',height:110,boxSizing:'border-box'},caption,'c'),
+      h('div',{margin:'0 20px',height:300,borderRadius:'20px 20px 0 0',background:L.ground,overflow:'hidden',position:'relative'},body,'p')
+    ]);
+  }
+  miniList(){
+    return h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column'},[
+      h('div',{height:34,display:'flex',alignItems:'center',padding:'0 12px',fontSize:15,fontWeight:800},'Chats','a'),
+      h('div',{height:22,background:'#DCEEDC',display:'flex',alignItems:'center',padding:'0 12px',fontSize:10,fontWeight:700,color:'#1B5E20'},'Connected · 3 phones nearby','r'),
+      h('div',{flex:1,padding:'8px 8px',display:'flex',flexDirection:'column',gap:6},
+        [['Ruma didi','Are you home yet'],['Char Bagan village','Boat leaves at six'],['Anwar','Voice note · 0:12'],['Relief camp 2','Blankets came in']]
+          .map(([n,s])=>h('div',{background:L.lift,borderRadius:14,padding:'8px 10px',display:'flex',gap:8,alignItems:'center'},[
+          h('div',{width:26,height:26,background:L.tint,clipPath:S.cookie9,flex:'none'},null,'a'),
+          h('div',{flex:1},[h('div',{fontSize:11,fontWeight:700},n,'n'),h('div',{fontSize:9,color:L.muted,marginTop:2},s,'s')],'x')],n)),'l')
+    ]);
+  }
+  miniEmergency(){
+    return h('div',{position:'absolute',inset:0,background:'#FBEDEF',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12},[
+      h('div',{width:96,height:96,background:L.red,clipPath:S.clover4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,fontWeight:800,color:'#fff'},'3','c'),
+      h('div',{fontSize:14,fontWeight:800,color:'#8C0B20'},'Carried by 3 phones','t')]);
+  }
+  miniNearby(){
+    return h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10},[
+      h('div',{width:80,height:80,background:L.brand,clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:800,color:'#0B3A57'},'3','c'),
+      h('div',{fontSize:13,fontWeight:700,color:L.primary},'Three phones nearby','t')]);
+  }
+  miniBoard(){
+    return h('div',{position:'absolute',inset:0,padding:10,display:'flex',flexDirection:'column',gap:8},[
+      h('div',{background:L.red,borderRadius:14,padding:10,color:'#fff'},[h('div',{fontSize:13,fontWeight:800},'Medical','t'),h('div',{fontSize:10,marginTop:3,opacity:.9},'900 m · north east','m')],'a'),
+      h('div',{background:L.lift,borderRadius:14,padding:10},[h('div',{fontSize:13,fontWeight:800},'Clean water at the school','t'),h('div',{fontSize:10,color:L.muted,marginTop:3},'400 m · ends in 2 days','m')],'b')]);
+  }
+  miniMap(){
+    return h('div',{position:'absolute',inset:0,background:'repeating-linear-gradient(135deg,#E4EDE4 0 10px,#EAF1EA 10px 20px)'},[
+      h('div',{position:'absolute',left:-20,top:150,width:300,height:34,background:'#CFE2F0',transform:'rotate(-12deg)'},null,'r'),
+      h('div',{position:'absolute',left:40,top:80,width:34,height:34,background:L.red,clipPath:S.clover4},null,'p1'),
+      h('div',{position:'absolute',left:150,top:190,width:34,height:34,background:L.primary,clipPath:S.scallop12},null,'p2')]);
+  }
+  miniDoc(){
+    return h('div',{position:'absolute',inset:0,padding:12,display:'flex',flexDirection:'column',gap:8},[
+      h('div',{fontSize:15,fontWeight:800},'Privacy','t'),
+      h('div',{background:L.tint,borderRadius:14,padding:10,fontSize:11,lineHeight:1.4,color:'#12303F',fontWeight:600},'We collect nothing. There is no server. Nothing you write leaves the phones it travels between.','s'),
+      h('div',{fontSize:10,lineHeight:1.5,color:L.muted},'Betar has no account, no phone number and no login. It never asks for internet, so it has no way to send anything anywhere.','b')]);
+  }
+
+  flow(title,note,steps){
+    return h('div',{background:'#F7FAFD',borderRadius:26,padding:'22px 24px',marginBottom:18},[
+      h('div',{fontSize:19,fontWeight:800,marginBottom:4},title,'t'),
+      h('div',{fontSize:15,color:'#4A5B67',lineHeight:1.5,marginBottom:18},note,'n'),
+      h('div',{display:'grid',gridTemplateColumns:'repeat(5,minmax(0,1fr))',gap:10,alignItems:'stretch'},
+        steps.map((s,i)=>h('div',{display:'flex',alignItems:'stretch'},[
+          h('div',{flex:1,background:'#EEF4F9',borderRadius:20,padding:'14px 16px',display:'flex',flexDirection:'column',gap:8},[
+            h('div',{display:'flex',alignItems:'center',gap:8},[
+              h('div',{width:24,height:24,borderRadius:12,background:'#12608F',color:'#fff',fontSize:13,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},String(i+1),'n'),
+              h('div',{fontSize:15,fontWeight:700,lineHeight:1.25},s[0],'t')],'head'),
+            h('div',{fontSize:13,lineHeight:1.45,color:'#2A3B47'},s[1],'b'),
+            h('div',{display:'flex',gap:8,alignItems:'flex-start',marginTop:2},[
+              h('div',{width:10,height:10,marginTop:4,flex:'none',background:'#9A6700',clipPath:S.diamond},null,'d'),
+              h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:10.5,lineHeight:1.45,color:'#7A5100',flex:1},s[2],'f')],'fail')],'card')
+        ],'s'+i)),'row')
+    ]);
+  }
+
+  renderVals(){
+    const T=THEMES;
+    return {
+      themeRows:[
+        {name:'Dark',frames:[{label:'Chats · dark',bg:T.dark.ground,node:chatsScreen(T.dark)},{label:'Alerts · dark',bg:T.dark.ground,node:alertsScreen(T.dark)},{label:'Emergency status · dark',bg:T.dark.ground,node:emergencyScreen(T.dark)}]},
+        {name:'Light high contrast · sunlight',frames:[{label:'Chats · sunlight',bg:T.sun.ground,node:chatsScreen(T.sun)},{label:'Alerts · sunlight',bg:T.sun.ground,node:alertsScreen(T.sun)},{label:'Emergency status · sunlight',bg:T.sun.ground,node:emergencyScreen(T.sun)}]},
+        {name:'Dark high contrast',frames:[{label:'Chats · dark high contrast',bg:T.darkhc.ground,node:chatsScreen(T.darkhc)},{label:'Alerts · dark high contrast',bg:T.darkhc.ground,node:alertsScreen(T.darkhc)},{label:'Emergency status · dark high contrast',bg:T.darkhc.ground,node:emergencyScreen(T.darkhc)}]}
+      ],
+      iconSpec:h('div',{display:'flex',gap:18,alignItems:'flex-start',flexWrap:'wrap'},[
+        h('div',{display:'flex',flexDirection:'column',gap:8,alignItems:'center'},[
+          h('div',{width:108,height:108,borderRadius:26,background:L.brand,position:'relative',overflow:'hidden'},[
+            h('div',{position:'absolute',left:20,top:47,width:26,height:14,borderRadius:7,background:L.ground},null,'a'),
+            h('div',{position:'absolute',left:62,top:47,width:26,height:14,borderRadius:7,background:L.ground},null,'b')],'ic'),
+          mono('launcher · inverted','m1',{textAlign:'center'})],'a'),
+        h('div',{display:'flex',flexDirection:'column',gap:8,alignItems:'center'},[
+          h('svg',{viewBox:'0 0 108 108',width:108,height:108},[
+            R.createElement('defs',{key:'d'},R.createElement('mask',{id:'store-void'},[
+              R.createElement('rect',{key:'r',width:108,height:108,rx:28,fill:'#fff'}),
+              R.createElement('g',{key:'g',stroke:'#000',strokeWidth:14,strokeLinecap:'round'},[
+                R.createElement('path',{key:'a',d:'M27,54 L39,54'}),R.createElement('path',{key:'b',d:'M69,54 L81,54'})])])),
+            R.createElement('rect',{key:'x',width:108,height:108,rx:28,fill:L.brand,mask:'url(#store-void)'})]),
+          mono('primary mark · real hole','m2',{textAlign:'center'})],'b'),
+        h('div',{display:'flex',flexDirection:'column',gap:8,alignItems:'center'},[
+          h('div',{width:48,height:48,borderRadius:12,background:L.brand,position:'relative',overflow:'hidden'},[
+            h('div',{position:'absolute',left:7,top:19,width:13,height:10,borderRadius:5,background:L.ground},null,'a'),
+            h('div',{position:'absolute',left:28,top:19,width:13,height:10,borderRadius:5,background:L.ground},null,'b')],'ic'),
+          mono('compact · 24dp and below','m3',{textAlign:'center'})],'c')
+      ]),
+      listingCopy:h('div',{display:'flex',flexDirection:'column',gap:14},[
+        h('div',{},[mono('TITLE','k'),h('div',{fontSize:22,fontWeight:800,marginTop:4},'Betar — connect with no network','v')],'t'),
+        h('div',{},[mono('SHORT DESCRIPTION · 80 CHARACTERS','k'),h('div',{fontSize:17,fontWeight:600,marginTop:4,lineHeight:1.4},'Reach people nearby when there is no signal, no internet and no towers.','v')],'s'),
+        h('div',{},[mono('FULL DESCRIPTION · FIRST THREE LINES','k'),
+          h('div',{fontSize:16,lineHeight:1.6,marginTop:6,color:'#1E2C36'},'Connect with no network.','a'),
+          h('div',{fontSize:16,lineHeight:1.6,color:'#1E2C36'},'For remote areas with patchy coverage, and for cyclones, floods and outages when the towers are down.','b'),
+          h('div',{fontSize:16,lineHeight:1.6,color:'#1E2C36'},'Betar carries messages, emergency alerts, community notices, a help board and offline maps between phones directly — no SIM, no internet, no account.','c')],'f'),
+        h('div',{background:'#F6EBD2',borderRadius:18,padding:'12px 14px',fontSize:14,lineHeight:1.5,color:'#5C3D00'},'Listing rule: messaging is mentioned third, never first, and the word messenger does not appear. No company name in the developer copy — the link goes to the repository.','r')
+      ]),
+      featureGraphic:h('div',{width:1024,height:500,maxWidth:'100%',borderRadius:26,background:'#12608F',position:'relative',overflow:'hidden',display:'flex',alignItems:'center',padding:'0 64px',boxSizing:'border-box',gap:48},[
+        h('div',{position:'absolute',right:-120,top:-80,width:520,height:520,borderRadius:'50%',border:'60px solid rgba(75,163,224,.35)'},null,'r1'),
+        h('div',{position:'absolute',right:20,top:120,width:260,height:260,borderRadius:'50%',border:'40px solid rgba(75,163,224,.5)'},null,'r2'),
+        h('div',{position:'relative',display:'flex',flexDirection:'column',gap:22,maxWidth:560},[
+          h('svg',{viewBox:'0 0 108 108',width:88,height:88},[
+            R.createElement('defs',{key:'d'},R.createElement('mask',{id:'fg-void'},[
+              R.createElement('rect',{key:'r',width:108,height:108,rx:28,fill:'#fff'}),
+              R.createElement('g',{key:'g',stroke:'#000',strokeWidth:14,strokeLinecap:'round'},[
+                R.createElement('path',{key:'a',d:'M27,54 L39,54'}),R.createElement('path',{key:'b',d:'M69,54 L81,54'})])])),
+            R.createElement('rect',{key:'x',width:108,height:108,rx:28,fill:'#4BA3E0',mask:'url(#fg-void)'})]),
+          h('div',{fontSize:60,fontWeight:800,color:'#fff',lineHeight:1.05,letterSpacing:'-.02em'},'Connect with no network','t'),
+          h('div',{fontSize:24,fontWeight:600,color:'#BFDDF3',lineHeight:1.4},'Phone to phone, when the towers are down','s')],'copy')
+      ]),
+      storeFrames:h('div',{display:'flex',gap:18,flexWrap:'wrap'},[
+        this.storeShot('Works with no signal at all',this.miniList()),
+        this.storeShot('Call for help when it matters',this.miniEmergency()),
+        this.storeShot('See who can carry for you',this.miniNearby()),
+        this.storeShot('Alerts and notices for everyone nearby',this.miniBoard()),
+        this.storeShot('Maps that travel between phones',this.miniMap()),
+        this.storeShot('Nothing leaves your phone but the message',this.miniDoc())
+      ]),
+      flows:h('div',null,[
+        this.flow('1 · Install to first message','Target under thirty seconds. Every step below is skippable except the language.',[
+          ['Open the app','Language tiles in their own scripts. Nothing else on the screen.','fails if: English gate, or a spinner'],
+          ['Three panels','Eight words each, read aloud available. Swipe or skip.','fails if: reading is required'],
+          ['Nickname','Pre-filled, skippable. Keys generated quietly here.','fails if: the word key ever appears'],
+          ['Permissions','Plain reasons, then the system dialogs.','fails if: a denial dead ends the app'],
+          ['Chats opens','Empty state teaches how a message travels.','fails if: it apologises instead of teaching']
+        ]),
+        this.flow('2 · Adding and verifying somebody in person','The only moment the app asks two people to stand together. It has to be worth it.',[
+          ['Tap the plus','Three labelled ways in. Scan is first.','fails if: labels are icon-only'],
+          ['Scan their code','Camera, one square, one sentence of why.','fails if: it mentions keys or fingerprints'],
+          ['Compare','Same six characters on both phones, 52px.','fails if: the code is small or hard to read aloud'],
+          ['Confirm together','One action each. Green chip appears in the thread.','fails if: green appears without a human check'],
+          ['Write','Thread opens verified. Delivery states start honest.','fails if: a tick implies delivery']
+        ]),
+        this.flow('3 · Sending an emergency alert','One handed, panicking, possibly hurt, maybe cannot read. Five taps, none of them small.',[
+          ['Press SOS','Present on every screen, never hidden, never scrolls away.','fails if: it is behind a menu'],
+          ['Pick a category','Five tiles, each its own shape. Long press speaks it.','fails if: shape and word do not both carry it'],
+          ['Location choice','Off by default, with the honest tradeoff written out.','fails if: it is on by default'],
+          ['Slide to send','A deliberate 200dp drag, not a button.','fails if: a pocket can send it'],
+          ['Watch it travel','Real counters. Mark resolved when safe.','fails if: it ever says delivered without proof']
+        ])
+      ])
+    };
+  }
+}
+</script>
+</body>
+</html>

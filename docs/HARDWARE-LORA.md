@@ -23,7 +23,7 @@ regulatory constraints.
 
 ## 2. India band: 865–868 MHz (IN865)
 
-> **Verified against the primary source** — Gazette of India **G.S.R. 853(E), 10 December 2021**,
+> **Verified against the primary source**: Gazette of India **G.S.R. 853(E), 10 December 2021**,
 > "Use of Low Power Equipment in the Frequency Band 865–868 MHz for Short Range Devices
 > (Exemption from Licence) Rules, 2021" (Ministry of Communications, WPC Wing). See
 > `RESEARCH-FINDINGS.md` §4.
@@ -31,7 +31,7 @@ regulatory constraints.
 - India permits **licence-free** low-power short-range-device use across the **865–868 MHz**
   sub-band (GSR 853(E) delicensed it, **superseding** the older 865–867 MHz RFID rules of 2005).
   In LoRaWAN/Meshtastic terms this is the **IN865** region.
-- This is **different from EU868 and US915** — a hard constraint. Hardware and firmware must be
+- This is **different from EU868 and US915**: a hard constraint. Hardware and firmware must be
   configured to IN865 within 865–868 MHz; using EU/US band plans in India is non-compliant.
 - **Exact limits from the notification:**
   - **Non-Specific Short Range Devices** (the class Mesh user/relay nodes fall in):
@@ -44,7 +44,7 @@ regulatory constraints.
 - **Conditions:** no licence for compliant devices, but only on a **non-interference,
   non-protected, shared, non-exclusive** basis, and equipment **must be type-approved** by the
   Central Government. Legal basis: Indian Telegraph Act 1885 + Indian Wireless Telegraphy Act 1933.
-- **Design impact:** the **1% duty cycle** on the 25 mW class is a hard throughput ceiling — it
+- **Design impact:** the **1% duty cycle** on the 25 mW class is a hard throughput ceiling: it
   reinforces "small, high-priority messages only over LoRa" (`ROUTING-PROTOCOL.md` §6). The
   routing engine enforces conservative duty-cycling so the backbone stays within limits. Any
   500 mW operation is a different device class requiring Adaptive Power Control and type approval.
@@ -57,7 +57,7 @@ A companion node, not a phone:
   Meshtastic hardware (Heltec, RAK, LILYGO T-Beam, etc.).
 - **Antenna:** tuned for 865–868 MHz.
 - **Power:** battery + small solar for unattended operation; low sleep-current firmware.
-- **Phone link:** BLE (or USB-serial) to a paired phone running Project Mesh.
+- **Phone link:** BLE (or USB-serial) to a paired phone running Betar.
 - **Optional GPS** on fixed relay nodes for positioning/time (not required on user nodes).
 
 Roles:
@@ -66,7 +66,7 @@ Roles:
 - **Relay node:** fixed, solar-powered, placed for coverage (ridge line, tower, camp), forming a
   village/valley backbone.
 - **Gateway node:** a relay that also has occasional internet (e.g. VSAT/where available) can act
-  as an egress point — strictly optional and never required.
+  as an egress point, strictly optional and never required.
 
 ## 4. Phone ↔ node bridging
 
@@ -90,14 +90,14 @@ Roles:
 ## 6. Deployment model
 
 - **Community-owned:** nodes are built and maintained by local communities, NGOs, and
-  volunteers — matching the civic, decentralized ethos and avoiding any central operator.
+  volunteers, matching the civic, decentralized ethos and avoiding any central operator.
 - **Documentation and kits:** open build guides, bills of materials, and recommended
   configurations for the IN865 band, so a community can stand up a backbone without deep RF
   expertise.
 - **Cost:** individual nodes are inexpensive (roughly the price range of existing Meshtastic
   boards); solar relay nodes cost more but are shared infrastructure.
 
-## 7. Honest limitations
+## 7. Limitations
 
 - LoRa's tiny bit-rate means the backbone is for **critical small messages**, not general media.
 - Range is **highly terrain-dependent**; real coverage requires siting relay nodes thoughtfully.

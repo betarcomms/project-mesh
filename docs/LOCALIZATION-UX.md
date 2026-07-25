@@ -8,16 +8,19 @@ not afterthoughts.
 
 ## 1. Language
 
-- **Many Indic languages, done properly.** Not "English with a translated string file" — full
+- **Many Indic languages, done properly.** Not "English with a translated string file", full
   support for major Indic **scripts** with correct complex-script shaping (conjuncts, matras,
   reordering). Use open **Noto** (or equivalent libre) fonts bundled with the app so rendering
   does not depend on the device's font coverage.
-- **Priority languages** follow the regions served first: **Hindi, Bengali, Assamese, Bodo**,
-  and additional languages (Ladakhi/Bhoti, Meitei, Nepali, Tamil, Telugu, Marathi, Odia, etc.)
-  added by need and contributor capacity.
-- **Right-to-left** and mixed-script handling where relevant (e.g. Urdu).
-- Translations are **community-contributed** through the open localization workflow, with a
-  glossary so safety-critical terms (SOS, help, water, danger) are consistent.
+- **Default shipped languages: English and Bengali only.** Every other language, Hindi,
+  Assamese, Bodo, Ladakhi/Bhoti, Meitei, Nepali, Tamil, Telugu, Marathi, Odia and so on, is
+  community-contributed: it ships only once a contributor provides a real translation, not
+  as part of the default install.
+- **Right-to-left** and mixed-script handling where relevant (e.g. Urdu), if and when that
+  language arrives as a community contribution.
+- Every language past the two defaults is **community-contributed** through the open
+  localization workflow, with a glossary so safety-critical terms (SOS, help, water, danger)
+  are consistent.
 
 ## 2. Low-literacy first
 
@@ -50,9 +53,9 @@ India's volume market is inexpensive Android phones. Targets:
 
 - **No screen ever blocks on a network call.** Every interaction assumes a device that may never
   touch the internet.
-- **Honest connectivity indicators:** the UI shows mesh state (peers nearby, relay active,
-  LoRa gateway reachable) rather than a misleading "online/offline" binary.
-- **Delivery is shown as it truly is:** "sent to mesh," "carried," "delivered" (on ACK) — never a
+- **Connectivity indicators reflect reality:** the UI shows mesh state (peers nearby, relay
+  active, LoRa gateway reachable) rather than a misleading "online/offline" binary.
+- **Delivery is shown as it truly is:** "sent to mesh," "carried," "delivered" (on ACK), never a
   false real-time "read" guarantee that the DTN model cannot provide.
 
 ## 5. Safety-aware UX
@@ -64,7 +67,7 @@ India's volume market is inexpensive Android phones. Targets:
 - **Panic / duress** controls (see `CRYPTOGRAPHY.md`) are reachable but guarded against accidental
   triggering.
 - **Plain-language privacy explanations** in the user's language: what the app does and does not
-  know, and the honest limits from the threat model.
+  know, and its limits, drawn from the threat model.
 
 ## 6. Trust and onboarding
 

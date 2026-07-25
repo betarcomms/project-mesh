@@ -1766,3 +1766,98 @@ selection; offline map screen renders a real GL surface. Channel-passphrase and 
 entry via ADB remain blocked by the same `input text` flakiness this project already documented —
 not a regression, ruled out by cross-referencing the exact same limitation noted in an earlier
 session's `IMPLEMENTATION-STATUS.md` entry.
+
+## 2026-07-26 — Betar rebrand: design system, documentation rewrite, and a note on this log's own voice going forward
+
+The app is being renamed to Betar (Bengali for wireless). Project Mesh stays the name of the
+protocol and the Rust core. `docs/DESIGN-BRIEF.md` and `docs/BETAR-TRANSITION.md` (added the
+previous session) lay out the full plan. This entry covers what actually got done this session,
+plus one procedural note.
+
+**Android Compose design system built and verified**, not just written: four themes (light,
+light high contrast, dark, dark high contrast) in `android/app/src/main/java/india/projectmesh/app/ui/theme/`,
+transcribed from `docs/DESIGN-BRIEF.md` and `design/Betar Design System.dc.html`. The five
+emergency category shapes (medical, trapped, fire, danger, other) are hand rolled as Compose
+`GenericShape`, reproducing the design file's own path math exactly rather than approximating
+with a library shape. Wired into `MainActivity` as `BetarTheme`. Verified with a real
+`./gradlew assembleDebug`, not just `compileDebugKotlin`.
+
+Two real build problems found and resolved along the way, not hidden:
+
+1. The bumped `compose-bom` needed for the newer `material3` would not compile under the
+   pinned Kotlin 2.0.21, failing with "internal in file" errors. Root cause confirmed by
+   reading the actual dependency graph, not guessed: Kotlin 2.1.20 is what Compose's own
+   transitive dependencies already forced `kotlin-stdlib` to. Bumped the project to 2.1.20 and
+   updated `docs/REPRODUCIBLE-BUILD.md`'s pinned toolchain table to match.
+2. Material 3 Expressive (`MaterialExpressiveTheme`, `MaterialShapes`, `MotionScheme`) turned
+   out to be stripped from stable `material3:1.4.0` entirely and only exists as public
+   experimental starting `material3:1.5.0-alpha`, which itself needs AGP 9.1.0 and
+   `compileSdk` 37, a full toolchain migration well beyond a design pass. Decided against
+   that: stayed on stable Material 3 and hand rolled the category shapes and spacing scale
+   instead. The mesh ribbon's spring motion (`docs/DESIGN-BRIEF.md` §6) still needs its own
+   `animateFloatAsState(spring(...))` at the component level when that component gets built,
+   there is no theme wide motion scheme to lean on yet.
+
+**Documentation rewrite pass underway**, per `docs/BETAR-TRANSITION.md` Part 4: stripping
+government and political framing project wide, removing em dashes, renaming to Betar where a
+passage means the app while keeping Project Mesh where it means the protocol or the core, and
+folding `docs/LEGAL.md`'s compliance-relevant content into a slimmer `docs/COMPLIANCE.md`. The
+GitHub org move in Part 3 was explicitly not done: the repository stays
+`https://github.com/konkomaji/project-mesh`, no organisation was created, and the repository
+stays private until a later, separate decision to make it public.
+
+**A procedural note on this file's own voice.** `docs/BETAR-TRANSITION.md` Part 2 sets new
+framing and voice rules for all documentation from here on, including no em dashes and no
+repeating the same honesty tic forty times. This log is append only and its own footer treats a
+rewritten history as worse than an honest one, so entries above this line were deliberately left
+untouched rather than rewritten to match. Everything from this entry forward follows the new
+rules.
+
+## 2026-07-26 — Documentation rewrite finished, and a public showcase website added
+
+Closing out the same pass the entry above describes.
+
+**Documentation rewrite completed** across all 19 files `docs/BETAR-TRANSITION.md` Part 4
+flagged, not just started. `docs/LEGAL.md` was folded into a slimmer `docs/COMPLIANCE.md`
+(keeps LoRa spectrum compliance, the AGPL-3.0 licence position, and the no warranty position;
+cuts the government framing doctrine, roughly 80 percent of the old file). `WHITEPAPER.md`
+needed a real pass by hand, not a mechanical one: it named an individual steward by name (removed,
+attribution now goes to the project and its public source per `docs/GOVERNANCE.md`), built its
+opening argument around three failure modes where one was administrative network shutdowns
+(cut to two: coverage gaps and disaster-induced collapse, matching the framing rule that Betar's
+resilience is never marketed around *why* a network is down), and had a full legal-positioning
+section built on the same shutdown-and-censorship doctrine as the old `LEGAL.md` (slimmed to a
+short compliance section matching `docs/COMPLIANCE.md`). Comparative, factual descriptions of
+other projects in the prior-art section (FireChat's history in Hong Kong protests, Briar's
+activist and journalist audience, ProtestChat by name) were deliberately left alone: those are
+true facts about other people's software, not Betar's own framing, and scrubbing them would be
+revisionism rather than honesty. `docs/ARCHITECTURE.md` needed no change at all: the one hit the
+transition doc's own audit flagged there was a false positive, confirmed by actually reading it
+rather than trusting the count.
+
+**A public showcase website added**, `website/`: five static pages (home, about, safety and
+limits, privacy, documents), the three logo files, and a shared stylesheet using the same colour
+tokens as the Android app's design system, so the two actually match rather than coincidentally
+looking similar. SEO and AEO groundwork: per-page meta description, canonical link, Open Graph
+and Twitter Card tags, `SoftwareApplication` and `FAQPage` JSON-LD on the home page, `sitemap.xml`,
+`robots.txt`, and an `llms.txt` summary for the newer crawlers that read one. Uses `betar.example`
+(an IANA-reserved documentation domain) as a placeholder throughout, flagged in a comment on the
+home page, since no real domain exists yet; every canonical, `og:url` and sitemap entry needs
+that swap once one does.
+
+**Verified before this was called done, not assumed:** a repository-wide grep for em dashes and
+for government, censorship, shutdown, protest, activism and surveillance framing across every
+changed file, by hand, not by trusting a fork's own report. The handful of real remaining hits
+were checked individually and are legitimate: citations to other projects' factual history, the
+framing rule's own text in `docs/GOVERNANCE.md` stating what not to do, a legal reference to
+"Central Government" as the actual spectrum-licensing authority in `docs/HARDWARE-LORA.md`, and
+historical entries in this file from before the cutover, left alone on purpose. Then the full
+push checklist: `cargo test --release` in `core/` (191 passed, 0 failed), and
+`./gradlew assembleDebug` in `android/` (successful).
+
+**One procedural note on how this pass was actually done.** Several of the file rewrites in this
+entry and the one above were dispatched to parallel background agents. Some ran and completed
+correctly (verified by reading their actual diffs afterward, not by trusting their own summaries);
+at least one silently did not, most importantly `WHITEPAPER.md`, which looked untouched hours
+later and needed a full pass by hand. Treat "dispatched" and "done" as different claims until a
+diff has actually been read.

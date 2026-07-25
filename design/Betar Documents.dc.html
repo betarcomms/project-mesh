@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 28px;max-width:1080px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Documents</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">One shared template: a summary card in very plain words at the top, then the detail. Every page has a read aloud control in the same place. Copy here is final, not placeholder — it is written to be translated, so sentences are short and none of them lean on idiom. Pages are shown at their full scrolling length at 360dp wide.</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:14px">No company is named anywhere, because none exists. Where a document would normally name one, it points at the source code instead.</div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">G · INDEX AND TEMPLATE</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+      <div style="font-size:15px;font-weight:700">Documents index</div>
+      <div data-screen-label="Documents index" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ index }}</div>
+      <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">Reached from You. Each row says in one line why you would open it.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+      <div style="font-size:15px;font-weight:700">The shared page template</div>
+      <div style="width:360px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9">{{ template }}</div>
+      <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">Summary card first, detail below, read aloud pinned under the title. 18sp body, 1.6 line height, no fixed-height text boxes.</div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:0 56px 72px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">H · THE SEVEN PAGES · FULL LENGTH, FINAL COPY</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ docs }}" as="d" hint-placeholder-count="7">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ d.title }}</div>
+        <div data-screen-label="{{ d.title }}" style="width:360px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9">{{ d.node }}</div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="margin-top:34px;font-size:16px;line-height:1.7;color:#3A4B57;max-width:820px">Next and last: dark and sunlight versions of the emergency flow, Alerts and Chats, the store listing with six caption frames, and the annotated flows for the three journeys.</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+function regular(n,rot){const p=[];for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(rot||0);p.push((50+Math.cos(a)*50).toFixed(2)+'% '+(50+Math.sin(a)*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const S={cookie9:lobed(9,.84,.16,0),clover4:lobed(4,.74,.26,Math.PI/4),scallop12:lobed(12,.88,.12,0),burst8:lobed(8,.72,.28,0),
+  flower6:lobed(6,.78,.22,0),pentagon:regular(5,-Math.PI/2),hexagon:regular(6,-Math.PI/2),
+  diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',square:'inset(6% round 26%)'};
+const C={ground:'#EEF4F9',lift:'#F7FAFD',ink:'#101A22',deep:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700',tint:'#DCE9F5',muted:'#4A5B67'};
+
+const iconBtn=(k,child)=>h('div',{width:44,height:44,flex:'none',borderRadius:14,background:C.lift,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:C.deep},child,k);
+const readAloud=()=>h('div',{display:'inline-flex',alignItems:'center',gap:10,height:56,borderRadius:20,background:C.tint,padding:'0 20px',alignSelf:'flex-start'},[
+  h('div',{width:18,height:28,borderRadius:9,background:C.deep,flex:'none'},null,'m'),
+  h('div',{fontSize:17,fontWeight:700,color:C.deep},'Read this out','t')]);
+
+const para=(t,k)=>h('div',{fontSize:18,lineHeight:1.6,color:'#1E2C36'},t,k);
+const head=(t,k)=>h('div',{fontSize:21,fontWeight:800,lineHeight:1.3,marginTop:6},t,k);
+const bullets=(items,k)=>h('div',{display:'flex',flexDirection:'column',gap:10},items.map((t,i)=>
+  h('div',{display:'flex',gap:12,alignItems:'flex-start'},[
+    h('div',{width:12,height:12,marginTop:7,flex:'none',background:C.brand,clipPath:S.cookie9},null,'d'),
+    h('div',{fontSize:18,lineHeight:1.55,color:'#1E2C36',flex:1},t,'t')],'b'+i)),k);
+const card=(title,body,bg,fg,k)=>h('div',{background:bg,borderRadius:26,padding:'18px 20px',display:'flex',flexDirection:'column',gap:8},[
+  h('div',{fontSize:19,fontWeight:800,color:fg},title,'t'),
+  h('div',{fontSize:17,lineHeight:1.55,color:fg},body,'b')],k);
+const kv=(rows,k)=>h('div',{background:C.lift,borderRadius:24,padding:'6px 18px'},rows.map(([a,b],i)=>
+  h('div',{display:'flex',gap:14,padding:'12px 0',borderTop:i?'1px solid #E7EFF6':'none'},[
+    h('div',{fontSize:17,fontWeight:700,flex:'none',width:110},a,'a'),
+    h('div',{fontSize:17,lineHeight:1.5,color:'#2A3B47',flex:1},b,'b')],'r'+i)),k);
+
+function docPage(title, summary, blocks){
+  return h('div',{display:'flex',flexDirection:'column',fontFamily:"'Noto Sans',sans-serif",color:C.ink},[
+    h('div',{height:60,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 16px'},[iconBtn('b','←'),
+      h('div',{fontSize:20,fontWeight:800,flex:1},'Documents','t')],'bar'),
+    h('div',{padding:'4px 20px 34px',display:'flex',flexDirection:'column',gap:16},[
+      h('div',{fontSize:30,fontWeight:800,lineHeight:1.2,letterSpacing:'-.01em'},title,'title'),
+      readAloud(),
+      h('div',{background:C.tint,borderRadius:28,padding:'20px 22px',display:'flex',flexDirection:'column',gap:10},[
+        h('div',{fontSize:15,fontWeight:800,letterSpacing:'.06em',color:C.deep},'IN SHORT','k'),
+        h('div',{fontSize:20,lineHeight:1.5,fontWeight:600,color:'#12303F'},summary,'s')],'summary')
+    ].concat(blocks),'body')
+  ]);
+}
+
+class Component extends DCLogic {
+  renderVals(){
+    const docs=[
+      {title:'Privacy',node:docPage('Privacy','We collect nothing. There is no server. Nothing you write leaves the phones it travels between.',[
+        head('There is nowhere to collect it'),
+        para('Betar has no account, no phone number, no email and no login. It never asks for internet, so it has no way to send anything anywhere. Your messages move only between phones that are close enough to each other to pass them along.'),
+        head('What is kept on your phone'),
+        kv([['Your messages','Until you delete them. Nothing is deleted for you.'],
+          ['Messages you carry for other people','Until they reach the person, or up to seven days, whichever comes first.'],
+          ['Your nickname','Until you change it.'],
+          ['Nearby phone names','About an hour, so the app can tell the same phone from a new one.']]),
+        head('What a nearby phone can see'),
+        bullets(['Your nickname, if you set one.',
+          'That your phone is there, and roughly how close it is.',
+          'The scrambled messages it is asked to carry, which it cannot read.']),
+        para('A phone carrying a message for you cannot read it. Only the person you are writing to can.'),
+        head('What nobody can see'),
+        bullets(['Your location, unless you switch it on for a single alert.',
+          'Anything you type, until you send it.',
+          'How often you use the app. Nothing counts your taps.']),
+        head('Children'),
+        para('There is no age check, because there is no account to check. A child using this phone shares whatever this phone shares.'),
+        head('Erasing everything'),
+        para('Open You, then Privacy, then hold Erase everything. It removes your messages, your nickname, the messages you were carrying and the keys underneath. It cannot be undone and there is no copy anywhere else.'),
+        card('How to check this is true','Every claim here is in the source code, which anyone can read. The app asks for no internet permission at all — open your phone settings and look. An app without that permission cannot send your data anywhere, whatever it says.','#DCEEDC','#1B5E20')
+      ])},
+      {title:'Terms of use',node:docPage('Terms of use','Use it. Do not use it to hurt people. It comes with no promises, and nobody is running it.',[
+        head('Using Betar'),
+        para('You may use, copy, study and share this app, for free, for anything lawful. There is nothing to agree to and nobody to agree with.'),
+        head('What not to do'),
+        bullets(['Do not send false emergency alerts. People walk into danger for those.',
+          'Do not use it to threaten, harass or harm anyone.',
+          'Do not clog the mesh on purpose. Space that gets wasted is space somebody else needed.']),
+        head('No warranty'),
+        para('Betar is provided as it is, with no promise that it will work, reach anyone, or keep working. If it fails, nobody owes you anything. Use it knowing that.'),
+        head('Not an emergency service'),
+        para('Betar does not call anyone. It cannot reach police, an ambulance or a fire service. If those exist where you are and you can reach them, reach them first.'),
+        head('Who maintains this'),
+        para('A community of volunteers, through the source code. There is no company, no support desk and no one to sue. Problems and fixes go to the repository.'),
+        card('The code','github.com/betar-mesh/project-mesh','#DCE9F5','#12608F')
+      ])},
+      {title:'Safety and limits',node:docPage('Safety and limits','Betar tries. It cannot promise. If no other phone is near you, nothing you send goes anywhere.',[
+        card('Read this one before a storm, not during','It is the shortest honest description of what this app can and cannot do for you.','#F6EBD2','#5C3D00'),
+        head('Delivery is best effort'),
+        para('A message moves when two phones come close. If nobody comes close, it waits on your phone. It may take minutes. It may take hours. It may never arrive, and you will not always be told which.'),
+        head('The four states, honestly'),
+        kv([['Waiting','Still on your phone. Nobody has been near enough yet.'],
+          ['Travelling','One phone has taken a copy.'],
+          ['Spreading','Several phones are carrying it.'],
+          ['Delivered','The person you wrote to confirmed it. Only this one means it arrived.']]),
+        head('What it cannot do'),
+        bullets(['It cannot reach anyone if no other phone with Betar is within range.',
+          'It cannot call emergency services.',
+          'It cannot promise that an alert was seen, only that phones are carrying it.',
+          'It cannot work if your battery is dead. Charge early.']),
+        head('About the security'),
+        para('Messages are scrambled so that only the person you are writing to can read them. That part has not yet been checked by independent reviewers. Until it has, treat anything truly dangerous to you as if it could be read.'),
+        head('Verify people in person'),
+        para('Stand next to the person, compare the six characters on both phones, and confirm. That is the only way to be certain you are writing to who you think you are.'),
+        head('Distance'),
+        para('Phone to phone is usually tens of metres, less through walls, more in the open. Range is not the point. Movement is: people walking between villages carry your messages further than any single hop.')
+      ])},
+      {title:'Permissions explained',node:docPage('Permissions','Four permissions, each with one job. And one the app deliberately does not have.',[
+        kv([['Nearby devices','So your phone can find other phones and hand messages over. Without it, nothing moves.'],
+          ['Location while using','Only if you choose to share where you are on an alert or a pin. Off unless you turn it on, each time.'],
+          ['Microphone','Only while you hold the record button, for a voice note.'],
+          ['Notifications','So an alert reaches you when the phone is in your pocket.'],
+          ['Battery exemption','So your phone stops shutting Betar down. Without it, messages stop moving when the screen is off.']]),
+        card('No internet permission','Betar does not request internet access at all. Not restricted, not unused: absent. That is the strongest promise in the app, because your phone enforces it rather than us. You can check it in your phone settings under Betar, and in the source code.','#DCEEDC','#1B5E20'),
+        head('If you say no'),
+        para('Everything still opens. Only the part that needed the permission stops working, and the screen says which one and why.')
+      ])},
+      {title:'Open source licences',node:docPage('Open source licences','Anyone may use, study, change and share this. A changed version has to stay open too.',[
+        head('AGPL-3.0'),
+        para('Betar is licensed under the GNU Affero General Public License, version 3. In plain words: you can run it, read it, change it and pass it on. If you pass on a changed version, you must pass on the changed source too, under the same licence. Nobody can take this app private.'),
+        para('The full licence text ships with the app and is in the repository.'),
+        head('Built on Project Mesh'),
+        para('Betar is the app. Project Mesh is the open protocol and core underneath it that makes phone to phone carrying work. Both live in the same place: github.com/betar-mesh/project-mesh'),
+        head('Third party components'),
+        kv([['Noto Sans','SIL Open Font License 1.1'],
+          ['Noto Sans Bengali','SIL Open Font License 1.1'],
+          ['Noto Sans Devanagari','SIL Open Font License 1.1'],
+          ['libsodium','ISC'],
+          ['SQLCipher','BSD 3-Clause'],
+          ['Kotlin standard library','Apache 2.0'],
+          ['AndroidX libraries','Apache 2.0'],
+          ['Map tiles','Open Database License, from OpenStreetMap contributors']]),
+        head('Thank you'),
+        para('To the translators, testers and relief workers who checked this in the field. Credited as a group, by choice.')
+      ])},
+      {title:'About Betar',node:docPage('About Betar','Betar means wireless in Bengali. It lets phones talk to each other when there is no network at all.',[
+        h('div',{display:'flex',justifyContent:'center',padding:'6px 0'},
+          h('svg',{viewBox:'0 0 108 108',width:88,height:88,'aria-label':'Betar'},[
+            R.createElement('defs',{key:'d'},R.createElement('mask',{id:'about-void'},[
+              R.createElement('rect',{key:'r',width:108,height:108,rx:28,fill:'#fff'}),
+              R.createElement('g',{key:'g',stroke:'#000',strokeWidth:14,strokeLinecap:'round'},[
+                R.createElement('path',{key:'a',d:'M27,54 L39,54'}),R.createElement('path',{key:'b',d:'M69,54 L81,54'})])])),
+            R.createElement('rect',{key:'x',width:108,height:108,rx:28,fill:C.brand,mask:'url(#about-void)'})]),'logo'),
+        para('Betar carries messages, emergency alerts, notices and maps between phones directly, with no towers, no router and no internet. It is for remote places, and for the days after a storm when everything else is down.'),
+        para('There is no account and no server. Nothing you write leaves the phones it travels between.'),
+        head('The name'),
+        para('Betar, বেতার, is Bengali for wireless: be, without, and tar, wire. The mark is a wire with its middle removed. The break is a real hole, so the wire is there only as its own absence.'),
+        head('Jagadish Chandra Bose'),
+        para('In November 1895, in Calcutta, Bose sent radio waves through two walls and through a seated man to ring a bell and set off a small charge in the next room. It was a public demonstration of wireless transmission, before Marconi\u2019s. He worked at millimetre wavelengths a century before ordinary phones reached them, and he refused to patent any of it, because he believed the work belonged to everyone.'),
+        para('This app is free and open for the same reason, a hundred and thirty years later.'),
+        head('Betar and Project Mesh'),
+        para('Betar is the app you are holding. Project Mesh is the open protocol and core that makes it work. Both live in the same place.'),
+        card('The code','github.com/betar-mesh/project-mesh','#DCE9F5','#12608F'),
+        kv([['Version','1.0.0'],['Build','1042'],['Licence','AGPL-3.0']]),
+        para('Translators and contributors are credited as a group. No individual is named in this app, by choice. What can be checked is the code, not a name on a page.')
+      ])},
+      {title:'How to use this in a storm',node:docPage('In a storm','Charge early. Turn carrying on. Keep the app open. Send one clear alert, not ten.',[
+        head('Before'),
+        bullets(['Charge every phone and battery pack you have.',
+          'Open You and run through the readiness list until everything is green.',
+          'Turn on carrying for others. It costs a little battery and it is what makes the whole thing work.',
+          'Agree with your household where you will go, while you can still talk normally.']),
+        head('During'),
+        bullets(['Keep the app open when you are in a shelter. Phones in a room together move a lot of messages.',
+          'Write short. Short messages travel further and cost less battery.',
+          'Send one alert, not several. Repeats crowd out other people.',
+          'Turn the screen brightness down, not the app off.']),
+        head('If you need help'),
+        bullets(['Press SOS. It is on every screen.',
+          'Pick the picture that matches: medical, trapped, fire, danger, other.',
+          'Turn location on if you want to be found. It is off until you do.',
+          'Slide to send. Watch the count of phones carrying it.',
+          'Mark yourself safe when you are, so people stop looking.']),
+        head('Helping other people'),
+        bullets(['Leave carrying on. Your phone becomes part of the road.',
+          'Walk with your phone. Movement is what carries messages between villages.',
+          'Acknowledge alerts you can actually reach. An acknowledgement tells everyone else it is being handled.',
+          'Put water, food and shelter on the board. A notice with a picture works for people who cannot read.']),
+        card('One honest reminder','If no other phone is near you, nothing you send moves. Stay where people are.','#F6EBD2','#5C3D00')
+      ])}
+    ];
+
+    const rows=[['Privacy','We collect nothing.',S.hexagon],
+      ['Safety and limits','What this cannot do.',S.diamond],
+      ['In a storm','A guide for the day it matters.',S.burst8],
+      ['Permissions','What each one is for.',S.clover4],
+      ['Terms of use','Short and human.',S.square],
+      ['Licences','AGPL-3.0 and what we build on.',S.scallop12],
+      ['About Betar','The name, and the man it honours.',S.cookie9]];
+
+    return {
+      docs,
+      index:h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column',fontFamily:"'Noto Sans',sans-serif"},[
+        h('div',{height:60,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 16px'},[iconBtn('b','←'),
+          h('div',{fontSize:24,fontWeight:800,flex:1},'Documents','t')],'bar'),
+        h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'4px 12px 20px',display:'flex',flexDirection:'column',gap:8},
+          rows.map(([t,s,clip])=>h('div',{background:C.lift,borderRadius:24,padding:'12px 14px',display:'flex',gap:14,alignItems:'center',minHeight:72,flex:'none'},[
+            h('div',{width:44,height:44,flex:'none',background:C.tint,clipPath:clip},null,'i'),
+            h('div',{flex:1,minWidth:0},[h('div',{fontSize:19,fontWeight:700},t,'t'),
+              h('div',{fontSize:15,color:C.muted,lineHeight:1.4,marginTop:2},s,'s')],'x'),
+            h('div',{fontSize:22,color:C.muted,flex:'none'},'›','c')],t)),'list')
+      ]),
+      template:h('div',{display:'flex',flexDirection:'column',fontFamily:"'Noto Sans',sans-serif"},[
+        h('div',{height:60,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'0 16px'},[iconBtn('b','←'),
+          h('div',{fontSize:20,fontWeight:800,flex:1},'Documents','t')],'bar'),
+        h('div',{padding:'4px 20px 30px',display:'flex',flexDirection:'column',gap:16},[
+          h('div',{fontSize:30,fontWeight:800,lineHeight:1.2},'Page title','ti'),
+          readAloud(),
+          h('div',{background:C.tint,borderRadius:28,padding:'20px 22px',display:'flex',flexDirection:'column',gap:10},[
+            h('div',{fontSize:15,fontWeight:800,letterSpacing:'.06em',color:C.deep},'IN SHORT','k'),
+            h('div',{fontSize:20,lineHeight:1.5,fontWeight:600,color:'#12303F'},'The whole page in one or two sentences, in the plainest words the language allows.','s')],'sum'),
+          h('div',{fontSize:21,fontWeight:800},'A section heading','h'),
+          h('div',{fontSize:18,lineHeight:1.6,color:'#1E2C36'},'Body text at 18sp, line height 1.6, no fixed heights anywhere so Bengali and Devanagari matras have room and 200 percent font scaling still works.','p'),
+          h('div',{background:C.lift,borderRadius:24,padding:'6px 18px'},[['Term','Its meaning in one line.'],['Term','Its meaning in one line.']].map(([a,b],i)=>
+            h('div',{display:'flex',gap:14,padding:'12px 0',borderTop:i?'1px solid #E7EFF6':'none'},[
+              h('div',{fontSize:17,fontWeight:700,width:110,flex:'none'},a,'a'),
+              h('div',{fontSize:17,lineHeight:1.5,color:'#2A3B47',flex:1},b,'b')],'r'+i)),'kv'),
+          card('A closing card','Used for the one thing the reader should leave with. Green for good news, amber for a caution. Never red — red is the emergency control and nothing else.','#DCEEDC','#1B5E20')
+        ],'body')
+      ])
+    };
+  }
+}
+</script>
+</body>
+</html>

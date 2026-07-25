@@ -65,7 +65,7 @@ Noise is chosen for being compact, formally analysed, and misuse-resistant on co
 Because Mesh is store-and-forward, two parties may never be online together. Using the
 recipient's published **signed prekey** and a **one-time prekey** (an X3DH-style bootstrap), a
 sender can establish a forward-secret session and seal a first message that the recipient can
-open later — without an interactive handshake.
+open later, without an interactive handshake.
 
 ## 5. Ongoing messaging: the Double Ratchet
 
@@ -76,7 +76,7 @@ Every direct/group session runs the **Signal Double Ratchet**:
 - **forward secrecy:** each message uses a fresh key derived and then discarded, so leaking a
   current key does not expose past messages;
 - **post-compromise security:** once fresh DH material is exchanged, a past key compromise no
-  longer lets the attacker read new messages — the session self-heals;
+  longer lets the attacker read new messages: the session self-heals;
 - out-of-order and lost messages are handled with skipped-message keys (bounded).
 
 > Note: ProtestChat's alpha explicitly had **not** implemented a Double Ratchet. Project Mesh
@@ -90,31 +90,31 @@ Every direct/group session runs the **Signal Double Ratchet**:
   owner and no server. Each message is AEAD-sealed with a fresh nonce. Channels are ideal for
   open local information (e.g. a relief camp's public channel).
 - **Small groups (≤ ~8):** the sender may seal an **individual AEAD copy per member** (each under
-  that member's Double Ratchet session). Simple, but bandwidth is **linear in membership** —
+  that member's Double Ratchet session). Simple, but bandwidth is **linear in membership**,
   acceptable only for tiny groups.
-- **Larger groups: use MLS (RFC 9420).** *(Research-driven change — see `RESEARCH-FINDINGS.md`
+- **Larger groups: use MLS (RFC 9420).** *(Research-driven change: see `RESEARCH-FINDINGS.md`
   §2.)* The per-member-copy approach and sender-key schemes built on the Double Ratchet scale
-  poorly — group key-update cost grows roughly **O(N²)** in membership. **MLS (Messaging Layer
+  poorly: group key-update cost grows roughly **O(N²)** in membership. **MLS (Messaging Layer
   Security, IETF RFC 9420, 2023)** provides asynchronous group key establishment with **forward
   secrecy and post-compromise security** and **logarithmic** update cost via its **TreeKEM**
   tree-based key derivation (log N encryptions instead of N−1 pairwise). MLS cipher suites are
-  **HPKE**-based (KEM + KDF + AEAD) with an EdDSA/ECDSA signature — composing cleanly with the PQ
+  **HPKE**-based (KEM + KDF + AEAD) with an EdDSA/ECDSA signature, composing cleanly with the PQ
   direction in §6a. **Decision: Double Ratchet for 1:1 and tiny groups; MLS for anything larger.**
 
 ## 6a. Post-quantum protection
 
-*(Research-driven addition — see `RESEARCH-FINDINGS.md` §2.)* "Most secure in 2026" means
+*(Research-driven addition: see `RESEARCH-FINDINGS.md` §2.)* "Most secure in 2026" means
 defending against **"harvest-now, decrypt-later"**: an adversary who records ciphertext today to
 decrypt with a future quantum computer. Because Mesh is store-and-forward and envelopes can live
 a long time, this matters here more than for a real-time chat app.
 
-- **Handshake:** add **PQXDH** — Signal's post-quantum extension of X3DH — which runs a
+- **Handshake:** add **PQXDH** (Signal's post-quantum extension of X3DH), which runs a
   **post-quantum KEM** (an **ML-KEM / CRYSTALS-Kyber-1024**-class algorithm, IND-CCA
   post-quantum secure; the parameter used in Signal's production) **alongside** the classical
   X25519 exchange, yielding a **hybrid** secret secure if *either* problem holds.
-- **Honest limit:** PQXDH stops a **passive** harvest-now-decrypt-later adversary. It does **not**
-  protect against an **active** quantum attacker able to compute discrete logs to impersonate a
-  party — no deployed protocol does yet. State this plainly; do not claim "quantum-proof."
+- PQXDH stops a **passive** harvest-now-decrypt-later adversary. It does **not** protect against
+  an **active** quantum attacker able to compute discrete logs to impersonate a party: no deployed
+  protocol does yet. This is not quantum-proof.
 - **Groups:** MLS (§6) has HPKE-based cipher suites with post-quantum paths, so the group layer
   can move to PQ in step with the 1:1 layer.
 - **Direction of travel:** Session's V2 protocol (late 2025) adopting **ML-KEM** + reinstated
@@ -136,14 +136,14 @@ a long time, this matters here more than for a real-time chat app.
 
 ### 7.3 Onion routing (optional, for direct messages)
 - A sender may wrap a direct message in a **Sphinx-style** layered-encryption packet routed
-  through several relays. Each relay peels one layer and learns only the next hop — **no single
+  through several relays. Each relay peels one layer and learns only the next hop: **no single
   relay learns both source and destination**, providing **relationship anonymity within the
   mesh**.
 - Sphinx packets are **fixed-size** and bit-wise unlinkable across hops, resisting simple
   size/shape correlation by an on-path relay.
-- **Bounds (honest statement):** this defends against *individual* curious/malicious relays and
+- **Bounds:** this defends against *individual* curious/malicious relays and
   local observers. It does **not** defend against a **global passive adversary** who can observe
-  all radio emissions and perform end-to-end timing correlation — that is an explicit non-goal
+  all radio emissions and perform end-to-end timing correlation: that is an explicit non-goal
   (see `THREAT-MODEL.md`).
 
 ## 8. Encryption at rest and duress
@@ -159,7 +159,7 @@ a long time, this matters here more than for a real-time chat app.
 ## 9. What we deliberately do not claim
 
 - No defence against a **global passive adversary** performing nationwide traffic correlation.
-- No defence against **endpoint compromise** via an OS/device exploit — if the device is owned,
+- No defence against **endpoint compromise** via an OS/device exploit: if the device is owned,
   the messages on it are exposed.
 - No **perfect anonymity**; onion routing reduces, but does not eliminate, inferable metadata.
 - Cryptographic choices here are **proposals pending independent review**; nothing ships to

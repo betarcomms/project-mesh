@@ -2,10 +2,13 @@
 
 **A technical white paper**
 
-Stewardship: Konko Maji (research + open source)
+Project Mesh is the protocol and the Rust core this paper describes. The shipping consumer app
+built on it is called **Betar**; see `docs/DESIGN-BRIEF.md` for the app's own identity and
+design. Stewardship is to the project and its public source, not to a named individual; see
+`docs/GOVERNANCE.md`.
 Status: Phase 1 (core, Android-first) implemented and released as `v0.1.0-prealpha`
-(debug-signed APK, 191 passing core tests, on-device QA pass) — pre-alpha, no independent
-security audit yet. This document was written at the design stage; §5–§9 now describe a real,
+(debug-signed APK, 191 passing core tests, on-device QA pass), pre-alpha, no independent
+security audit yet. This document was written at the design stage; §5 to §9 now describe a real,
 tested implementation, not a plan. Live status: [`docs/IMPLEMENTATION-STATUS.md`](docs/IMPLEMENTATION-STATUS.md).
 Licence: CC BY-SA 4.0 (this document); the code is AGPL-3.0-or-later (`LICENSE`)
 
@@ -13,11 +16,10 @@ Licence: CC BY-SA 4.0 (this document); the code is AGPL-3.0-or-later (`LICENSE`)
 
 ## Abstract
 
-Communication systems in India fail in three recurring situations: in regions with weak or
+Communication systems in India fail in two recurring situations: in regions with weak or
 absent cellular and fibre coverage (Ladakh, the North-East, the Sundarbans, Himalayan and
-tribal belts); during natural disasters that physically destroy telecommunication
-infrastructure (floods, cyclones, earthquakes); and during administrative shutdowns of
-telecommunication services. All three failures share a single cause — dependence on
+tribal belts), and during natural disasters that physically destroy telecommunication
+infrastructure (floods, cyclones, earthquakes). Both failures share a single cause: dependence on
 centralized, infrastructure-bound networks. This paper presents **Project Mesh**, a
 decentralized, server-less, end-to-end encrypted communication and civic-coordination platform
 designed for the Indian context. Project Mesh forms an ad-hoc **delay-tolerant mesh network**
@@ -29,10 +31,10 @@ layered architecture, transport strategy, store-carry-forward routing protocol, 
 design, application-level civic features (emergency SOS, disaster bulletins, offline maps, a
 community resource board, and messaging), localization and accessibility strategy for a
 low-literacy, low-end-device, multilingual user base, distribution as a fully de-Googled
-application, open-source governance model, and legal positioning under Indian law. We are
-explicit throughout about the system's fundamental limitations — most importantly the severe
+application, open-source governance model, and compliance position under Indian law. We are
+explicit throughout about the system's fundamental limitations, most importantly the severe
 constraints Apple's iOS places on background Bluetooth operation, and the physical necessity of
-dedicated radio hardware to cover rural distances — and about the security properties the
+dedicated radio hardware to cover rural distances, and about the security properties the
 system deliberately does and does not provide.
 
 ---
@@ -51,7 +53,7 @@ system deliberately does and does not provide.
 10. Localization, accessibility, and user experience
 11. Distribution and the de-Googled requirement
 12. Governance, licensing, and sustainability
-13. Legal positioning
+13. Compliance
 14. Evaluation and comparison with prior art
 15. Limitations and open problems
 16. Roadmap
@@ -68,13 +70,13 @@ are cross-referenced from here.
 ### 1.1 The problem
 
 The reliability of everyday communication in India is not uniform. For hundreds of millions of
-people, connectivity is contingent — on terrain, on weather, on infrastructure investment, and
-on administrative decisions. Three distinct but related failure modes recur:
+people, connectivity is contingent, on terrain, on weather, and on infrastructure investment. Two
+distinct but related failure modes recur:
 
 1. **Coverage gaps.** Cellular and fibre networks are commercially concentrated in dense and
-   prosperous areas. Mountainous, forested, riverine, and remote regions — Ladakh, Arunachal
+   prosperous areas. Mountainous, forested, riverine, and remote regions, Ladakh, Arunachal
    Pradesh and the wider North-East, the Sundarbans delta, tribal districts across central
-   India — have thin, intermittent, or no coverage. For these communities, being "offline" is
+   India, have thin, intermittent, or no coverage. For these communities, being "offline" is
    the normal condition, not the exception.
 
 2. **Disaster-induced collapse.** Natural disasters destroy the very infrastructure that
@@ -83,19 +85,9 @@ on administrative decisions. Three distinct but related failure modes recur:
    coastal networks; Himalayan earthquakes and landslides sever fibre. Communication fails at
    the precise moment it is most needed for rescue and relief.
 
-3. **Administrative shutdowns.** Under the Telecommunications (Temporary Suspension of Services)
-   Rules, 2024 — in force from 22 November 2024 under the Telecommunications Act, 2023, and
-   superseding the 2017 Temporary Suspension of Telecom Services Rules — authorities can order
-   the suspension of telecom services. India has consistently ranked as the country with the highest number of
-   such shutdowns globally (see §13 and References). The Supreme Court of India, in
-   *Anuradha Bhasin v. Union of India* (2020), held that indefinite shutdowns are impermissible
-   and that access to information via the internet is protected under the constitutional right
-   to freedom of speech and expression, subject to proportionality — establishing that
-   resilient communication is a legitimate civic interest.
-
-These three failure modes look different politically but are **identical technically**: a
+These two failure modes look different in cause but are **identical technically**: a
 communication system that assumes always-available centralized infrastructure stops working
-when that infrastructure is absent, destroyed, or disabled.
+when that infrastructure is absent or destroyed.
 
 ### 1.2 The approach
 
@@ -118,17 +110,17 @@ This paper contributes:
   tended to understate;
 - a **cryptographic and routing design** that provides confidentiality, forward secrecy, and
   meaningful metadata protection without any server or registry;
-- a **localization and accessibility** strategy for a genuinely Indian user base — many Indic
+- a **localization and accessibility** strategy for a genuinely Indian user base, many Indic
   languages, low literacy, and inexpensive hardware; and
 - a **legal and governance** framework positioning the project as legitimate civic
   infrastructure under Indian law.
 
 ### 1.4 What this project is not
 
-Project Mesh is not a tool built to defeat any government, and it is not marketed as one. It is
-disaster and rural-connectivity infrastructure whose resilience is uniform: it does not know or
-care *why* the network is unavailable. This positioning is both sincere and load-bearing; it is
-elaborated in §13 and `docs/LEGAL.md`, and all contributors are asked to honour it.
+Project Mesh is disaster and rural-connectivity infrastructure whose resilience is uniform: it
+does not know or care *why* the network is unavailable, only that it is. This is a sincere
+description of the design, not a disguise, and every contributor is asked to keep public
+materials in this same framing (`docs/BETAR-TRANSITION.md` Part 2).
 
 ---
 
@@ -140,7 +132,7 @@ The intellectual foundations are **delay-tolerant networking** (Fall, 2003) and
 **store-carry-forward** routing for intermittently connected networks. Classic DTN routing
 schemes relevant here include **Epidemic routing** (Vahdat & Becker, 2000), **Spray-and-Wait**
 (Spyropoulos et al., 2005), and **PRoPHET** (Lindgren et al.). These trade bandwidth and
-storage for delivery probability in networks with no stable end-to-end path — exactly the
+storage for delivery probability in networks with no stable end-to-end path, exactly the
 regime Project Mesh operates in.
 
 ### 2.2 Consumer mesh messaging apps
@@ -162,8 +154,8 @@ Several consumer applications have attempted phone-to-phone mesh messaging:
 - **Berty** is an open-source, decentralized messenger using BLE and internet transports.
 - **ProtestChat** (ni5arga) is a recent open-source alpha built with React Native/Expo, using a
   BLE-mesh epidemic-relay model. It validated the demand but is Bluetooth-only, chat-only,
-  built on a cross-platform runtime we deliberately avoid (§5), and — by its authors' own
-  documentation — lacks background relaying, a completed ratchet, and any security audit. Its
+  built on a cross-platform runtime we deliberately avoid (§5), and, by its authors' own
+  documentation, lacks background relaying, a completed ratchet, and any security audit. Its
   forward-secrecy and threat-model documents are useful references.
 
 ### 2.3 Long-range radio mesh
@@ -201,31 +193,31 @@ combination.
 
 ### 3.1 Goals
 
-- **G1 — Infrastructure independence.** Core functions must work with zero internet, zero
+- **G1: Infrastructure independence.** Core functions must work with zero internet, zero
   cellular service, and zero central server.
-- **G2 — Decentralization.** No node is required; no registry, directory, or coordinator
+- **G2: Decentralization.** No node is required; no registry, directory, or coordinator
   exists. The network degrades gracefully as nodes join or leave.
-- **G3 — Security by default.** End-to-end encryption, forward secrecy, and no personal
+- **G3: Security by default.** End-to-end encryption, forward secrecy, and no personal
   identifiers, with no configuration required from the user.
-- **G4 — Metadata minimization.** Reduce what a passive observer or a relay can learn about who
+- **G4: Metadata minimization.** Reduce what a passive observer or a relay can learn about who
   is talking to whom.
-- **G5 — Civic utility.** Deliver real value in the *ordinary* rural and disaster case — not
-  only in edge scenarios — through SOS, bulletins, maps, and resource coordination.
-- **G6 — Accessibility.** Usable by low-literacy users, in many Indian languages, on
+- **G5: Civic utility.** Deliver real value in the *ordinary* rural and disaster case, not
+  only in edge scenarios, through SOS, bulletins, maps, and resource coordination.
+- **G6: Accessibility.** Usable by low-literacy users, in many Indian languages, on
   inexpensive Android phones with limited RAM, storage, and battery.
-- **G7 — De-Googled and libre.** No Google Play Services, no Firebase, no proprietary cloud
+- **G7: De-Googled and libre.** No Google Play Services, no Firebase, no proprietary cloud
   dependency; distributable via F-Droid and direct download; open source.
-- **G8 — Honesty.** Ship no claim we cannot substantiate; document every limitation.
+- **G8: Honesty.** Ship no claim we cannot substantiate; document every limitation.
 
 ### 3.2 Non-goals
 
-- **N1 — Anonymity against a global passive adversary.** We provide meaningful metadata
+- **N1: Anonymity against a global passive adversary.** We provide meaningful metadata
   protection, not guarantees against an adversary who can observe the entire radio environment.
-- **N2 — Real-time, high-bandwidth media.** This is a store-carry-forward text-and-small-payload
+- **N2: Real-time, high-bandwidth media.** This is a store-carry-forward text-and-small-payload
   network, not a video-calling platform.
-- **N3 — Seamless iOS background operation.** Apple's platform constraints make this
+- **N3: Seamless iOS background operation.** Apple's platform constraints make this
   impossible; we design *around* it rather than pretending to solve it (§6).
-- **N4 — Guaranteed delivery.** Delivery is best-effort and probabilistic, as is inherent to
+- **N4: Guaranteed delivery.** Delivery is best-effort and probabilistic, as is inherent to
   DTN.
 
 ---
@@ -284,9 +276,9 @@ Project Mesh uses a **shared portable core with thin native front-ends**.
 
 ### 5.1 The shared Rust core
 
-All security-critical and protocol logic — cryptography, packet construction and parsing, the
+All security-critical and protocol logic, cryptography, packet construction and parsing, the
 routing/relay engine, deduplication, expiry, channel and group semantics, onion routing, and
-encrypted persistence — lives in a single **Rust** library. Rationale:
+encrypted persistence, lives in a single **Rust** library. Rationale:
 
 - **Memory safety** for parsing untrusted network input, without a garbage collector.
 - **One implementation** of the hard logic, shared byte-for-byte across platforms, eliminating
@@ -334,16 +326,16 @@ is in [`docs/TRANSPORT.md`](docs/TRANSPORT.md).
 - **Apple MultipeerConnectivity** provides fast iOS ↔ iOS links using Apple's combined
   Bluetooth/peer-to-peer-Wi-Fi stack, but is Apple-only and cannot bridge to Android.
 
-### 6.2 The iOS constraint (stated plainly)
+### 6.2 The iOS constraint
 
 Apple restricts background Bluetooth severely, and no application can remove these limits:
 
 - A backgrounded iOS app **cannot place a custom service UUID in the main advertising packet**;
   the UUID is moved into a special "overflow" area (a hashed bit in a 128-bit bitmask) that is
   only discoverable by a device **explicitly scanning for that specific UUID**. An Android peer
-  that knows the Mesh UUID **can** parse this and discover the iOS peripheral — cross-platform
+  that knows the Mesh UUID **can** parse this and discover the iOS peripheral, cross-platform
   background discovery is *possible* but higher-latency. *(Corrected per
-  `docs/RESEARCH-FINDINGS.md` §3 — an earlier draft wrongly called it impossible.)*
+  `docs/RESEARCH-FINDINGS.md` §3, an earlier draft wrongly called it impossible.)*
 - Overflow advertising is **screen-gated**: it transmits only while the iOS device's screen is
   illuminated. A screen-off backgrounded iOS device goes effectively silent.
 - Background scanning is throttled and de-duplicated; since iOS 14 the advertised service set
@@ -366,7 +358,7 @@ flooded delta. Genuine rural and disaster coverage requires **LoRa** radio:
 - In India, LoRa operates in the **licence-free 865–868 MHz ISM band** (the **IN865** region in
   LoRaWAN/Meshtastic terminology), subject to the Indian regulator's power and duty-cycle
   limits. This is distinct from the EU (868 MHz) and US (915 MHz) bands and is a
-  **hard India-specific design constraint** — see [`docs/HARDWARE-LORA.md`](docs/HARDWARE-LORA.md).
+  **hard India-specific design constraint**, see [`docs/HARDWARE-LORA.md`](docs/HARDWARE-LORA.md).
 - Implemented as an inexpensive companion node (ESP32 + LoRa module such as those used by
   Meshtastic hardware) that a phone pairs with over BLE/USB. Community-owned solar-powered nodes
   can form a village or valley backbone.
@@ -388,7 +380,7 @@ Project Mesh uses **store-carry-forward, epidemic-style dissemination with contr
 node keeps a bounded store of unexpired, sealed **envelopes** it has seen. When two nodes meet,
 they exchange compact **summary vectors** (Bloom filters / ID digests) of what they hold and
 then transfer only the envelopes the other lacks. This "gossip on contact" approach needs no
-addresses, routing tables, or topology knowledge — the correct properties for a network with no
+addresses, routing tables, or topology knowledge, the correct properties for a network with no
 stable paths.
 
 ### 7.2 Controls against the cost of flooding
@@ -425,8 +417,8 @@ Summary here; full specification, including handshake transcripts and key schedu
 
 ### 8.1 Identity
 
-A user is a **self-generated key pair** — a long-term **Ed25519** signing identity and an
-**X25519** key-agreement key — created entirely on-device at first launch. There is **no phone
+A user is a **self-generated key pair**, a long-term **Ed25519** signing identity and an
+**X25519** key-agreement key, created entirely on-device at first launch. There is **no phone
 number, no email, no account, and no registration.** A user's public identity fingerprint can be
 shared out-of-band (QR code shown screen-to-screen, or a short spoken safety string) for
 in-person verification. Trust is rooted in human verification, never in a server.
@@ -446,9 +438,9 @@ in-person verification. Trust is rooted in human verification, never in a server
   9420)**, whose TreeKEM gives forward secrecy, post-compromise security, and **logarithmic**
   (not O(N²)) group key-update cost. *(Updated per `docs/RESEARCH-FINDINGS.md`.)*
 - **Post-quantum:** the handshake adds **PQXDH** (a post-quantum KEM, ML-KEM/Kyber-1024 class,
-  run alongside X25519) to defend against passive "harvest-now, decrypt-later" quantum attacks —
+  run alongside X25519) to defend against passive "harvest-now, decrypt-later" quantum attacks,
   important because store-and-forward envelopes are long-lived. It does **not** stop an active
-  quantum attacker (stated honestly). *(Added per `docs/RESEARCH-FINDINGS.md`.)*
+  quantum attacker. *(Added per `docs/RESEARCH-FINDINGS.md`.)*
 - **Channels:** symmetric keys derived from a passphrase using a memory-hard KDF (**Argon2id**),
   with per-message nonces and AEAD sealing.
 
@@ -461,13 +453,13 @@ in-person verification. Trust is rooted in human verification, never in a server
   leak message type.
 - **Optional onion routing:** for direct messages, a **Sphinx-style** layered-encryption packet
   lets the sender route through several relays such that no single relay learns both source and
-  destination — providing **relationship anonymity within the mesh** (subject to the non-goals
+  destination, providing **relationship anonymity within the mesh** (subject to the non-goals
   in §3.2 and §4).
 
 ### 8.4 At rest
 
 All local storage (messages, keys, contacts) is encrypted at rest with AEAD
-(ChaCha20-Poly1305 over **redb**, a pure-Rust embedded store — a deliberate deviation from an
+(ChaCha20-Poly1305 over **redb**, a pure-Rust embedded store, a deliberate deviation from an
 earlier SQLCipher plan, since `rusqlite`'s SQLCipher backend needs an OpenSSL build this
 project's toolchain couldn't produce; same encrypted-at-rest security property, different
 engine, see `docs/PROGRESS.md`), with the database key protected by the device keystore / Secure
@@ -486,18 +478,18 @@ substrate. Full detail in [`docs/FEATURES.md`](docs/FEATURES.md).
 - **Emergency SOS.** One-tap, high-priority broadcast of a help request with optional coarse
   location, propagated preferentially through the mesh and to any LoRa gateway. Designed for
   disaster and medical emergencies.
-- **Disaster bulletin board.** A local, store-and-forward notice board for civic information —
+- **Disaster bulletin board.** A local, store-and-forward notice board for civic information:
   relief-camp locations, water and medicine availability, road/bridge status, missing-person
   notices. Signed by the poster's key; optionally endorsed by known responder keys.
 - **Offline maps.** OpenStreetMap vector tiles rendered with **MapLibre**, fully offline from
-  pre-downloaded regional packs (MBTiles/PMTiles). Users can drop and share pins — safe zones,
-  relief, hazards, water — over the mesh. No Google Maps, no network calls.
-- **Community resource board.** A local "have / need" exchange — food, shelter, transport,
-  tools, blood donors — for both everyday rural coordination and disaster relief.
+  pre-downloaded regional packs (MBTiles/PMTiles). Users can drop and share pins, safe zones,
+  relief, hazards, water, over the mesh. No Google Maps, no network calls.
+- **Community resource board.** A local "have / need" exchange, food, shelter, transport,
+  tools, blood donors, for both everyday rural coordination and disaster relief.
 - **Messaging.** Direct, group (bounded membership), passphrase channels, and public
   "everyone nearby" broadcast, all end-to-end encrypted, with store-and-forward delivery.
 - **Voice notes and small images** (bandwidth-permitting, transport-dependent), important for
-  low-literacy users — **not yet implemented**; Phase 1 shipped text-only messaging across all
+  low-literacy users, **not yet implemented**; Phase 1 shipped text-only messaging across all
   four addressing modes.
 
 Emergency and safety traffic is prioritized by the routing engine over ordinary messaging.
@@ -510,7 +502,7 @@ Full detail in [`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md). Principles:
 
 - **Many Indian languages, done properly.** First-class support for major Indic scripts and
   languages (Hindi, Bengali, Assamese, Bodo, and others prioritized by the regions served),
-  using open fonts (e.g. Noto) with correct complex-script shaping — not merely English with a
+  using open fonts (e.g. Noto) with correct complex-script shaping, not merely English with a
   translated string table.
 - **Low-literacy first.** Icon-led navigation, large touch targets, voice notes, and optional
   audio prompts, so that reading fluency is not a prerequisite for calling for help or reading a
@@ -529,11 +521,11 @@ Full detail in [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
 
 - **No Google Play Services, no Firebase, no proprietary cloud.** Notifications, background
   execution, and mapping are all implemented without Google's proprietary layer. This is both a
-  values requirement and a robustness requirement — the app must run on de-Googled and
+  values requirement and a robustness requirement, the app must run on de-Googled and
   custom-ROM devices and in environments with no Google connectivity.
 - **Android delivery** via **F-Droid**, **IzzyOnDroid**, and direct signed **APK**, with an
   optional Play listing built from the same source. **Reproducible builds** so that anyone can
-  verify the published binary matches the public source — essential for a security tool. Current
+  verify the published binary matches the public source, essential for a security tool. Current
   state: the first GitHub release (`v0.1.0-prealpha`) ships a direct, **debug-signed** APK;
   F-Droid build metadata and a pinned toolchain exist (`metadata/`,
   [`docs/REPRODUCIBLE-BUILD.md`](docs/REPRODUCIBLE-BUILD.md)), with same-machine build
@@ -548,46 +540,36 @@ Full detail in [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
 
 Full detail in [`docs/GOVERNANCE.md`](docs/GOVERNANCE.md).
 
-- **Licence.** Decided and shipped: **AGPL-3.0-or-later** (`LICENSE`, canonical GNU text) — a
+- **Licence.** Decided and shipped: **AGPL-3.0-or-later** (`LICENSE`, canonical GNU text), a
   copyleft licence over a permissive one so that improvements to public-good infrastructure
   remain open, and the network-use clause specifically closes the "run it as a hosted service
   without sharing changes" gap a plain GPL leaves. (ProtestChat's MIT choice permits closed
   forks; for civic commons we lean copyleft.) Documentation is CC BY-SA 4.0.
-- **Stewardship.** Konko Maji stewards the project as a transparent, named, non-profit-style
-  initiative with a public mission centred on disaster and rural connectivity — which is also the
-  correct legal posture (§13).
+- **Stewardship.** The project is stewarded as a transparent, mission-driven initiative with a
+  public mission centred on disaster and rural connectivity, attributed to the project and its
+  public source rather than to a named individual (`docs/GOVERNANCE.md`).
 - **Open contribution.** Public specification, open issue tracker, and a contributor guide,
-  including a **language and framing discipline** (§13) that every contributor agrees to.
+  including a **language and framing discipline** (`docs/BETAR-TRANSITION.md` Part 2) that every
+  contributor agrees to.
 - **Sustainability.** Grant funding aligned with disaster-resilience and digital-inclusion
   missions; community-run hardware nodes; no data monetization (there is no data to monetize).
 
 ---
 
-## 13. Legal positioning
+## 13. Compliance
 
-Full detail in [`docs/LEGAL.md`](docs/LEGAL.md). This is not legal advice; qualified Indian
-counsel (e.g. the Software Freedom Law Centre, India) should review before any launch. The
-doctrine:
+Full detail in [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md). This is not legal advice; qualified
+counsel should review before any launch.
 
-- **Primary identity is disaster and rural civic technology** — genuinely, not as a disguise.
-  The features in §9 are real and are the point. Public materials (repository, store listings,
-  website) lead with disaster resilience and rural connectivity; the shutdown-resilience
-  property is never marketed and never named in project communications.
-- **Structural legal shields.** Because the system has **no server, no user database, and no
-  personal identifiers**, there is nothing to hand over and no "significant social media
-  intermediary" traceability obligation of the kind imposed by the IT Rules, 2021 is triggered
-  in the ordinary case. End-to-end encryption is lawful in India. The absence of a central
-  operator is a deliberate compliance property, not only a technical one.
-- **Alignment, not opposition.** Disaster-resilient, rural-connectivity communication aligns
-  with stated national goals (disaster management and rural digital inclusion) and with the
-  Supreme Court's recognition in *Anuradha Bhasin* that access to information is
-  constitutionally significant.
-- **Naming and branding.** Avoid names implying government patronage or colliding with
-  government programmes (e.g. "BharatNet"), which raise both confusion and, under the Emblems and
-  Names (Prevention of Improper Use) Act, 1950, registration friction.
-- **Framing discipline.** Contributors avoid framing the tool as "anti-government" or "for
-  circumventing shutdowns"; the consistent language is "communication that works when networks
-  are down."
+- **No server, no user database, no personal identifiers.** There is nothing to hand over and no
+  service backend for a traceability obligation to attach to. End-to-end encryption is lawful in
+  India. The absence of a central operator is a deliberate design property, not only a compliance
+  one.
+- **Spectrum.** The LoRa backbone (§6.3) operates in India's licence-free IN865 band under the
+  duty-cycle and power limits in [`docs/HARDWARE-LORA.md`](docs/HARDWARE-LORA.md); type approval
+  and spectrum compliance for any deployment is the deployer's responsibility.
+- **Licence and warranty.** AGPL-3.0-or-later, provided as is, with no warranty; see
+  `docs/COMPLIANCE.md` and `LICENSE` for the full terms.
 
 ---
 
@@ -599,16 +581,16 @@ doctrine:
 | Security-first / audited design | No | No (broken) | Yes | Alpha, no audit | Yes | **Yes (goal)** |
 | Forward secrecy (ratchet) | No | No | Yes | Not yet | Channel keys | **Yes** |
 | Android ↔ iOS bridge | Partial | Yes | Android-first | In progress | Companion | **Yes (BLE)** |
-| Honest iOS-background stance | — | — | — | Partial | N/A | **Yes** |
+| Honest iOS-background stance | N/A | N/A | N/A | Partial | N/A | **Yes** |
 | Long-range (LoRa) backbone | No | No | No | No | **Yes** | **Yes (Phase 3)** |
-| India LoRa band (IN865) | — | — | — | — | Yes | **Yes** |
+| India LoRa band (IN865) | N/A | N/A | N/A | N/A | Yes | **Yes** |
 | Civic features beyond chat | No | No | Limited | No | Limited | **Yes** |
 | Offline de-Googled maps | No | No | No | No | Basic | **Yes** |
 | Indic-language, low-literacy UX | No | No | Partial | No | No | **Yes** |
 | Fully de-Googled distribution | No | No | Yes | Partial | Yes | **Yes** |
 
 Phase 1 (phone-to-phone core) is now implemented and released (`v0.1.0-prealpha`), verified on a
-real Android emulator, not only unit-tested in isolation — 191 core tests, plus a DTN simulation
+real Android emulator, not only unit-tested in isolation, 191 core tests, plus a DTN simulation
 harness (`core/src/dtn_sim.rs`) that drives the real relay engine through scripted contact
 schedules rather than a reimplemented protocol. The "Yes" entries for phone-level rows (forward
 secrecy, Android↔iOS BLE bridge groundwork, civic features, offline maps, de-Googled
@@ -652,49 +634,46 @@ These are documented, not hidden, in keeping with goal G8.
 
 The phased plan is maintained in [`docs/ROADMAP.md`](docs/ROADMAP.md). In brief:
 
-- **Phase 1 — Core (Android-first). Implemented and released as `v0.1.0-prealpha`.** Rust core
+- **Phase 1, Core (Android-first). Implemented and released as `v0.1.0-prealpha`.** Rust core
   (identity, Noise → Double Ratchet, PQXDH hybrid post-quantum bootstrap, MLS groups, Argon2id
-  channels, store-carry-forward engine, envelope padding, encryption at rest — 191 tests); real
+  channels, store-carry-forward engine, envelope padding, encryption at rest, 191 tests); real
   BLE GATT + Wi-Fi Direct drivers; SOS, disaster bulletin, offline map rendering, resource board,
   and all four messaging modes, verified on-device. **Not yet done from the original Phase 1
-  scope:** Indic-language translations (deliberately deferred — community-contributed, by
+  scope:** Indic-language translations (deliberately deferred, community-contributed, by
   design), a real F-Droid submission (build metadata and reproducible-build groundwork exist;
   no submission made yet), physical-device/two-device verification, offline map *data*
-  (OpenStreetMap tile packs — the rendering pipeline is done, the tile data is not), and an
+  (OpenStreetMap tile packs, the rendering pipeline is done, the tile data is not), and an
   independent security audit.
-- **Phase 2 — Reach and hardening.** iOS front-end (with the honest background model); more
-  languages; performance tuning for low-end devices; onion-routing option; independent security
-  audit.
-- **Phase 3 — Hybrid (LoRa backbone).** LoRa companion-node bridge in the IN865 band; reference
+- **Phase 2, Reach and hardening.** iOS front-end (built to the same background-BLE constraints
+  described in §6.2); more languages; performance tuning for low-end devices; onion-routing
+  option; independent security audit.
+- **Phase 3, Hybrid (LoRa backbone).** LoRa companion-node bridge in the IN865 band; reference
   solar node design; open contribution model for community node builders.
-- **Phase 4 — Ecosystem.** Community node networks, governance maturity, reproducible-build
+- **Phase 4, Ecosystem.** Community node networks, governance maturity, reproducible-build
   verification, and field partnerships with disaster-response and rural-connectivity
   organizations.
-
-Shutdown-resilience is present from Phase 1 as an emergent property, never as a stated feature.
 
 ---
 
 ## 17. Conclusion
 
-India's communication failures in coverage gaps, disasters, and shutdowns are one problem
-wearing three faces: dependence on centralized infrastructure. Project Mesh answers that
-problem with a decentralized, server-less, end-to-end encrypted mesh that works phone-to-phone
-today and across a long-range LoRa backbone tomorrow, wrapped in a genuine civic-resilience
-feature set, built for India's languages and devices, distributed free of proprietary
-dependencies, and positioned honestly and lawfully as the disaster and rural-connectivity
-infrastructure it truly is. The design is deliberately candid about what is hard and what is
-impossible; the value of a resilience tool lies entirely in whether its claims are true. The
-next step is implementation of Phase 1 and independent scrutiny of both this design and the code
-that follows.
+India's communication failures in coverage gaps and disasters are one problem wearing two faces:
+dependence on centralized infrastructure. Project Mesh answers that problem with a
+decentralized, server-less, end-to-end encrypted mesh that works phone-to-phone today and across
+a long-range LoRa backbone tomorrow, wrapped in a genuine civic-resilience feature set, built for
+India's languages and devices, distributed free of proprietary dependencies, and positioned
+honestly as the disaster and rural-connectivity infrastructure it truly is. The design is
+deliberately candid about what is hard and what is impossible; the value of a resilience tool
+lies entirely in whether its claims are true. The next step is independent scrutiny of both this
+design and the code that implements it.
 
 ---
 
 ## 18. References
 
-A consolidated, linked bibliography — DTN routing, Noise, Double Ratchet, Sphinx/Loopix/Nym, the
+A consolidated, linked bibliography, DTN routing, Noise, Double Ratchet, Sphinx/Loopix/Nym, the
 Bridgefy analysis, Briar, Meshtastic, MapLibre/OpenStreetMap, the Indian LoRa band, the
 Telecommunications (Temporary Suspension of Services) Rules 2024 and the Telecommunications Act
 2023 (superseding the 2017 Suspension Rules), *Anuradha Bhasin v. Union of India* (2020),
-shutdown trackers, and the IT Rules 2021 — is maintained in
+shutdown trackers, and the IT Rules 2021, is maintained in
 [`docs/REFERENCES.md`](docs/REFERENCES.md).

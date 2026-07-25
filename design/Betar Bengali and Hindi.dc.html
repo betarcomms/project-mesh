@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&family=Noto+Sans+Bengali:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E3EBF2;font-family:'Noto Sans',system-ui,sans-serif;color:#101A22}
+a{color:#12608F}a:hover{color:#0d4a6e}
+@keyframes betar-ripple{0%{transform:scale(.45);opacity:.55}70%{opacity:0}100%{transform:scale(1.6);opacity:0}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 28px;max-width:1080px">
+  <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">Bengali, Hindi and 200 percent text</div>
+  <div style="font-size:17px;line-height:1.6;color:#3A4B57;margin-top:10px">Proof that the layout survives longer strings and complex script shaping. These strings are <b>my draft</b>, written to be checked, not shipped — every one is listed in the review table under the frames so a translator can correct them in place. The layout findings hold whatever the final wording is.</div>
+  <div style="background:#F6EBD2;border-radius:22px;padding:16px 20px;margin-top:18px;max-width:820px;font-size:16px;line-height:1.55;color:#5C3D00">Nothing here is machine translated into the UI without review. If a string looks wrong to you, it is the string that is wrong, not the frame.</div>
+</section>
+
+<section style="padding:0 56px 40px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">L · THE SAME TWO SCREENS IN THREE SETTINGS</div>
+  <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start">
+    <sc-for list="{{ frames }}" as="f" hint-placeholder-count="5">
+      <div style="display:flex;flex-direction:column;gap:9px;width:360px">
+        <div style="font-size:15px;font-weight:700">{{ f.title }}</div>
+        <div data-screen-label="{{ f.title }}" style="width:360px;height:800px;border-radius:28px;overflow:hidden;box-shadow:0 12px 40px rgba(16,26,34,.16);background:#EEF4F9;position:relative">{{ f.node }}</div>
+        <div style="font-family:'Noto Sans Mono',monospace;font-size:11px;line-height:1.5;color:#4A5B67;max-width:360px">{{ f.note }}</div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="padding:0 56px 72px;max-width:1080px">
+  <div style="font-family:'Noto Sans Mono',monospace;font-size:12px;letter-spacing:.1em;color:#4A5B67;margin-bottom:16px">M · WHAT THE PROOF SHOWED, AND THE STRINGS TO CHECK</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px">
+    <div style="background:#F7FAFD;border-radius:24px;padding:20px 22px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:10px">Findings</div>
+      <ul style="margin:0;padding-left:18px;font-size:16px;line-height:1.65;color:#1E2C36">
+        <li>Bengali runs 15 to 30 percent longer than English at the same point size. Every one line label in the app has to survive two lines.</li>
+        <li>Line height 1.5 clears Bengali matras and the Devanagari shirorekha. At 1.35 the row above starts to collide.</li>
+        <li>Nav labels are the tightest spot. Five destinations at 12sp in Bengali need 60dp of width, which is what the 72dp slot gives.</li>
+        <li>At 200 percent text the emergency tiles stay two across by dropping the word to two lines, never by shrinking the pictogram.</li>
+      </ul>
+    </div>
+    <div style="background:#F7FAFD;border-radius:24px;padding:20px 22px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:10px">Rules this locks in</div>
+      <ul style="margin:0;padding-left:18px;font-size:16px;line-height:1.65;color:#1E2C36">
+        <li>No fixed height on anything containing text. Min height only.</li>
+        <li>No text truncation on emergency or delivery state. Wrap instead.</li>
+        <li>Pictogram and shape sizes never scale with the font. They are the fallback when the words get long.</li>
+        <li>Numerals follow the language: Bengali digits in Bengali, Devanagari digits in Hindi, and the same digits inside timestamps.</li>
+      </ul>
+    </div>
+  </div>
+  <div style="background:#F7FAFD;border-radius:24px;padding:8px 22px">{{ stringTable }}</div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+const R = React;
+const h = (t, s, k, x) => R.createElement(t, Object.assign({style: s}, x || {}), k);
+function polar(fn,steps){const p=[];for(let i=0;i<steps;i++){const a=(i/steps)*Math.PI*2;const r=fn(a);p.push((50+Math.cos(a)*r*50).toFixed(2)+'% '+(50+Math.sin(a)*r*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const lobed=(n,b,am,rot)=>polar(a=>b+am*Math.cos(n*(a-(rot||0))),200);
+function regular(n,rot){const p=[];for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+(rot||0);p.push((50+Math.cos(a)*50).toFixed(2)+'% '+(50+Math.sin(a)*50).toFixed(2)+'%');}return 'polygon('+p.join(',')+')';}
+const S={cookie9:lobed(9,.84,.16,0),clover4:lobed(4,.74,.26,Math.PI/4),scallop12:lobed(12,.88,.12,0),burst8:lobed(8,.72,.28,0),
+  pentagon:regular(5,-Math.PI/2),hexagon:regular(6,-Math.PI/2),diamond:'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'};
+const C={ground:'#EEF4F9',lift:'#F7FAFD',tint:'#DCE9F5',ink:'#101A22',muted:'#4A5B67',deep:'#12608F',brand:'#4BA3E0',red:'#C8102E',green:'#2E7D32',amber:'#9A6700'};
+const BN="'Noto Sans Bengali','Noto Sans',sans-serif";
+const HI="'Noto Sans Devanagari','Noto Sans',sans-serif";
+
+const glyph=(kind,col,size)=>{
+  const sets={waiting:{l:[],n:[[16,16,4.5,'none']]},travelling:{l:[[10,20,22,12]],n:[[9,21,4,col],[23,11,4,'none']]},
+    spreading:{l:[[8,22,16,8],[8,22,25,20],[16,8,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,3.6,'none']]},
+    delivered:{l:[[8,22,16,8],[16,8,25,20],[8,22,25,20]],n:[[8,23,3.6,col],[16,7,3.6,col],[26,20,5.6,col]]}}[kind];
+  return h('svg',{width:size,height:size,flex:'none'},[
+    ...sets.l.map((v,i)=>R.createElement('line',{key:'l'+i,x1:v[0],y1:v[1],x2:v[2],y2:v[3],stroke:col,strokeWidth:2.2,strokeLinecap:'round',opacity:.6})),
+    ...sets.n.map((v,i)=>R.createElement('circle',{key:'n'+i,cx:v[0],cy:v[1],r:v[2],fill:v[3],stroke:col,strokeWidth:2.2}))],{viewBox:'0 0 32 32'});
+};
+const shell=(kids,font)=>h('div',{position:'absolute',inset:0,display:'flex',flexDirection:'column',fontFamily:font,color:C.ink},kids);
+
+function chats(L,scale){
+  const s=scale||1;
+  return shell([
+    h('div',{height:60*Math.min(s,1.2),flex:'none',display:'flex',alignItems:'center',padding:'0 16px'},
+      h('div',{fontSize:24*s,fontWeight:800,lineHeight:1.35},L.chats),'bar'),
+    h('div',{minHeight:38,flex:'none',display:'flex',alignItems:'center',gap:10,padding:'6px 16px',background:'#DCEEDC'},[
+      h('div',{width:16,height:16,position:'relative',flex:'none',display:'flex',alignItems:'center',justifyContent:'center'},[
+        h('div',{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid '+C.green,animation:'betar-ripple 2.6s ease-out infinite'},null,'r'),
+        h('div',{width:7,height:7,borderRadius:'50%',background:C.green},null,'d')],'w'),
+      h('div',{fontSize:14*s,fontWeight:700,color:'#1B5E20',flex:1,lineHeight:1.5},L.ribbon,'l')],'ribbon'),
+    h('div',{flex:1,minHeight:0,overflow:'hidden',boxSizing:'border-box',padding:'8px 12px 150px',display:'flex',flexDirection:'column',gap:8},
+      L.rows.map((r,i)=>h('div',{background:C.lift,borderRadius:22,padding:'12px 14px',display:'flex',gap:12,alignItems:'center'},[
+        h('div',{width:48,height:48,flex:'none',background:C.tint,clipPath:S.cookie9,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:700,color:C.deep},r.initial,'a'),
+        h('div',{flex:1,minWidth:0},[
+          h('div',{display:'flex',gap:8,alignItems:'baseline'},[
+            h('div',{fontSize:18*s,fontWeight:700,flex:1,lineHeight:1.5,overflowWrap:'anywhere'},r.name,'n'),
+            h('div',{fontSize:13*s,color:C.muted,flex:'none',lineHeight:1.5},r.time,'t')],'r1'),
+          h('div',{display:'flex',alignItems:'flex-start',gap:7,marginTop:3},[
+            glyph(r.kind,r.kind==='delivered'?C.green:C.deep,17),
+            h('div',{fontSize:15*s,color:C.muted,flex:1,lineHeight:1.5,overflowWrap:'anywhere'},r.snippet,'s')],'r2')],'x')],i)),'list'),
+    h('div',{position:'absolute',right:16,bottom:96,height:56,borderRadius:20,background:C.red,display:'flex',alignItems:'center',gap:8,padding:'0 16px',boxShadow:'0 6px 18px rgba(200,16,46,.4)'},[
+      h('div',{width:20,height:20,background:'#fff',clipPath:S.burst8},null,'i'),
+      h('div',{fontSize:18,fontWeight:800,color:'#fff'},L.sos,'t')],'sos'),
+    h('div',{minHeight:82,flex:'none',background:C.lift,display:'flex',alignItems:'flex-start',padding:'8px 4px 6px'},
+      L.nav.map((label,i)=>h('div',{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5,minWidth:0},[
+        h('div',{width:56,height:30,borderRadius:15,background:i===0?C.tint:'transparent',display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},
+          h('div',{width:20,height:20,background:i===0?C.deep:'#5A6B77',clipPath:[S.cookie9,S.scallop12,S.hexagon,S.clover4,S.pentagon][i]}),'p'),
+        h('div',{fontSize:12*s,fontWeight:i===0?700:500,color:i===0?C.deep:C.muted,textAlign:'center',lineHeight:1.4,overflowWrap:'anywhere'},label,'l')],i)),'nav')
+  ],L.font);
+}
+
+function emergency(L,scale){
+  const s=scale||1;
+  return shell([
+    h('div',{minHeight:64,flex:'none',display:'flex',alignItems:'center',gap:12,padding:'10px 16px'},[
+      h('div',{width:44,height:44,flex:'none',borderRadius:14,background:'#F3D8DC',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,color:'#8C0B20'},'✕','x'),
+      h('div',{fontSize:24*s,fontWeight:800,color:'#8C0B20',lineHeight:1.35,flex:1},L.what,'t')],'bar'),
+    h('div',{padding:'0 16px 8px',fontSize:16*s,color:'#6B3037',lineHeight:1.5,flex:'none'},L.hold,'sub'),
+    h('div',{flex:1,minHeight:0,overflow:'hidden',padding:'12px 16px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,alignContent:'start',boxSizing:'border-box'},
+      L.cats.map((c,i)=>h('div',{minHeight:132,borderRadius:26,background:C.lift,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,padding:'12px 8px',boxSizing:'border-box',gridColumn:i===4?'span 2':'auto'},[
+        h('div',{width:58,height:58,flex:'none',background:C.red,clipPath:[S.clover4,S.pentagon,S.burst8,S.diamond,S.cookie9][i],display:'flex',alignItems:'center',justifyContent:'center'},
+          h('div',{width:21,height:21,borderRadius:11,border:'2px dashed rgba(255,255,255,.75)',fontFamily:"'Noto Sans Mono',monospace",fontSize:7,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center'},c[1]),'p'),
+        h('div',{fontSize:19*s,fontWeight:800,textAlign:'center',lineHeight:1.4,overflowWrap:'anywhere'},c[0],'l')],i)),'grid'),
+    h('div',{padding:'12px 16px 24px',flex:'none'},
+      h('div',{background:'#F3D8DC',borderRadius:22,padding:'14px 16px',fontSize:15*s,lineHeight:1.55,color:'#6B3037'},L.foot),'f')
+  ],L.font);
+}
+
+const BNL={font:BN,chats:'চ্যাট',ribbon:'যুক্ত আছে · কাছে ৩টি ফোন',sos:'SOS',
+  nav:['চ্যাট','কাছাকাছি','বোর্ড','মানচিত্র','আপনি'],
+  rows:[{initial:'র',name:'রুমা দিদি',snippet:'তুমি কি বাড়ি পৌঁছেছ',time:'১৪:২০',kind:'delivered'},
+    {initial:'চ',name:'চর বাগান গ্রাম',snippet:'নৌকা ছাড়বে ছয়টায়',time:'১৩:৫৫',kind:'spreading'},
+    {initial:'আ',name:'আনোয়ার',snippet:'কণ্ঠবার্তা · ০:১২',time:'১২:৪০',kind:'travelling'},
+    {initial:'ত',name:'ত্রাণ শিবির ২',snippet:'কম্বল এসে পৌঁছেছে',time:'১১:০২',kind:'delivered'},
+    {initial:'শ',name:'শেফালী',snippet:'আমি জল নিয়ে আসছি',time:'০৯:৪৮',kind:'waiting'}],
+  what:'কী হয়েছে?',hold:'চেপে ধরে রাখলে পড়ে শোনানো হবে।',
+  cats:[['চিকিৎসা','MED'],['আটকে আছি','TRAP'],['আগুন','FIRE'],['বিপদ','DANG'],['অন্য কিছু','OTHR']],
+  foot:'আপনার বার্তা ফোন থেকে ফোনে যাবে। কাছের মানুষ প্রথমে পাবে, ফোন সরলে আরও দূরে পৌঁছবে।'};
+
+const HIL={font:HI,chats:'चैट',ribbon:'जुड़ा है · पास में 3 फ़ोन',sos:'SOS',
+  nav:['चैट','आस-पास','बोर्ड','नक़्शा','आप'],
+  rows:[{initial:'रु',name:'रुमा दीदी',snippet:'क्या तुम घर पहुँच गईं',time:'१४:२०',kind:'delivered'},
+    {initial:'च',name:'चर बागान गाँव',snippet:'नाव छह बजे निकलेगी',time:'१३:५५',kind:'spreading'},
+    {initial:'अ',name:'अनवर',snippet:'आवाज़ संदेश · ०:१२',time:'१२:४०',kind:'travelling'},
+    {initial:'रा',name:'राहत शिविर 2',snippet:'कंबल आ गए हैं',time:'११:०२',kind:'delivered'},
+    {initial:'श',name:'शेफ़ाली',snippet:'मैं पानी लेकर आ रही हूँ',time:'०९:४८',kind:'waiting'}],
+  what:'क्या हुआ है?',hold:'दबाकर रखें तो पढ़कर सुनाया जाएगा।',
+  cats:[['चिकित्सा','MED'],['फँसे हुए हैं','TRAP'],['आग','FIRE'],['ख़तरा','DANG'],['कुछ और','OTHR']],
+  foot:'आपका संदेश फ़ोन से फ़ोन तक जाता है। पास के लोग पहले पाते हैं, फ़ोन चलने पर संदेश और दूर पहुँचता है।'};
+
+class Component extends DCLogic {
+  renderVals(){
+    const strings=[
+      ['chats.title','Chats','চ্যাট','चैट'],
+      ['mesh.connected','Connected · 3 phones nearby','যুক্ত আছে · কাছে ৩টি ফোন','जुड़ा है · पास में 3 फ़ोन'],
+      ['nav.nearby','Nearby','কাছাকাছি','आस-पास'],
+      ['nav.board','Board','বোর্ড','बोर्ड'],
+      ['nav.map','Map','মানচিত্র','नक़्शा'],
+      ['nav.you','You','আপনি','आप'],
+      ['sos.question','What is happening?','কী হয়েছে?','क्या हुआ है?'],
+      ['sos.hold','Press and hold a tile to hear it read out.','চেপে ধরে রাখলে পড়ে শোনানো হবে।','दबाकर रखें तो पढ़कर सुनाया जाएगा।'],
+      ['cat.medical','Medical','চিকিৎসা','चिकित्सा'],
+      ['cat.trapped','Trapped','আটকে আছি','फँसे हुए हैं'],
+      ['cat.fire','Fire','আগুন','आग'],
+      ['cat.danger','Danger','বিপদ','ख़तरा'],
+      ['cat.other','Other','অন্য কিছু','कुछ और'],
+      ['msg.voice','Voice note','কণ্ঠবার্তা','आवाज़ संदेश']
+    ];
+    return {
+      frames:[
+        {title:'Chats · Bengali',node:chats(BNL),note:'Longest row name is 30 percent wider than the English original and still fits on one line. Ribbon and nav labels checked for matra clearance.'},
+        {title:'Emergency · Bengali',node:emergency(BNL),note:'আটকে আছি wraps to two lines inside the tile; the tile grows, the pictogram does not shrink.'},
+        {title:'Chats · Hindi',node:chats(HIL),note:'Shirorekha stays unbroken at 18sp with 1.5 line height. Devanagari digits used in timestamps.'},
+        {title:'Emergency · Hindi',node:emergency(HIL),note:'फँसे हुए हैं is the longest category label in any language so far. It sets the tile minimum height.'},
+        {title:'Chats · Bengali at 200 percent text',node:chats(BNL,2),note:'Everything reflows, nothing truncates, no row loses its delivery glyph. Touch targets do not shrink.'}
+      ],
+      stringTable:h('div',null,[
+        h('div',{display:'grid',gridTemplateColumns:'160px 1fr 1fr 1fr',gap:'0 16px',padding:'14px 0',borderBottom:'2px solid #DCE9F5',fontSize:13,fontWeight:800,letterSpacing:'.05em',color:C.muted,fontFamily:"'Noto Sans Mono',monospace"},
+          ['KEY','ENGLISH','BENGALI · DRAFT','HINDI · DRAFT'].map((t,i)=>h('div',null,t,i)),'head')
+      ].concat(strings.map((r,i)=>
+        h('div',{display:'grid',gridTemplateColumns:'160px 1fr 1fr 1fr',gap:'0 16px',padding:'12px 0',borderBottom:'1px solid #E7EFF6',alignItems:'baseline'},[
+          h('div',{fontFamily:"'Noto Sans Mono',monospace",fontSize:12.5,color:C.deep},r[0],'k'),
+          h('div',{fontSize:16,lineHeight:1.5},r[1],'e'),
+          h('div',{fontSize:17,lineHeight:1.6,fontFamily:BN},r[2],'b'),
+          h('div',{fontSize:17,lineHeight:1.6,fontFamily:HI},r[3],'h')],'r'+i))))
+    };
+  }
+}
+</script>
+</body>
+</html>

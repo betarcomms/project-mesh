@@ -53,7 +53,7 @@ where they exist.
 
 - A local **"have / need"** exchange: food, shelter, transport, tools, blood donors, charging
   points, labour.
-- Useful in **ordinary rural life** (not only disasters) — which is deliberate: the platform
+- Useful in **ordinary rural life** (not only disasters), which is deliberate: the platform
   earns daily use so it is present and understood when a crisis hits.
 - Entries are signed, categorized by icon, and TTL-bounded.
 
@@ -71,7 +71,7 @@ where they exist.
 - **Voice notes** are first-class, because they serve **low-literacy** users directly.
 - **Small images** (compressed) where transport allows; large media prefers Wi-Fi Direct.
 - Both respect the routing engine's priority and size rules; over LoRa, media is not forwarded
-  (bit-rate too low) — only text/SOS/bulletins.
+  (bit-rate too low), only text/SOS/bulletins.
 
 ## 7. Cross-cutting behaviour
 
