@@ -50,7 +50,7 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 
 body {
   margin: 0;
@@ -59,7 +59,13 @@ body {
   font-family: 'Noto Sans', system-ui, -apple-system, sans-serif;
   line-height: 1.6;
   font-size: 18px;
+  overflow-x: hidden;
 }
+
+/* Every image/svg on the site must never exceed its container -- the screenshot grid was
+   overflowing on mobile without this, full-resolution 1080px-wide phone captures rendering at
+   native size inside a ~300px-wide card. */
+img, svg { max-width: 100%; height: auto; display: block; }
 
 a { color: var(--deep-blue); }
 a:hover { color: var(--brand-blue); }
@@ -181,6 +187,34 @@ p { margin: 0 0 16px; max-width: 68ch; }
 .card:nth-child(4n+4) .shape-accent { clip-path: var(--shape-cookie9); background: var(--brand-blue); }
 
 .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin: 24px 0; }
+
+/* Phone-frame treatment for on-device screenshots: a fixed-width column so three portrait
+   captures line up evenly regardless of each screen's actual content height, a visible bezel so
+   it reads as a device photo rather than a stray floating image, and a subtle lift on hover to
+   match the rest of the site's expressive motion language. */
+.screenshot-card { text-align: center; }
+.screenshot-frame {
+  max-width: 220px;
+  margin: 0 auto 16px;
+  border-radius: 28px;
+  border: 6px solid var(--ink);
+  overflow: hidden;
+  box-shadow: 0 16px 32px -16px rgba(16, 26, 34, .35);
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+.screenshot-frame img { border-radius: 20px; }
+.screenshot-card:hover .screenshot-frame { transform: translateY(-4px) scale(1.02); }
+
+@media (prefers-color-scheme: dark) {
+  .screenshot-frame { border-color: var(--outline); }
+}
+
+@media (max-width: 600px) {
+  body { font-size: 17px; }
+  .wrap { padding: 0 18px; }
+  h2 { margin: 36px 0 14px; }
+  .screenshot-frame { max-width: 170px; }
+}
 
 .pill {
   display: inline-flex;

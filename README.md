@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/assets/betar-logo.svg" width="120" height="120" alt="Betar logo, a wire cut out of a solid blue field, broken in the middle">
+<img src="docs/assets/betar-banner.png" width="100%" alt="Betar: connect with no network. Communication and safety infrastructure for places the network does not reach. Open source, built on Project Mesh, made in India.">
 
 # Betar
 

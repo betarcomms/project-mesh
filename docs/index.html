@@ -16,10 +16,14 @@
 <meta property="og:title" content="Betar: connect with no network">
 <meta property="og:description" content="Offline messaging and community safety infrastructure for remote areas, cyclones, floods and network outages. No SIM, no internet, no server, no account.">
 <meta property="og:url" content="https://konkomaji.github.io/project-mesh/">
-<meta property="og:image" content="https://konkomaji.github.io/project-mesh/assets/betar-logo.svg">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://konkomaji.github.io/project-mesh/assets/betar-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Betar: connect with no network">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Betar: connect with no network">
 <meta name="twitter:description" content="Offline messaging and community safety infrastructure for remote areas, cyclones, floods and network outages.">
+<meta name="twitter:image" content="https://konkomaji.github.io/project-mesh/assets/betar-banner.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,7 +41,11 @@
   "license": "https://www.gnu.org/licenses/agpl-3.0.html",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "isAccessibleForFree": true,
-  "softwareVersion": "0.1.0-prealpha"
+  "softwareVersion": "0.1.2-prealpha",
+  "downloadUrl": "https://github.com/konkomaji/project-mesh/releases/latest",
+  "installUrl": "https://github.com/konkomaji/project-mesh/releases/latest",
+  "softwareRequirements": "Android 8.0 (API 26) or later",
+  "author": { "@type": "Organization", "name": "Betar", "url": "https://github.com/konkomaji/project-mesh" }
 }
 </script>
 <script type="application/ld+json">
@@ -102,8 +110,28 @@
       <h1>Betar. Connect with no network.</h1>
       <p class="lede" style="margin-left:auto;margin-right:auto">Betar is communication and safety infrastructure for places the network does not reach: remote areas, and any time towers go down or power fails. Phones carry messages to each other directly, hop by hop, until one reaches the person it was meant for.</p>
       <div class="actions" style="justify-content:center">
-        <a class="btn" href="https://github.com/konkomaji/project-mesh">View the source</a>
-        <a class="btn secondary" href="about.html">How it works</a>
+        <a class="btn" href="https://github.com/konkomaji/project-mesh/releases/latest">Download the APK</a>
+        <a class="btn secondary" href="https://github.com/konkomaji/project-mesh">View the source</a>
+      </div>
+      <p style="font-size:14px;color:var(--slate)">Android 8.0 and up &middot; pre-alpha, signed release &middot; free, no account</p>
+    </section>
+
+    <section>
+      <h2>Why Betar exists</h2>
+      <p class="lede">Communication that depends on centralized infrastructure fails exactly when that infrastructure is absent, destroyed, or unavailable. Betar removes the dependency.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>Coverage gaps</h3>
+          <p>Hill country, islands, forest and river regions, high valleys: weak, intermittent, or absent cellular and fibre coverage, every day, not just during a crisis.</p>
+        </div>
+        <div class="card">
+          <h3>Disasters</h3>
+          <p>Cyclones, floods and earthquakes routinely destroy communication infrastructure exactly when people need it most.</p>
+        </div>
+        <div class="card">
+          <h3>Any outage</h3>
+          <p>Towers go down for whatever reason, for as long as it lasts. Betar keeps working the whole time.</p>
+        </div>
       </div>
     </section>
 
@@ -170,22 +198,35 @@
       <h2>Real screens, not mockups</h2>
       <p>Captured from an actual on-device run. English shown here; Bengali ships as an equal default language, not a translation afterthought.</p>
       <div class="grid">
-        <div class="card">
-          <img src="assets/screenshots/onboarding-language.png" alt="Language picker: English and Bengali tiles, no other language" style="border-radius:14px;margin-bottom:12px">
+        <div class="card screenshot-card">
+          <div class="screenshot-frame"><img src="assets/screenshots/onboarding-language.png" alt="Language picker: English and Bengali tiles, no other language"></div>
           <h3>Onboarding</h3>
           <p>Language picker, no account, no login, install to first message in under a minute.</p>
         </div>
-        <div class="card">
-          <img src="assets/screenshots/chats-empty.png" alt="Chats tab: mesh ribbon, teaching empty state, five-tab nav, persistent SOS button" style="border-radius:14px;margin-bottom:12px">
+        <div class="card screenshot-card">
+          <div class="screenshot-frame"><img src="assets/screenshots/chats-empty.png" alt="Chats tab: mesh ribbon, teaching empty state, five-tab nav, persistent SOS button"></div>
           <h3>Chats</h3>
           <p>The mesh ribbon, an empty state that teaches instead of apologising, and the SOS button that never hides.</p>
         </div>
-        <div class="card">
-          <img src="assets/screenshots/emergency-picker.png" alt="Emergency category picker: Medical, Trapped, Fire, Violence, Other, each its own shape" style="border-radius:14px;margin-bottom:12px">
+        <div class="card screenshot-card">
+          <div class="screenshot-frame"><img src="assets/screenshots/emergency-picker.png" alt="Emergency category picker: Medical, Trapped, Fire, Violence, Other, each its own shape"></div>
           <h3>Emergency</h3>
           <p>Five categories, each its own shape and pictogram, readable without literacy or colour.</p>
         </div>
       </div>
+    </section>
+
+    <section>
+      <h2>How to use it</h2>
+      <ol style="font-size:18px;line-height:1.9;padding-left:22px">
+        <li><strong>Install</strong> the APK above, Android 8.0 and up. Android will warn about installing from outside a store, that is expected for a pre-alpha build.</li>
+        <li><strong>Pick English or Bengali.</strong> No account, no phone number, no login screen.</li>
+        <li><strong>Allow three permissions</strong> (nearby devices, location while using, microphone/notifications) and you land on Chats, empty at first.</li>
+        <li><strong>Add somebody</strong> from the new-conversation menu, then verify in person once you are next to them, a short code both phones show, no jargon.</li>
+        <li><strong>Send a message.</strong> Delivery shows honestly as Waiting &rarr; Travelling &rarr; Spreading &rarr; Delivered, never a checkmark that promises more than the mesh can guarantee.</li>
+        <li><strong>The red SOS button</strong> never moves and never hides. Tap it, pick a category, slide to send, a deliberate gesture so it cannot fire by accident.</li>
+      </ol>
+      <p style="font-size:15px;color:var(--slate)">Full walkthrough and known rough edges in the <a href="https://github.com/konkomaji/project-mesh#-user-guide">README's user guide</a>.</p>
     </section>
 
     <section>
