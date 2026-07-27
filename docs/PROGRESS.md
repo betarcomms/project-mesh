@@ -2089,7 +2089,45 @@ truncation point wasn't consistent. Camera-preview ANRs remain the same "no real
 scan-to-scan test" limitation already on record in this file and `IMPLEMENTATION-STATUS.md`, not a
 new regression.
 
-**Verified:** `./gradlew assembleDebug` succeeds with the FAB padding fix included. **Not yet
-done:** live confirmation of `DirectConversationScreen`'s back arrow (the one call site with
-unique `trailing`-slot code, not just a rename of an already-proven pattern) and of
-`ShowMyCodeScreen`'s.
+**Verified:** all six back arrows confirmed tap-to-navigate on a real emulator. No app code
+changed in this pass, docs-only.
+
+## 2026-07-27 — Phase 1 gap audit, two decisions recorded, CHANGELOG.md added, v0.1.3-prealpha cut
+
+**Audited "is Phase 1 everything done" against `IMPLEMENTATION-STATUS.md`, answer: no, and said
+so plainly rather than rounding up.** Rust core is essentially done and tested; the real
+remaining gaps are all in the hardware-dependent native rows: BLE driver builds and advertises but
+has never actually exchanged a frame with a second device (no spare hardware, can't run two
+emulators on this host); Wi-Fi Direct/`MultiTransport` compile-only, same reason; offline maps is
+a rendering pipeline with no real OSM tile data or pin-sharing; `joinFromWelcome` (MLS group join)
+unverified on-device; F-Droid pipeline not actually submitted; the fuzzing harness has never
+actually run (Windows/MSVC linker blocker, documented in `core/fuzz/README.md`). **Also found and
+fixed a real doc-staleness bug while auditing:** the Betar UI redesign row still said "no QR/camera
+library wired (scan-to-add and identity QR are stubbed)" -- false since the QR scan-to-add pass
+two sessions ago. Corrected in place rather than left to mislead the next session.
+
+**A requested feature turned out to be technically infeasible as literally stated, said so
+directly instead of quietly scoping it down or half-building it:** relaying mesh messages through
+nearby devices that don't have Betar installed at all, only Bluetooth toggled on. Standard BLE
+gives a middle device nothing to connect to or forward through without matching software actually
+running on it -- not an Android-specific limitation; even Apple's Find My network, the closest
+real analog, only works because Apple controls the entire stack and every iPhone runs Apple's own
+firmware-level relay agent. No cross-vendor equivalent exists. Recorded so this doesn't get
+re-investigated from scratch next time it comes up.
+
+**Two roadmap decisions recorded, both in `docs/ROADMAP.md`/`docs/IMPLEMENTATION-STATUS.md`
+directly, not just in this log:** iOS (Phase 2) is explicitly paused, deprioritized to last among
+remaining phases, not dropped. Phase 3 (LoRa) planning started the same day, ahead of the
+roadmap's originally stated Phase 2→3 order -- a deliberate reordering, tracked as such rather
+than silently departed from. `docs/HARDWARE-LORA.md` gained a new §8: a concrete near-term
+implementation plan (reference board -- Heltec WiFi LoRa 32 V3 / ESP32-S3 + SX1262 -- the
+phone↔node wire protocol decision of reusing the existing `Envelope` format unchanged over a
+length-prefixed BLE/serial frame, and an ordered task breakdown for once hardware is actually
+acquired). Docs-only, no code, nothing to test without a physical board.
+
+**`CHANGELOG.md` added at the repo root** (Keep a Changelog format, adapted for this project's
+`0.1.x-prealpha` sequential-build versioning rather than strict semver), backfilled with
+0.1.0/0.1.1/0.1.2 from their existing GitHub release notes plus a new 0.1.3-prealpha entry
+summarizing every commit since the 0.1.2 tag: the QR/safety-code work, the full back-arrow pass
+across two sessions, and the "+"-hidden-behind-SOS bug fix. Version bumped in
+`android/app/build.gradle.kts` (`versionCode` 3→4, `versionName` 0.1.2→0.1.3-prealpha).

@@ -105,3 +105,55 @@ Roles:
   1–2 rather than gating the whole project on radios.
 - Regulatory compliance is the **deployer's responsibility**; the project provides conservative
   defaults and documentation, not a legal guarantee.
+
+## 8. Phase 3 near-term implementation plan (2026-07-27, docs-only)
+
+Written to make Phase 3 actionable the moment hardware exists, not to start coding against it
+now: no LoRa board has been acquired in this dev environment, and `core/src/transport.rs`'s
+`MeshTransport` trait (the boundary every driver, including this one, must implement) already
+exists and needs no changes to accommodate LoRa, per §4 above. Nothing in this section is
+implemented; it is the plan for when it is.
+
+**Reference board recommendation:** a Heltec WiFi LoRa 32 (V3) or equivalent ESP32-S3 + SX1262
+board -- widely used by Meshtastic (so IN865 region-plan firmware support is already mature,
+per §5's "interoperate with Meshtastic" strategy), inexpensive, and available with a battery
+connector for the solar/battery relay-node case in §3. Not a final decision, a starting point for
+whoever acquires the first unit: cheapest board with active Meshtastic IN865 support wins,
+re-evaluate if a better-supported option exists by the time hardware is actually ordered.
+
+**Phone ↔ node wire protocol decision:** reuse the existing `Envelope` wire format
+(`core/src/envelope.rs`) unchanged, carried as an opaque payload over a simple length-prefixed
+frame on the phone↔node link (BLE GATT, mirroring `BleTransportDriver`'s existing fragmentation
+header, or USB-serial for a wired bench setup) -- the same "envelopes cross freely between phone
+mesh and LoRa mesh" principle §4 already states, no new envelope/framing format needed, only a new
+`MeshTransport` implementation on the Android side that talks to the node instead of a peer phone,
+and (on the node's firmware side) a minimal bridge that shuttles those same opaque bytes onto the
+LoRa radio within the duty-cycle limits in §2.
+
+**Task breakdown, in order, once a board physically exists:**
+
+1. Bench-flash Meshtastic (or a minimal custom firmware, per §5) configured to the IN865 region
+   plan; confirm it actually transmits/receives on 865-868 MHz with a spectrum-adjacent device or
+   a second board, before writing any Betar-specific code against it.
+2. Define and implement the phone-side `MeshTransport` (a new
+   `android/app/src/main/java/india/projectmesh/app/lora/` driver, same shape as
+   `BleTransportDriver`/`WifiDirectTransportDriver`), talking to the node over BLE GATT using the
+   framing decided above.
+3. Implement the node-firmware bridge that shuttles opaque Betar envelope bytes onto the LoRa
+   radio and back, enforcing the 1% (25 mW class) duty cycle from §2 in firmware, not trusting the
+   phone side to self-limit.
+4. Wire the new driver into `MultiTransport` (`android/app/src/main/java/india/projectmesh/app/MultiTransport.kt`)
+   alongside BLE/Wi-Fi Direct, same peer-handle-remapping pattern already used for the other two.
+5. Bench test: two phones, each paired to its own node, nodes only reachable to each other over
+   LoRa (BLE/Wi-Fi Direct physically disabled or out of range) -- confirm an envelope composed on
+   one phone is delivered to the other purely over the LoRa hop, and that duty-cycle limiting
+   actually throttles a burst of traffic rather than exceeding band limits.
+6. Only after a real bench round trip works: revisit the reference solar relay-node BOM/build
+   guide (§3) with real measured power draw, not the currently-reasoned figures.
+
+**Not decided yet, deliberately left open:** exact GATT service/characteristic UUIDs for the
+phone↔node link (should not collide with `BleTransportDriver`'s own service, since a phone may run
+both a mesh-peer BLE role and a LoRa-node BLE role simultaneously), and whether the node bridge is
+a from-scratch minimal firmware or a Meshtastic plugin/module -- both are real engineering
+decisions that need a board in hand to prototype against, not something to freeze from documentation
+alone.

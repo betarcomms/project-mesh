@@ -34,6 +34,11 @@ messaging, and a green reproducible build on F-Droid.
 
 ## Phase 2: Reach and hardening
 
+> **2026-07-27 decision:** iOS is explicitly paused, deprioritized to last among the remaining
+> phases, not dropped. Phase 3 (LoRa) planning has started ahead of it -- see
+> `docs/HARDWARE-LORA.md` §8 -- a deliberate reordering of this roadmap's stated Phase 2→3
+> sequence, tracked here rather than silently departed from.
+
 - **iOS app:** Swift/SwiftUI; CoreBluetooth driver; MultipeerConnectivity for iOS clusters;
   **honest** foreground "relay mode" model (no false background-relay claims).
 - **Android ↔ iOS** BLE bridging validated.
