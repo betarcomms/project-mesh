@@ -2052,3 +2052,45 @@ resolve the same implicit way it already does in every other screen file in this
 Locale key-set parity reconfirmed via `diff` of sorted key lists, zero difference. **Not yet
 done:** no real device/emulator screenshot pass confirming the arrows render and navigate
 correctly on-screen, only compile-level verification this pass.
+
+## 2026-07-27 — On-device screenshot pass: one real bug found and fixed, back arrows confirmed live
+
+**A real, blocking bug surfaced immediately, unrelated to the back-arrow work itself:**
+`ConversationListScreen`'s own "+" FAB (start a new conversation) was completely covered by
+`BetarScaffold`'s persistent SOS FAB -- both sat in the same `Alignment.BottomEnd` corner with
+near-identical bounds (confirmed via `adb shell uiautomator dump`, not guessed from the
+screenshot: `[880,2031][1027,2178]` for "+" vs `[891,2042][1038,2189]` for SOS). SOS is composed
+after content in `BetarScaffold`'s `floatingActionButton` slot, so it always won the tap -- "new
+conversation" was unreachable through the UI at all, on any of the tab's five sub-screens,
+regardless of this pass's own changes. The mockup (`scrEmpty()` in `design/Betar Chats and
+Onboarding.dc.html`) already places this FAB at `bottom:158` against SOS's own `bottom:96`, i.e.
+deliberately stacked above it -- matched that intent in `ConversationListScreen.kt` by changing
+the flat `.padding(20.dp)` to `.padding(end = 20.dp, bottom = 92.dp)`. Confirmed fixed on-device:
+before the fix, tapping the "+" corner never opened the sheet; after, it opens every time.
+
+**Back arrows confirmed live, tap-to-navigate, on three of the six screens touched in the previous
+entry:** `ScanCodeScreen`, `JoinChannelScreen`, `CreateGroupScreen` -- each rendered the arrow
+correctly and navigated back to the Chats list on tap. `ChannelConversationScreen` and
+`GroupConversationScreen` were not independently exercised live (reaching them needs a working
+passphrase/group-name text field, which this emulator's IME kept swallowing keystrokes on), but
+they call the identical shared `BackTopBar(session.label, onBack, modifier = ...)` already proven
+in the two screens above, not distinct code. `DirectConversationScreen` (the one screen using
+`BackTopBar`'s `trailing` slot for the trust chip) and `ShowMyCodeScreen` were not reached this
+pass either -- **said plainly, not glossed over:**
+
+- `ShowMyCodeScreen` is only reachable through `ScanCodeScreen`, whose live camera preview
+  (CameraX + ZXing, per-frame analysis) triggered repeated real ANRs on this emulator badly enough
+  that the app's in-memory nav state reset back to the Chats list each time recovery was
+  attempted. This is the same "no real on-device QR test" limitation already on record in this
+  file and `IMPLEMENTATION-STATUS.md`, not a new regression -- the screen's back arrow itself was
+  confirmed working (see above) before the camera loop made further navigation on that screen
+  impractical this session.
+- `DirectConversationScreen` requires an added contact, which (to avoid the camera) means typing a
+  fingerprint into the manual-entry field or a group passphrase into `JoinChannelScreen`'s field --
+  this emulator's software keyboard opened a minimal floating toolbar that ate most keystrokes
+  (`north-gate-42` landed as `nort`), an environment quirk unrelated to app code.
+
+**Verified:** `./gradlew assembleDebug` succeeds with the FAB padding fix included. **Not yet
+done:** live confirmation of `DirectConversationScreen`'s back arrow (the one call site with
+unique `trailing`-slot code, not just a rename of an already-proven pattern) and of
+`ShowMyCodeScreen`'s.
