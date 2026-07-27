@@ -12,10 +12,16 @@ not afterthoughts.
   support for major Indic **scripts** with correct complex-script shaping (conjuncts, matras,
   reordering). Use open **Noto** (or equivalent libre) fonts bundled with the app so rendering
   does not depend on the device's font coverage.
-- **Default shipped languages: English and Bengali only.** Every other language, Hindi,
-  Assamese, Bodo, Ladakhi/Bhoti, Meitei, Nepali, Tamil, Telugu, Marathi, Odia and so on, is
-  community-contributed: it ships only once a contributor provides a real translation, not
-  as part of the default install.
+- **Default shipped language: English only, for now.** Bengali is paused (per-user decision,
+  2026-07-26, see `PROGRESS.md`), not dropped: the `values-bn/strings.xml` translation still
+  exists in the repo and the app's own language pickers still carry the Bengali row commented
+  out rather than deleted, so re-enabling it is uncommenting, not redoing the work. Until then,
+  the app builds with `defaultConfig.resourceConfigurations += listOf("en")`
+  (`android/app/build.gradle.kts`), so Bengali is not actually packaged into the APK even though
+  its source strings remain. Every language beyond English, Bengali, Hindi, Assamese, Bodo,
+  Ladakhi/Bhoti, Meitei, Nepali, Tamil, Telugu, Marathi, Odia and so on, is community-contributed:
+  it ships only once a contributor provides a real translation, not as part of the default
+  install.
 - **Right-to-left** and mixed-script handling where relevant (e.g. Urdu), if and when that
   language arrives as a community contribution.
 - Every language past the two defaults is **community-contributed** through the open

@@ -1953,3 +1953,65 @@ independent security audit, two-device hardware verification, CI-run wire-parser
 cross-machine build reproducibility all need resources (an external auditor, physical devices, a
 Linux/CI runner, a second machine) this dev session doesn't have. Onion routing is Phase 2 per
 `ROADMAP.md`, not a Phase 1 requirement, and was not started here.
+
+## 2026-07-27 — Real QR scan-to-add, a safety-code rework, and Bengali paused
+
+**QR scan-to-add is real now**, closing the gap this file and `IMPLEMENTATION-STATUS.md` have
+both flagged since the screens were first built: `ScanCodeScreen.kt`'s camera box used to be a
+static placeholder ("camera preview, not wired yet"). CameraX (`camera-core`/`camera2`/
+`lifecycle`/`view`) plus ZXing's plain `core` artifact (not `com.google.mlkit:barcode-scanning`,
+deliberately, that pulls in a proprietary Google model that conflicts with this project's F-Droid
+goal) now drive a live preview with per-frame decode (`QrCode.kt`'s `QrAnalyzer`), wired into
+`ScanCodeScreen`. `CAMERA` permission is requested contextually when the screen opens, not folded
+into the onboarding permission set, matching `design/Betar Workflow Map.dc.html`'s FLOW 2 branch
+("camera not allowed" gets an amber card, never a dead end, manual fingerprint entry still works).
+**New:** `ShowMyCodeScreen.kt`, the other half of scan-to-add that didn't exist before this pass
+(one device shows a code, the other scans it -- there was previously nothing to scan). Reachable
+from `ScanCodeScreen`'s "Show my code instead" button, matching the workflow map's documented ALT
+route that had no screen behind it yet.
+
+**Safety-code verification reworked, per the user's own spec, replacing the mockup's plain
+alphanumeric code.** `SafetyCode.kt`: a 6-digit number (unique per identity, not shared) plus 3
+emoji, both derived client-side from a SHA-256 digest of the fingerprint's raw bytes -- the emoji
+are the actual comparison target: two devices holding the same fingerprint independently derive
+the same 3 emoji, so a mismatch catches a substituted identity in transit, the same purpose a
+Signal-style safety number serves, in a friendlier compare-by-eye form. **Also fixed a real bug
+found while rebuilding this screen:** `VerifyInPersonScreen` used to display *this device's own*
+identity string regardless of which contact was being verified (flagged in the code's own doc
+comment as a known gap, since no per-contact derivation existed yet). Deriving client-side removes
+that constraint, so the screen now correctly shows the code derived from the contact's actual
+fingerprint. **Another small real bug fixed in the same file:** the "Not now" text on
+`VerifyInPersonScreen` had no click handler at all, `onNotNow` was a dead parameter; wired.
+
+**Design-fidelity pass on the three screens touched:** none of them had the back-arrow top bar
+every mockup in `design/Betar Chats and Onboarding.dc.html` specifies
+(`appBar(title, iconBtn('b','←'))`) and the Workflow Map's own global rule restates ("back is
+always the top left arrow"). Added `BackTopBar` and wired it to all three. **Not fixed, flagged
+honestly:** the same missing-back-arrow gap still exists on this tab's other sub-screens
+(`JoinChannelScreen`, `DirectConversationScreen`, `CreateGroupScreen`, etc.) -- out of scope for
+this pass, same `onBack`-parameter-never-called pattern, worth a dedicated pass.
+
+**Bengali paused, English-only for now, per explicit user decision -- not a deletion.**
+`LanguagePickerScreen.kt` and `LanguageScreen.kt` both have their Bengali row commented out rather
+than removed; `values-bn/strings.xml` is untouched and still key-set-identical to
+`values/strings.xml`; `android/app/build.gradle.kts` now sets `defaultConfig.resourceConfigurations
++= listOf("en")` so Bengali isn't actually packaged into the APK even though its source strings remain.
+Re-enabling is uncommenting two rows and deleting one Gradle block, not redoing translation work.
+Updated everywhere this was stated as current fact rather than design intent:
+`LOCALIZATION-UX.md` §1, `IMPLEMENTATION-STATUS.md`'s localization row, `README.md`'s screenshot
+caption and user-guide step 2, `docs/index.html`'s equivalent copy. Left untouched, deliberately:
+`DESIGN-BRIEF.md` §9 (still states the eventual bilingual design intent, not current build
+status), `ROADMAP.md` (forward-looking), `ARCHITECTURE.md`'s onboarding diagram, and every mention
+of "Bengali" that's actually about the *name* Betar's etymology, not the shipped-language feature
+(`docs/about.html`, `docs/llms.txt`, `BETAR-TRANSITION.md`'s name-meaning row) -- those were never
+about this and don't need updating.
+
+**Verified:** `./gradlew assembleDebug` succeeds after each change in this entry (build succeeded
+three times across the pass: the QR wiring, the safety-code rework, and the Bengali-pause commit).
+Locale key-set parity between `values/strings.xml` and `values-bn/strings.xml` reconfirmed via
+`diff` of sorted key lists, zero difference, after the new QR/safety-code strings were added to
+both. **Not yet done, said plainly:** no real on-device QR scan-to-scan test between two phones
+(this dev environment's two-emulator limit, same gap the BLE/Wi-Fi Direct drivers already have,
+see the "Real BLE/Wi-Fi/LoRa driver" and "Wi-Fi Direct / Aware driver" rows in
+`IMPLEMENTATION-STATUS.md`); the emoji/digit derivation is a UI-layer mnemonic transform, not
+reviewed as a security boundary by anyone but the person who wrote it.

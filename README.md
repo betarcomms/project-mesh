@@ -76,14 +76,17 @@ default screen, and gets the most design care of anything in the app. See
 
 ## 📱 Screenshots
 
-Real screens from a real on-device run, not mockups, English shown here; Bengali ships as an
-equal default language (see [`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md)).
+Real screens from a real on-device run, not mockups. **Language note:** the app currently ships
+English only, Bengali is paused (not deleted, see
+[`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md)) — the onboarding screenshot below predates
+that pause and still shows both language tiles, kept here rather than staged as current until a
+fresh capture replaces it.
 
 <div align="center">
 
 | Onboarding | Chats | Emergency |
 |---|---|---|
-| <img src="docs/assets/screenshots/onboarding-language.png" width="220" alt="Language picker screen: English and Bengali tiles, no other language, Continue button"> | <img src="docs/assets/screenshots/chats-empty.png" width="220" alt="Chats tab empty state: mesh ribbon reading Looking for phones nearby, How a message travels teaching copy, five-tab bottom nav, persistent red SOS button"> | <img src="docs/assets/screenshots/emergency-picker.png" width="220" alt="Emergency category picker: Medical, Trapped, Fire, Violence, Other tiles, each its own shape, honest alert-travel explanation"> |
+| <img src="docs/assets/screenshots/onboarding-language.png" width="220" alt="Language picker screen (pre-pause capture, shown for historical reference): English and Bengali tiles, Continue button"> | <img src="docs/assets/screenshots/chats-empty.png" width="220" alt="Chats tab empty state: mesh ribbon reading Looking for phones nearby, How a message travels teaching copy, five-tab bottom nav, persistent red SOS button"> | <img src="docs/assets/screenshots/emergency-picker.png" width="220" alt="Emergency category picker: Medical, Trapped, Fire, Violence, Other tiles, each its own shape, honest alert-travel explanation"> |
 
 </div>
 
@@ -92,7 +95,8 @@ equal default language (see [`docs/LOCALIZATION-UX.md`](docs/LOCALIZATION-UX.md)
 1. **Install.** [Download the APK](https://github.com/konkomaji/project-mesh/releases/latest) and
    install it, `minSdk` 26 (Android 8.0 and up). It is debug-signed pre-alpha, Android will warn
    about installing from outside a store, that warning is expected at this stage.
-2. **Pick a language.** English or Bengali, no account, no phone number, no login screen.
+2. **Pick a language.** English for now (Bengali paused, see the note above), no account, no
+   phone number, no login screen.
 3. **Skim the three intro panels**, set a nickname or let one be generated for you, allow the
    three permissions (nearby devices, location while using, microphone/notifications), and decide
    on battery-optimization exemption. Under a minute end to end.
