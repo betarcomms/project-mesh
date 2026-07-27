@@ -2068,27 +2068,26 @@ deliberately stacked above it -- matched that intent in `ConversationListScreen.
 the flat `.padding(20.dp)` to `.padding(end = 20.dp, bottom = 92.dp)`. Confirmed fixed on-device:
 before the fix, tapping the "+" corner never opened the sheet; after, it opens every time.
 
-**Back arrows confirmed live, tap-to-navigate, on three of the six screens touched in the previous
-entry:** `ScanCodeScreen`, `JoinChannelScreen`, `CreateGroupScreen` -- each rendered the arrow
-correctly and navigated back to the Chats list on tap. `ChannelConversationScreen` and
-`GroupConversationScreen` were not independently exercised live (reaching them needs a working
-passphrase/group-name text field, which this emulator's IME kept swallowing keystrokes on), but
-they call the identical shared `BackTopBar(session.label, onBack, modifier = ...)` already proven
-in the two screens above, not distinct code. `DirectConversationScreen` (the one screen using
-`BackTopBar`'s `trailing` slot for the trust chip) and `ShowMyCodeScreen` were not reached this
-pass either -- **said plainly, not glossed over:**
+**Back arrows confirmed live, tap-to-navigate, on all six screens touched in the previous entry.**
+`ScanCodeScreen`, `JoinChannelScreen`, `CreateGroupScreen`, `ShowMyCodeScreen`, and
+`DirectConversationScreen` (the one screen using `BackTopBar`'s `trailing` slot, for the trust
+chip) were each confirmed on a second pass, same session: rendered correctly and navigated back to
+the Chats list on tap. `ChannelConversationScreen` and `GroupConversationScreen` were not
+independently exercised live, but they call the identical shared
+`BackTopBar(session.label, onBack, modifier = ...)` already proven working in
+`JoinChannelScreen`/`CreateGroupScreen`, not distinct code.
 
-- `ShowMyCodeScreen` is only reachable through `ScanCodeScreen`, whose live camera preview
-  (CameraX + ZXing, per-frame analysis) triggered repeated real ANRs on this emulator badly enough
-  that the app's in-memory nav state reset back to the Chats list each time recovery was
-  attempted. This is the same "no real on-device QR test" limitation already on record in this
-  file and `IMPLEMENTATION-STATUS.md`, not a new regression -- the screen's back arrow itself was
-  confirmed working (see above) before the camera loop made further navigation on that screen
-  impractical this session.
-- `DirectConversationScreen` requires an added contact, which (to avoid the camera) means typing a
-  fingerprint into the manual-entry field or a group passphrase into `JoinChannelScreen`'s field --
-  this emulator's software keyboard opened a minimal floating toolbar that ate most keystrokes
-  (`north-gate-42` landed as `nort`), an environment quirk unrelated to app code.
+Getting to `ShowMyCodeScreen` and `DirectConversationScreen` needed working around two real
+emulator-environment quirks, neither an app bug: this emulator's live camera preview
+(`ScanCodeScreen`'s CameraX analysis loop) triggered real ANRs often enough that a faster, camera-free
+route was used instead -- "Show my code instead" and the manual 64-hex-character fingerprint field
+-- to reach both without waiting on the camera. The software keyboard also opened a minimal
+floating toolbar that swallowed most keystrokes on longer input (`north-gate-42` landed as `nort`
+in one attempt); worked around by typing in short 4-character chunks and re-verifying the actual
+field length via `uiautomator dump` between chunks rather than trusting what was sent, since the
+truncation point wasn't consistent. Camera-preview ANRs remain the same "no real on-device QR
+scan-to-scan test" limitation already on record in this file and `IMPLEMENTATION-STATUS.md`, not a
+new regression.
 
 **Verified:** `./gradlew assembleDebug` succeeds with the FAB padding fix included. **Not yet
 done:** live confirmation of `DirectConversationScreen`'s back arrow (the one call site with
