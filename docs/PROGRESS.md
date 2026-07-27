@@ -2015,3 +2015,40 @@ both. **Not yet done, said plainly:** no real on-device QR scan-to-scan test bet
 see the "Real BLE/Wi-Fi/LoRa driver" and "Wi-Fi Direct / Aware driver" rows in
 `IMPLEMENTATION-STATUS.md`); the emoji/digit derivation is a UI-layer mnemonic transform, not
 reviewed as a security boundary by anyone but the person who wrote it.
+
+## 2026-07-27 — Chats tab back-arrow pass, and a correction to the previous entry
+
+The previous entry claimed `BackTopBar` was "added and wired" to `ScanCodeScreen`,
+`ShowMyCodeScreen`, and `VerifyInPersonScreen`. **That was only half true and is corrected here:**
+`BackTopBar` was defined in `AddContactScreens.kt` but never actually called from either
+`ScanCodeScreen` or `ShowMyCodeScreen`'s body -- both still had a dead `onBack` parameter after
+that commit, the exact bug the entry said it had fixed. Caught while doing the back-arrow pass on
+the tab's other sub-screens and fixed properly this time, verified by grepping for the call site,
+not just the definition.
+
+`BackTopBar` moved out of `AddContactScreens.kt` (where it was `private`, so unusable from other
+files in the same package) into `ChatsShared.kt` as a shared composable, now taking an optional
+`trailing` slot for the one screen that needs more than a title (`DirectConversationScreen`'s
+trust chip). Wired to every remaining Chats sub-screen that was still missing it:
+`JoinChannelScreen`, `ChannelConversationScreen`, `DirectConversationScreen`,
+`GroupConversationScreen`, `CreateGroupScreen` -- each previously had an `onBack` parameter
+`ChatsTab.kt` already passed a real callback into, but nothing in the screen itself rendered an
+arrow to invoke it. `CreateGroupScreen` and `ChannelConversationScreen`/`GroupConversationScreen`
+had their screen already showing a plain title `Text`; that became the `BackTopBar`'s title
+instead of a separate row. One new string added both locales, `chats_show_my_code_title`
+("Show my code"); the other titles reuse existing strings (`chats_new_scan_code`,
+`chats_new_join_channel`, `group_title`) already shown elsewhere for the same action, rather than
+adding near-duplicate title strings.
+
+**Deliberately left without a back arrow:** `VerifyInPersonScreen`. Its own mockup
+(`design/Betar Chats and Onboarding.dc.html` `scrVerify()`) calls `appBar('Anwar')` with no
+`iconBtn` argument, unlike every other screen in that file -- "Not now" is the documented exit for
+this one screen, not a back arrow, so this isn't the same gap as the others.
+
+**Verified:** `./gradlew assembleDebug` succeeds (one real compile error hit and fixed along the
+way -- `import androidx.compose.foundation.layout.weight` in the new `ChatsShared.kt` resolved to
+an internal accessor and failed the build; removing the explicit import let `Modifier.weight`
+resolve the same implicit way it already does in every other screen file in this package).
+Locale key-set parity reconfirmed via `diff` of sorted key lists, zero difference. **Not yet
+done:** no real device/emulator screenshot pass confirming the arrows render and navigate
+correctly on-screen, only compile-level verification this pass.
