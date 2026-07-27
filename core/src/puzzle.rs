@@ -35,6 +35,9 @@ pub const DEFAULT_DIFFICULTY_BITS: u8 = 20;
 /// bits. `difficulty_bits = 0` returns immediately (any nonce satisfies zero required bits) —
 /// this is how "no puzzle required" is expressed, not a special case elsewhere.
 pub fn solve(id: &EnvelopeId, difficulty_bits: u8) -> u64 {
+    // Not a cryptographic secret (no key/IV/salt requirement applies): a hashcash-style
+    // brute-force search counter, disclosed alongside the message for every hop to re-verify.
+    // Starting at 0 and incrementing is correct, same as a Bitcoin mining nonce.
     let mut nonce: u64 = 0;
     loop {
         if verify(id, nonce, difficulty_bits) {
