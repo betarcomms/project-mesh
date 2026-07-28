@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-labelledby="mesh-logo-mono-title">
+  <title id="mesh-logo-mono-title">Project Mesh</title>
+  <!-- Single-color variant, no background, for use on dark surfaces or wherever the
+       tinted-square container of mesh-logo.svg doesn't fit. currentColor so it inherits
+       whatever text color the surrounding page/dark-mode context already uses. -->
+
+  <g stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none">
+    <path d="M54,26 L82,54"/>
+    <path d="M82,54 L54,82"/>
+    <path d="M54,82 L26,54"/>
+    <path d="M26,54 L54,26"/>
+    <path d="M54,26 L54,82"/>
+    <path d="M26,54 L82,54"/>
+  </g>
+
+  <g fill="currentColor">
+    <circle cx="54" cy="26" r="8"/>
+    <circle cx="82" cy="54" r="8"/>
+    <circle cx="54" cy="82" r="8"/>
+    <circle cx="26" cy="54" r="8"/>
+  </g>
+</svg>

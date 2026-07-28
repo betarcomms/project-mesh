@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-labelledby="mesh-logo-compact-title">
+  <title id="mesh-logo-compact-title">Project Mesh</title>
+  <!-- Compact variant for small sizes: drops the two center diagonals (mesh-logo.svg),
+       which turn to mud below ~24dp, keeps just the outer ring of four equal nodes. -->
+
+  <rect x="0" y="0" width="108" height="108" rx="28" fill="#F5F6F8"/>
+
+  <g stroke="#274A70" stroke-width="4" stroke-linecap="round">
+    <path d="M54,24 L84,54"/>
+    <path d="M84,54 L54,84"/>
+    <path d="M54,84 L24,54"/>
+    <path d="M24,54 L54,24"/>
+  </g>
+
+  <g fill="#274A70">
+    <circle cx="54" cy="24" r="9"/>
+    <circle cx="84" cy="54" r="9"/>
+    <circle cx="54" cy="84" r="9"/>
+    <circle cx="24" cy="54" r="9"/>
+  </g>
+</svg>

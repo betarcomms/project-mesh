@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="216" height="216" role="img" aria-labelledby="mesh-logo-title">
+  <title id="mesh-logo-title">Project Mesh</title>
+
+  <!--
+    THE HUB THAT IS NOT THERE
+
+    A mesh network's whole point is that no single node is the center: any node
+    can relay for any other, and the network survives losing any one of them.
+    The old logo (docs/assets/logo.svg, retired, predates the Betar rebrand)
+    put a node in the middle with everything radiating from it -- a hub and
+    spoke, the exact topology this project exists to not be.
+
+    This mark is four equal nodes, fully connected to each other, with the
+    center left empty on purpose. Same idea as Betar's "wire that is not
+    there" (docs/assets/betar-logo.svg): a shape defined by what's missing,
+    not what's drawn. Here, what's missing is the center.
+
+    Distinct palette from Betar's brand blue (#4BA3E0) deliberately -- see
+    docs/BETAR-TRANSITION.md Part 6.1 for why Project Mesh doesn't borrow the
+    app's identity. Uses the research site's own accent (#274A70 deep /
+    #3A6EA5 mid), a related but visibly different family.
+
+    Below roughly 24dp use mesh-logo-compact.svg -- the two diagonals crossing
+    through the empty center are the first thing to turn to mud at small
+    sizes, so the compact mark drops them and keeps just the outer ring.
+  -->
+
+  <rect x="0" y="0" width="108" height="108" rx="28" fill="#F5F6F8"/>
+
+  <g stroke="#274A70" stroke-width="3" stroke-linecap="round">
+    <!-- outer ring: top-right-bottom-left-top -->
+    <path d="M54,26 L82,54"/>
+    <path d="M82,54 L54,82"/>
+    <path d="M54,82 L26,54"/>
+    <path d="M26,54 L54,26"/>
+    <!-- diagonals, through the deliberately empty center -->
+    <path d="M54,26 L54,82" stroke="#3A6EA5"/>
+    <path d="M26,54 L82,54" stroke="#3A6EA5"/>
+  </g>
+
+  <g fill="#274A70">
+    <circle cx="54" cy="26" r="8"/>
+    <circle cx="82" cy="54" r="8"/>
+    <circle cx="54" cy="82" r="8"/>
+    <circle cx="26" cy="54" r="8"/>
+  </g>
+</svg>
