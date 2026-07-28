@@ -17,13 +17,13 @@ run). Part 5's package-id rename is done in code; icons are not.
 | Protocol name | **Project Mesh** stays as the name of the protocol and the Rust core |
 | GitHub org | **betarcomms** (renamed from `Betar-Communication` 2026-07-29, manually via GitHub web settings — org login rename isn't exposed via the REST API, confirmed by a failed API attempt first). konkomaji is admin. |
 | Repo structure | Three repos, see Part 3: `project-mesh` (protocol core), `betar` (full app, releases, website — created, empty, private), `betarchat` (chat-only variant, separate maintained fork of `betar`'s code — created, empty, private. App display name is **Betar Chat**, two words, but the repo slug is one word, no hyphen) |
-| `project-mesh` URL | `https://github.com/betarcomms/project-mesh` (not transferred yet, still `konkomaji/project-mesh`) |
+| `project-mesh` URL | `https://github.com/betarcomms/project-mesh` (transferred 2026-07-29, old `konkomaji/project-mesh` URL redirects) |
 | `betar` URL | `https://github.com/betarcomms/betar` (created, empty — code not moved in, see Part 3) |
 | `betarchat` URL | `https://github.com/betarcomms/betarchat` (created, empty — no code exists yet, see Part 3) |
 | Repo visibility | Going public |
 | Betar package id | `app.betar.comm`, replacing `india.projectmesh.app`. Renamed in code. See Part 5 |
 | Betar Chat package id | `app.betar.chat`. Not yet a real app, id reserved. See Part 5 |
-| Logo | Done. "The wire that is not there", files in `docs/assets/` |
+| Logo | Betar: done, "the wire that is not there", files in `docs/assets/`. Betar Chat: **needs its own separate logo**, not done, see Part 6 |
 | Brand blue | `#4BA3E0` |
 | Deep blue | `#12608F` (for text and anything small, light blue alone fails contrast) |
 | Off white blue ground | `#EEF4F9` |
@@ -100,11 +100,17 @@ Do these in order for `project-mesh`. Step 3 is the one that cannot be undone.
 - [x] Check the org name is free on GitHub. **betarcomms** (renamed 2026-07-29 from
       `Betar-Communication`, which was itself chosen over `betar-mesh`).
 - [x] Create the organisation.
-- [ ] Transfer `project-mesh` into it **while still private**. History, issues and stars
-      survive, and GitHub redirects the old URL.
-      **Note: `konkomaji/project-mesh` is already public on GitHub.** The private-first,
-      scan-then-public order in this doc did not happen. Scan history now regardless, and
-      before making any further repo public, confirm nothing sensitive is already exposed.
+- [x] Transfer `project-mesh` into it. Done 2026-07-29 via the GitHub API
+      (`POST /repos/konkomaji/project-mesh/transfer`), confirmed live at
+      `betarcomms/project-mesh`; old `konkomaji/project-mesh` URL redirects, local `origin`
+      remote updated to match.
+      **Note: it went in already public, not private-first as originally planned here.**
+      `konkomaji/project-mesh` was already public before this doc's private-first,
+      scan-then-public order could apply — flagged in the prior session, unchanged by the
+      transfer itself. The secret scan below still stands as the check that matters.
+      **User instruction 2026-07-29: `project-mesh` stays as-is otherwise** — no
+      `SECURITY.md`/`CONTRIBUTING.md`/`CODE_OF_CONDUCT.md`/`GOVERNANCE.md` link added as
+      part of this transfer. Those checklist lines below are left open, not done.
 - [x] **Scan git history for secrets before going public.** Done 2026-07-27 with
       `gitleaks detect --no-git=false` over full history (69 commits). 3 findings, all
       false positives: the crate name `libcrux-sha3` in two `Cargo.lock` files, and the
@@ -118,11 +124,23 @@ Do these in order for `project-mesh`. Step 3 is the one that cannot be undone.
 - [ ] Add `CONTRIBUTING.md`, including the framing rules in Part 2 so a contributor does
       not undo the positioning in a pull request description.
 - [ ] Add `CODE_OF_CONDUCT.md`.
-- [ ] Set the repo description and topics: `mesh-networking`, `ble`, `offline-first`,
-      `disaster-response`, `rust`, `android`.
+- [x] Set the repo description and topics: `mesh-networking`, `ble`, `offline-first`,
+      `disaster-response`, `rust`, `android`. Already set on the GitHub repo before this
+      session (description: "Betar: offline mesh messaging and safety infrastructure...";
+      topics include all six listed plus `end-to-end-encryption`, `jetpack-compose`,
+      `kotlin`, `wifi-direct`) — confirmed via the API response from the transfer above,
+      not something this session did.
 - [ ] Link `GOVERNANCE.md` from the README.
 - [ ] Make the repo public. (Already public, see the note above. Re-verify the secret
       scan is clean rather than skipping this step.)
+
+**Decided 2026-07-29, documentation policy for `betar` and `betarchat` specifically:**
+these two repos do **not** get `project-mesh`'s style of detailed internal working docs
+(no `IMPLEMENTATION-STATUS.md`-style gap tracker, no `BETAR-TRANSITION.md`-style running
+log carried over). Just the normal set a human-written GitHub repo has — README,
+LICENSE, CONTRIBUTING, that's it, written plainly. `project-mesh` itself is unaffected
+by this and keeps its existing docs as-is per the instruction above; this is scoped to
+what gets written when `betar`/`betarchat` actually get code.
 
 ## Part 4. Documentation rewrite
 
@@ -248,13 +266,18 @@ Package id decided and renamed in code. Icons are not done.
 
 ## Part 6. Design
 
-- [x] Logo designed and delivered, `docs/assets/`.
-- [x] Design brief written, `docs/DESIGN-BRIEF.md`.
+- [x] Logo designed and delivered, `docs/assets/`. **This logo is Betar's only.**
+- [ ] **Decided 2026-07-29: Betar Chat needs its own separate logo, not a reuse or minor
+      variant of Betar's.** Not designed yet. Betar Chat is otherwise unbriefed —
+      no design brief, no concept round — this is a real gap, not just an asset to
+      produce off the existing brief.
+- [x] Design brief written, `docs/DESIGN-BRIEF.md`. Covers Betar only.
 - [ ] Run the brief through a designer or a design tool. Get the design system agreed
       before the full screen set.
 - [ ] Missing assets, once the system exists: wordmark lockup (needs a typeface chosen
       first, guessing letterforms is how logos end up looking wrong), feature graphic,
-      store screenshots, the category pictogram set.
+      store screenshots, the category pictogram set. All Betar-specific; Betar Chat needs
+      its own equivalent set once its own logo/brief exist.
 
 ## Part 7. Distribution
 
