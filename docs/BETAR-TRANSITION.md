@@ -15,11 +15,11 @@ run). Part 5's package-id rename is done in code; icons are not.
 |---|---|
 | App name | **Betar** (বেতার), Bengali for wireless, literally *be-* (without) *tar* (wire) |
 | Protocol name | **Project Mesh** stays as the name of the protocol and the Rust core |
-| GitHub org | **Betar-Communication** (created, konkomaji is admin). GitHub logins are case insensitive, so URLs use the lowercase form below |
-| Repo structure | Three repos, see Part 3: `project-mesh` (protocol core), `betar` (full app, releases, website), `betarchat` (chat-only variant — app display name is **Betar Chat**, two words, but the repo slug is one word, no hyphen) |
-| `project-mesh` URL | `https://github.com/betar-communication/project-mesh` |
-| `betar` URL | `https://github.com/betar-communication/betar` (not created yet) |
-| `betarchat` URL | `https://github.com/betar-communication/betarchat` (not created yet) |
+| GitHub org | **betarcomms** (renamed from `Betar-Communication` 2026-07-29, manually via GitHub web settings — org login rename isn't exposed via the REST API, confirmed by a failed API attempt first). konkomaji is admin. |
+| Repo structure | Three repos, see Part 3: `project-mesh` (protocol core), `betar` (full app, releases, website — created, empty, private), `betarchat` (chat-only variant, separate maintained fork of `betar`'s code — created, empty, private. App display name is **Betar Chat**, two words, but the repo slug is one word, no hyphen) |
+| `project-mesh` URL | `https://github.com/betarcomms/project-mesh` (not transferred yet, still `konkomaji/project-mesh`) |
+| `betar` URL | `https://github.com/betarcomms/betar` (created, empty — code not moved in, see Part 3) |
+| `betarchat` URL | `https://github.com/betarcomms/betarchat` (created, empty — no code exists yet, see Part 3) |
 | Repo visibility | Going public |
 | Betar package id | `app.betar.comm`, replacing `india.projectmesh.app`. Renamed in code. See Part 5 |
 | Betar Chat package id | `app.betar.chat`. Not yet a real app, id reserved. See Part 5 |
@@ -75,20 +75,30 @@ Three repos live under the org, not one.
 | `betar` | The full Android app: chat, SOS, bulletin board, resource board, map pins, everything. Future releases and the app's own website live here too. |
 | `betarchat` | Same app, same stack, same everything except stripped to chat only: direct messages, groups, channels. No SOS, no bulletin board, no resource board, no map. App display name is Betar Chat; repo slug is one word, no hyphen. |
 
-**Open question, not yet decided:** how `betarchat` is actually produced from `betar`'s
-code. A build flavor in the same module, a fork that gets feature code deleted, or a
-maintained branch. This changes how much ongoing double work every future change costs
-and should be settled before this is acted on, not discovered mid-split.
+**Decided 2026-07-29:** `betarchat` is a **separate maintained fork** of `betar`'s code
+— its own full copy of the source with SOS/bulletin/resource/map deleted, maintained
+independently going forward. Real double-maintenance cost on every future change to
+shared code (messaging, transport, identity); accepted as the tradeoff over a build
+flavor or branch.
+
+**Open question, still not decided:** how `betar` (once it's a standalone repo) gets the
+Rust core it depends on at build time. Today `android/`'s build reaches into `../core`
+in the same mono-repo (see `metadata/app.betar.comm.yml`'s `cd ../core && cargo ndk...`
+prebuild step). Splitting `android/` out into `betar` breaks that relative path. Options
+not yet weighed: git submodule pointing at `project-mesh`, vendoring a copy of `core/`
+into `betar`, or a published/prebuilt artifact. Settle this before actually moving code
+into `betar`, not mid-split.
 
 `project-mesh` already exists on `konkomaji/project-mesh` and is the repo the steps below
-apply to. `betar` and `betarchat` are new — Part 5's code rename (package id
-`app.betar.comm`/`app.betar.chat`) is done, so `betar` now has something real to hold;
-`betarchat` still doesn't exist as actual code, only as a reserved package id, until the
-open question above is settled.
+apply to. `betar` and `betarchat` repos are **created on GitHub, private, empty** — Part
+5's code rename (package id `app.betar.comm`/`app.betar.chat`) is done, so `betar` has
+something real to hold once the core-dependency question above is settled, but no code
+has been pushed into either new repo yet.
 
 Do these in order for `project-mesh`. Step 3 is the one that cannot be undone.
 
-- [x] Check the org name is free on GitHub. **Betar-Communication**, chosen over `betar-mesh`.
+- [x] Check the org name is free on GitHub. **betarcomms** (renamed 2026-07-29 from
+      `Betar-Communication`, which was itself chosen over `betar-mesh`).
 - [x] Create the organisation.
 - [ ] Transfer `project-mesh` into it **while still private**. History, issues and stars
       survive, and GitHub redirects the old URL.
@@ -102,7 +112,7 @@ Do these in order for `project-mesh`. Step 3 is the one that cannot be undone.
       `ChannelMessaging.kt`, none of them an actual secret value. Filename check for
       `local.properties`, `.jks`, `.keystore`, and `android/app/src/main/jniLibs` binaries
       also clean, nothing committed that should not be. Re-run this scan for `betar` and
-      `betarchat` once those repos exist, this result does not cover them.
+      `betarchat` once code actually lands in them — today they're empty, nothing to scan.
 - [ ] Add `SECURITY.md`. How to report a vulnerability, and a clear line that no
       independent audit has happened yet. Researchers look here first.
 - [ ] Add `CONTRIBUTING.md`, including the framing rules in Part 2 so a contributor does
@@ -158,7 +168,7 @@ nothing to do with framing. Every hit needs looking at rather than replacing bli
 - [ ] Rewrite the voice. Plain sentences, no repeated honesty tics.
 - [ ] Rename to Betar where it means the app. Keep Project Mesh where it means the
       protocol or the Rust core.
-- [ ] Update every repository URL to `https://github.com/betar-communication/project-mesh`.
+- [ ] Update every repository URL to `https://github.com/betarcomms/project-mesh`.
 - [ ] Remove any wording that names or implies a single developer.
 - [ ] Replace the tricolor logo reference in `README.md` with `docs/assets/betar-logo.svg`.
 
@@ -205,7 +215,7 @@ Package id decided and renamed in code. Icons are not done.
       Base reverses to `betar.app`, a domain worth actually holding (same ownership
       caveat that ruled out `org.betar.*` without `betar.org` held — noted, not yet
       verified as registered). `.comm` on the full app for "communication" (matches the
-      GitHub org name, Betar-Communication); `.chat` on the chat-only variant for what it
+      GitHub org name, betarcomms); `.chat` on the chat-only variant for what it
       actually is. (Briefly renamed to bare `app.betar` for the full app mid-session, then
       corrected to `app.betar.comm` — the code below reflects the final id only.)
 
