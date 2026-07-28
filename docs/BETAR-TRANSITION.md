@@ -3,8 +3,9 @@
 Working document. The project is being renamed, repositioned and made public, and this
 tracks all of it in one place so nothing gets lost between sessions.
 
-Status of this file: nothing in Part 3 onwards has been done yet. Parts 1 and 2 record
-what has already been decided, so future work does not relitigate settled questions.
+Status of this file: Parts 1 and 2 record what has already been decided, so future work
+does not relitigate settled questions. Part 3 is partly done (org created, secret scan
+run). Part 5's package-id rename is done in code; icons are not.
 
 ---
 
@@ -14,10 +15,14 @@ what has already been decided, so future work does not relitigate settled questi
 |---|---|
 | App name | **Betar** (বেতার), Bengali for wireless, literally *be-* (without) *tar* (wire) |
 | Protocol name | **Project Mesh** stays as the name of the protocol and the Rust core |
-| GitHub org | **betar-mesh** (fallbacks: `betarnet`, `betar-project`, `betar-community`) |
-| Main repo name | Stays **project-mesh**, moved under the org |
-| Repo URL | `https://github.com/betar-mesh/project-mesh` |
+| GitHub org | **Betar-Communication** (created, konkomaji is admin). GitHub logins are case insensitive, so URLs use the lowercase form below |
+| Repo structure | Three repos, see Part 3: `project-mesh` (protocol core), `Betar` (full app, releases, website), `Betar-Chat` (chat-only variant, repo slug hyphenated since GitHub logins can't have spaces — the app itself is called **Betar Chat**, no hyphen) |
+| `project-mesh` URL | `https://github.com/betar-communication/project-mesh` |
+| `Betar` URL | `https://github.com/betar-communication/Betar` (not created yet) |
+| `Betar-Chat` URL | `https://github.com/betar-communication/Betar-Chat` (not created yet) |
 | Repo visibility | Going public |
+| Betar package id | `app.betar.comm`, replacing `india.projectmesh.app`. Renamed in code. See Part 5 |
+| Betar Chat package id | `app.betar.chat`. Not yet a real app, id reserved. See Part 5 |
 | Logo | Done. "The wire that is not there", files in `docs/assets/` |
 | Brand blue | `#4BA3E0` |
 | Deep blue | `#12608F` (for text and anything small, light blue alone fails contrast) |
@@ -62,17 +67,40 @@ These govern all documentation, all in app copy and all store listings.
 
 ## Part 3. GitHub and repository
 
-Do these in order. Step 3 is the one that cannot be undone.
+Three repos live under the org, not one.
 
-- [ ] Check `betar-mesh` is free on GitHub. Use a fallback if not.
-- [ ] Create the organisation.
+| Repo | Contents |
+|---|---|
+| `project-mesh` | The Rust protocol core only. The existing repo, transferred in as is. |
+| `Betar` | The full Android app: chat, SOS, bulletin board, resource board, map pins, everything. Future releases and the app's own website live here too. |
+| `Betar-Chat` | Same app, same stack, same everything except stripped to chat only: direct messages, groups, channels. No SOS, no bulletin board, no resource board, no map. |
+
+**Open question, not yet decided:** how `Betar-Chat` is actually produced from `Betar`'s
+code. A build flavor in the same module, a fork that gets feature code deleted, or a
+maintained branch. This changes how much ongoing double work every future change costs
+and should be settled before Part 5 starts, not discovered mid rename.
+
+`project-mesh` already exists on `konkomaji/project-mesh` and is the repo the steps below
+apply to. `Betar` and `Betar-Chat` are new and get created once Part 5's code rename gives
+them something real to hold, not as empty shells today.
+
+Do these in order for `project-mesh`. Step 3 is the one that cannot be undone.
+
+- [x] Check the org name is free on GitHub. **Betar-Communication**, chosen over `betar-mesh`.
+- [x] Create the organisation.
 - [ ] Transfer `project-mesh` into it **while still private**. History, issues and stars
       survive, and GitHub redirects the old URL.
-- [ ] **Scan git history for secrets before going public.** Once public, history is
-      permanent and deleting a file does not remove it. Run `gitleaks detect
-      --no-git=false`, and check by hand for `local.properties`, any `.jks` or
-      `.keystore`, and anything under `android/app/src/main/jniLibs` that should not be
-      committed.
+      **Note: `konkomaji/project-mesh` is already public on GitHub.** The private-first,
+      scan-then-public order in this doc did not happen. Scan history now regardless, and
+      before making any further repo public, confirm nothing sensitive is already exposed.
+- [x] **Scan git history for secrets before going public.** Done 2026-07-27 with
+      `gitleaks detect --no-git=false` over full history (69 commits). 3 findings, all
+      false positives: the crate name `libcrux-sha3` in two `Cargo.lock` files, and the
+      SharedPreferences key constant name `joined_passphrases_wrapped_b64` in
+      `ChannelMessaging.kt`, none of them an actual secret value. Filename check for
+      `local.properties`, `.jks`, `.keystore`, and `android/app/src/main/jniLibs` binaries
+      also clean, nothing committed that should not be. Re-run this scan for `Betar` and
+      `Betar-Chat` once those repos exist, this result does not cover them.
 - [ ] Add `SECURITY.md`. How to report a vulnerability, and a clear line that no
       independent audit has happened yet. Researchers look here first.
 - [ ] Add `CONTRIBUTING.md`, including the framing rules in Part 2 so a contributor does
@@ -81,7 +109,8 @@ Do these in order. Step 3 is the one that cannot be undone.
 - [ ] Set the repo description and topics: `mesh-networking`, `ble`, `offline-first`,
       `disaster-response`, `rust`, `android`.
 - [ ] Link `GOVERNANCE.md` from the README.
-- [ ] Make the repo public.
+- [ ] Make the repo public. (Already public, see the note above. Re-verify the secret
+      scan is clean rather than skipping this step.)
 
 ## Part 4. Documentation rewrite
 
@@ -127,7 +156,7 @@ nothing to do with framing. Every hit needs looking at rather than replacing bli
 - [ ] Rewrite the voice. Plain sentences, no repeated honesty tics.
 - [ ] Rename to Betar where it means the app. Keep Project Mesh where it means the
       protocol or the Rust core.
-- [ ] Update every repository URL to `https://github.com/betar-mesh/project-mesh`.
+- [ ] Update every repository URL to `https://github.com/betar-communication/project-mesh`.
 - [ ] Remove any wording that names or implies a single developer.
 - [ ] Replace the tricolor logo reference in `README.md` with `docs/assets/betar-logo.svg`.
 
@@ -154,22 +183,56 @@ on. It is a log, and 60 of the 218 hits are in it.
 
 ## Part 5. Code and app changes
 
-None of this has been started. It all waits until the rename is settled.
+Package id decided and renamed in code. Icons are not done.
 
-- [ ] **Decide the Android package id.** Currently `india.projectmesh.app`. This is the
+- [x] **Decide the Android package id.** Was `india.projectmesh.app`. This was the
       single irreversible choice on this page. F-Droid and Play both treat the package id
       as the app's permanent identity, and changing it later means a new app with zero
-      installs. Candidates: `mesh.betar.app`, `in.betar.app`. Do not use `org.betar.*`
-      unless the `betar.org` domain is actually held.
-- [ ] Change the app label to Betar in `strings.xml`.
-- [ ] Rename the Kotlin package to match the new package id.
+      installs.
+
+      **First decided `in.betar.app` / `in.betar.chat`, then rejected: `in` is a Kotlin
+      hard keyword.** Confirmed by direct test-compile against this project's own
+      toolchain, not just reasoned about: `package in.betar.scratch` fails
+      (`Syntax error: Package name must be a '.'-separated identifier list.`).
+      `` package `in`.betar.scratch `` (backtick-escaped) does compile, but every one of
+      this app's ~90 Kotlin files would carry that escape permanently on every
+      package/import line touching the root — rejected as a standing tax on the whole
+      codebase for a package id.
+
+      **Decided instead: `app.betar.comm` for Betar, `app.betar.chat` for Betar Chat.**
+      Base reverses to `betar.app`, a domain worth actually holding (same ownership
+      caveat that ruled out `org.betar.*` without `betar.org` held — noted, not yet
+      verified as registered). `.comm` on the full app for "communication" (matches the
+      GitHub org name, Betar-Communication); `.chat` on the chat-only variant for what it
+      actually is. (Briefly renamed to bare `app.betar` for the full app mid-session, then
+      corrected to `app.betar.comm` — the code below reflects the final id only.)
+
+      **Checked 2026-07-29 (before this exact `app.betar.comm` / `app.betar.chat` pair was
+      settled, so re-check before any store submission):** `in.betar.app` / `in.betar.chat`
+      didn't collide on Play or F-Droid at the time. The current ids have not been
+      checked.
+- [x] Change the app label to Betar in `strings.xml`. Already true going into this
+      session (`values/strings.xml` and `values-bn/strings.xml` both already said
+      `Betar` / `বেতার`) — not something this rename had to do.
+- [x] Rename the Kotlin package to match the new package id. Done 2026-07-29: moved
+      `android/app/src/main/java/india/projectmesh/app/**` to
+      `android/app/src/main/java/app/betar/comm/**`, rewrote every package/import/FQN
+      reference, updated `namespace`/`applicationId` in `build.gradle.kts` to
+      `app.betar.comm`, renamed the `Theme.ProjectMesh` style to `Theme.Betar`, renamed
+      `metadata/india.projectmesh.app.yml` to `metadata/app.betar.comm.yml`. Verified with
+      `./gradlew :app:compileDebugKotlin` — BUILD SUCCESSFUL. Not run on a device this
+      session.
 - [ ] Build the adaptive launcher icon from the locked mark. **Build it inverted**:
       background layer filled `#4BA3E0` edge to edge, foreground layer drawing the two
       wire bars in `#EEF4F9`. An adaptive icon cannot have a real hole because the
       foreground sits on the background rather than on the wallpaper.
 - [ ] Add the monochrome icon layer for Android 13 themed icons.
 - [ ] Replace the old tricolor drawables once the new ones are in.
-- [ ] Update `metadata/india.projectmesh.app.yml` to the new package id and app name.
+- [x] Update `metadata/india.projectmesh.app.yml` to the new package id and app name.
+      Renamed to `metadata/app.betar.yml`, `AutoName` changed to `Betar`. `SourceCode`/
+      `Repo`/`IssueTracker` URLs deliberately left pointing at the current
+      `konkomaji/project-mesh` mono-repo — Part 3's repo split hasn't happened, updating
+      those now would be premature.
 
 ## Part 6. Design
 
