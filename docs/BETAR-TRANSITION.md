@@ -84,16 +84,30 @@ flavor or branch.
 **Open question, still not decided:** how `betar` (once it's a standalone repo) gets the
 Rust core it depends on at build time. Today `android/`'s build reaches into `../core`
 in the same mono-repo (see `metadata/app.betar.comm.yml`'s `cd ../core && cargo ndk...`
-prebuild step). Splitting `android/` out into `betar` breaks that relative path. Options
-not yet weighed: git submodule pointing at `project-mesh`, vendoring a copy of `core/`
-into `betar`, or a published/prebuilt artifact. Settle this before actually moving code
-into `betar`, not mid-split.
+prebuild step). Splitting `android/` out into `betar` breaks that relative path.
 
-`project-mesh` already exists on `konkomaji/project-mesh` and is the repo the steps below
-apply to. `betar` and `betarchat` repos are **created on GitHub, private, empty** — Part
-5's code rename (package id `app.betar.comm`/`app.betar.chat`) is done, so `betar` has
-something real to hold once the core-dependency question above is settled, but no code
-has been pushed into either new repo yet.
+**Decided 2026-07-29: git submodule.** `betar` carries `project-mesh` as a submodule for
+`core/`, pinned to an exact commit. Rejected the other two: a vendored copy duplicates a
+crypto/protocol core across repos (real drift risk on security-relevant code, and the
+same double-maintenance cost already accepted once for Betar Chat — not worth taking
+twice); a published/prebuilt artifact conflicts with the F-Droid plan already committed
+to in Part 7 — F-Droid builds from source on its own server (the existing
+`cd ../core && cargo ndk...` prebuild step is that model already working), and this repo
+deliberately never commits the compiled `.so` (gitignored, regenerated every build).
+Submodule keeps one source of truth, pins `betar` to a reproducible commit, and F-Droid
+natively supports it (`submodules: true` in the build recipe).
+
+**Not yet done:** actually adding the submodule, and updating the prebuild path (from
+`../core` to wherever the submodule lands inside `betar`) in both `build.gradle.kts` and
+the eventual `betar`-repo F-Droid metadata. That's real execution work for whenever code
+actually moves into `betar`, not done as part of deciding the strategy.
+
+`project-mesh` already exists on `betarcomms/project-mesh` (transferred, see below) and
+is the repo the steps below apply to. `betar` and `betarchat` repos are **created on
+GitHub, private, empty** — Part 5's code rename (package id
+`app.betar.comm`/`app.betar.chat`) is done and the core-dependency strategy is now
+decided, so `betar` is unblocked to actually receive code; no code has been pushed into
+either new repo yet.
 
 Do these in order for `project-mesh`. Step 3 is the one that cannot be undone.
 
