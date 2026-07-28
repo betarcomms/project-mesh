@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://konkomaji.github.io/project-mesh/sitemap.xml
+Sitemap: https://betarcomms.github.io/project-mesh/sitemap.xml

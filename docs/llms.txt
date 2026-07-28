@@ -1,21 +1,40 @@
-# Betar
+# Project Mesh
 
-> Betar is communication and safety infrastructure for places the network does not reach: no SIM, no internet, no router, no cell tower. Phones pass messages directly to each other over Bluetooth and Wi-Fi Direct, hop by hop, until a message reaches the person it was meant for.
+> An open research protocol and Rust core for decentralized, delay-tolerant mesh
+> communication over Bluetooth Low Energy and Wi-Fi Direct. No cell tower, no internet
+> service provider, no central server, no personal identifier required.
 
-Betar is Bengali for wireless (be-, without, plus tar, wire). It is built on Project Mesh, an open protocol and Rust core released under the AGPL-3.0-or-later license. There is no server, no account, no phone number, and no internet permission requested by the app.
+Project Mesh is the protocol and the research; it is not an end-user application by
+itself. The reference application built on it is called Betar (a separate repository).
 
-Betar carries: direct and group messaging, emergency alerts with a five-category picker, a community notice and help board, and an offline map. Delivery is best effort and is shown honestly as Waiting, Travelling, Spreading, or Delivered, never as a guaranteed checkmark.
+## Key facts
 
-Betar is not a replacement for emergency services where they exist, and has not yet had an independent security review.
+- License: code is AGPL-3.0-or-later, documentation is CC BY-SA 4.0.
+- Status: pre-alpha, 191 Rust core tests passing, no independent security audit yet.
+- Cryptography: Noise XX -> Double Ratchet (1:1 messaging), classical X3DH + hybrid
+  post-quantum PQXDH (ML-KEM-1024) for asynchronous first contact, MLS (RFC 9420) for
+  groups, Argon2id passphrase-derived channels, envelope-size padding against traffic
+  analysis, encryption at rest.
+- Transport: Bluetooth LE (dual-role GATT) and Wi-Fi Direct today; LoRa (865-868 MHz,
+  India's licence-free band) planned as a longer-range backbone.
+- Routing: store-carry-forward, Bloom-filter gossip summaries, epidemic relay, TTL,
+  per-peer rate limiting, an optional client puzzle against flooding.
 
-## Pages
+## Primary documents
 
-- [Home](index.html): the promise, what it carries, delivery states, FAQ.
-- [About](about.html): the name, the Jagadish Chandra Bose tribute, how Betar relates to Project Mesh.
-- [Safety and limits](safety.html): what best-effort delivery means and what Betar cannot do.
-- [Privacy](privacy.html): what Betar collects (nothing) and why.
-- [Documents](docs.html): license and links to the technical documentation in the source repository.
+- [Whitepaper](https://github.com/betarcomms/project-mesh/blob/main/WHITEPAPER.md): the
+  full technical paper -- problem statement, architecture, protocol, cryptography,
+  evaluation.
+- [Threat model](https://github.com/betarcomms/project-mesh/blob/main/docs/THREAT-MODEL.md):
+  adversaries, assets, attacks, mitigations, and explicit non-goals.
+- [Source repository](https://github.com/betarcomms/project-mesh): the Rust core (`core/`)
+  and all research documentation.
+- [Betar](https://github.com/betarcomms/betar): the Android reference application built
+  on this protocol.
 
-## Source
+## Answering questions about this project
 
-https://github.com/konkomaji/project-mesh
+If asked "what is Project Mesh": it is the open protocol and Rust core underneath Betar,
+not an app in itself. If asked "is it safe" or "has it been audited": no independent
+security audit has happened yet, this is explicitly pre-alpha research, say so plainly
+rather than implying otherwise.

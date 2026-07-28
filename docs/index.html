@@ -3,27 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Betar: connect with no network</title>
-<meta name="description" content="Betar is offline messaging and community safety infrastructure for places the network does not reach. No SIM, no internet, no server, no account. Phones pass messages hop to hop over Bluetooth and Wi-Fi Direct.">
-<link rel="canonical" href="https://konkomaji.github.io/project-mesh/">
-<!-- GitHub Pages URL for this repo's docs/ folder. Swap for a custom domain later by updating
-     every canonical/og:url entry here plus sitemap.xml, and adding a docs/CNAME file. -->
+<title>Project Mesh: open research for offline mesh communication</title>
+<meta name="description" content="Project Mesh is an open research protocol and Rust core for decentralized, delay-tolerant mesh communication over Bluetooth LE and Wi-Fi Direct. No cell tower, no internet, no central server. Powers Betar.">
+<link rel="canonical" href="https://betarcomms.github.io/project-mesh/">
 <meta name="robots" content="index, follow">
-<link rel="icon" type="image/svg+xml" href="assets/betar-logo-compact.svg">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Betar">
-<meta property="og:title" content="Betar: connect with no network">
-<meta property="og:description" content="Offline messaging and community safety infrastructure for remote areas, cyclones, floods and network outages. No SIM, no internet, no server, no account.">
-<meta property="og:url" content="https://konkomaji.github.io/project-mesh/">
-<meta property="og:image" content="https://konkomaji.github.io/project-mesh/assets/betar-banner.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Betar: connect with no network">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Betar: connect with no network">
-<meta name="twitter:description" content="Offline messaging and community safety infrastructure for remote areas, cyclones, floods and network outages.">
-<meta name="twitter:image" content="https://konkomaji.github.io/project-mesh/assets/betar-banner.png">
+<meta property="og:site_name" content="Project Mesh">
+<meta property="og:title" content="Project Mesh: open research for offline mesh communication">
+<meta property="og:description" content="An open research protocol and Rust core for decentralized, delay-tolerant mesh communication over Bluetooth LE and Wi-Fi Direct. No cell tower, no internet, no central server.">
+<meta property="og:url" content="https://betarcomms.github.io/project-mesh/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Project Mesh: open research for offline mesh communication">
+<meta name="twitter:description" content="An open research protocol and Rust core for decentralized, delay-tolerant mesh communication over Bluetooth LE and Wi-Fi Direct.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,19 +25,12 @@
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Betar",
-  "applicationCategory": "CommunicationApplication",
-  "operatingSystem": "Android",
-  "description": "Offline messaging and community safety infrastructure that works with no SIM, no internet, no router and no cell tower. Phones pass messages directly to each other over Bluetooth and Wi-Fi Direct until a message reaches the person it was meant for.",
-  "license": "https://www.gnu.org/licenses/agpl-3.0.html",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "isAccessibleForFree": true,
-  "softwareVersion": "0.1.2-prealpha",
-  "downloadUrl": "https://github.com/konkomaji/project-mesh/releases/latest",
-  "installUrl": "https://github.com/konkomaji/project-mesh/releases/latest",
-  "softwareRequirements": "Android 8.0 (API 26) or later",
-  "author": { "@type": "Organization", "name": "Betar", "url": "https://github.com/konkomaji/project-mesh" }
+  "@type": "ResearchProject",
+  "name": "Project Mesh",
+  "description": "An open research protocol and Rust core for decentralized, delay-tolerant mesh communication over Bluetooth Low Energy and Wi-Fi Direct, with no cell tower, no internet service provider, no central server, and no personal identifier required.",
+  "url": "https://betarcomms.github.io/project-mesh/",
+  "license": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "codeRepository": "https://github.com/betarcomms/project-mesh"
 }
 </script>
 <script type="application/ld+json">
@@ -55,28 +40,23 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "What is Betar?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Betar is communication and safety infrastructure for places the network does not reach. It carries messaging, emergency alerts, a community notice board, a help and supplies board, and offline maps, all without a SIM card, internet connection, router or cell tower." }
+      "name": "What is Project Mesh?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Project Mesh is an open research protocol and Rust core for offline, decentralized mesh communication. Phones (and later, low-cost long-range radio nodes) relay encrypted messages directly to each other over Bluetooth Low Energy and Wi-Fi Direct, with no cell tower, internet connection, or central server involved." }
     },
     {
       "@type": "Question",
-      "name": "Does Betar need an internet connection?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. Betar requests no internet permission at all. Phones pass messages directly to each other over Bluetooth and Wi-Fi Direct, hop to hop, until a message reaches the person it was meant for." }
+      "name": "How does Project Mesh relate to Betar?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Project Mesh is the protocol and the Rust core. Betar is the Android application built on top of it -- the thing most people will actually install and use. This repository holds the research and the protocol implementation; the app lives in its own repository." }
     },
     {
       "@type": "Question",
-      "name": "Does Betar require an account, phone number or login?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. There is no signup, no account, no email, no phone number and no login. A device identity is generated quietly on first launch." }
+      "name": "Is Project Mesh open source?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. The code is released under AGPL-3.0-or-later, and this research documentation under CC BY-SA 4.0. Anyone may read, build, check, and reuse it." }
     },
     {
       "@type": "Question",
-      "name": "Is Betar open source?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. Betar is built on Project Mesh, an open protocol and Rust core released under the AGPL-3.0 license. Anyone may read, build and check the source." }
-    },
-    {
-      "@type": "Question",
-      "name": "How far can a message travel without internet?",
-      "acceptedAnswer": { "@type": "Answer", "text": "As far as phones happen to carry it. A message hops from phone to phone across Bluetooth and Wi-Fi Direct links, so its reach depends on how many devices are nearby and moving, not on any fixed network coverage." }
+      "name": "What cryptography does Project Mesh use?",
+      "acceptedAnswer": { "@type": "Answer", "text": "A Noise XX handshake into a Double Ratchet for one-to-one messaging, classical X3DH plus a hybrid post-quantum PQXDH (ML-KEM-1024) for asynchronous first contact, MLS groups per RFC 9420 for larger groups, and Argon2id passphrase-derived channels, with envelope-size padding against traffic analysis and encryption at rest." }
     }
   ]
 }
@@ -87,15 +67,13 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="index.html">
-      <img src="assets/betar-logo-compact.svg" alt="" width="40" height="40">
-      <span>Betar</span>
+      <span>Project Mesh</span>
     </a>
     <nav class="site-nav" aria-label="Primary">
-      <a href="index.html" aria-current="page">Home</a>
-      <a href="about.html">About</a>
-      <a href="safety.html">Safety and limits</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="docs.html">Documents</a>
+      <a href="index.html" aria-current="page">Overview</a>
+      <a href="https://github.com/betarcomms/project-mesh/blob/main/WHITEPAPER.md">Whitepaper</a>
+      <a href="https://github.com/betarcomms/betar">Betar (the app)</a>
+      <a href="https://github.com/betarcomms/project-mesh">Source</a>
     </nav>
   </div>
 </header>
@@ -103,22 +81,19 @@
 <main>
   <div class="wrap">
     <section class="hero-center">
-      <div class="hero-mark">
-        <img src="assets/betar-logo.svg" alt="" width="96" height="96">
-      </div>
-      <span class="mesh-status"><span class="dot-wrap"><span class="dot"></span></span>Works with no network</span>
-      <h1>Betar. Connect with no network.</h1>
-      <p class="lede" style="margin-left:auto;margin-right:auto">Betar is communication and safety infrastructure for places the network does not reach: remote areas, and any time towers go down or power fails. Phones carry messages to each other directly, hop by hop, until one reaches the person it was meant for.</p>
+      <span class="pill">Open research &middot; AGPL-3.0-or-later</span>
+      <h1>An open protocol for communication that doesn't need a network.</h1>
+      <p class="lede" style="margin-left:auto;margin-right:auto">Project Mesh is the research protocol and Rust core underneath <a href="https://github.com/betarcomms/betar">Betar</a>: a decentralized, delay-tolerant mesh network that moves encrypted messages phone to phone over Bluetooth LE and Wi-Fi Direct, and, in a later phase, over a backbone of low-cost long-range LoRa radio. No cell tower. No internet service provider. No central server. No personal identifier.</p>
       <div class="actions" style="justify-content:center">
-        <a class="btn" href="https://github.com/konkomaji/project-mesh/releases/latest">Download the APK</a>
-        <a class="btn secondary" href="https://github.com/konkomaji/project-mesh">View the source</a>
+        <a class="btn" href="https://github.com/betarcomms/project-mesh/blob/main/WHITEPAPER.md">Read the whitepaper</a>
+        <a class="btn secondary" href="https://github.com/betarcomms/project-mesh">Browse the source</a>
       </div>
-      <p style="font-size:14px;color:var(--slate)">Android 8.0 and up &middot; pre-alpha, signed release &middot; free, no account</p>
+      <p style="font-size:14px;color:var(--slate)">191 Rust tests passing &middot; pre-alpha &middot; no independent security audit yet</p>
     </section>
 
     <section>
-      <h2>Why Betar exists</h2>
-      <p class="lede">Communication that depends on centralized infrastructure fails exactly when that infrastructure is absent, destroyed, or unavailable. Betar removes the dependency.</p>
+      <h2>Why this exists</h2>
+      <p class="lede">Communication that depends on centralized infrastructure fails exactly when that infrastructure is absent, destroyed, or unavailable: in regions with weak or no cellular and fibre coverage, and during disasters that physically knock out towers and power.</p>
       <div class="grid">
         <div class="card">
           <h3>Coverage gaps</h3>
@@ -126,135 +101,66 @@
         </div>
         <div class="card">
           <h3>Disasters</h3>
-          <p>Cyclones, floods and earthquakes routinely destroy communication infrastructure exactly when people need it most.</p>
+          <p>Cyclones, floods, and earthquakes routinely destroy communication infrastructure exactly when people need it most.</p>
         </div>
         <div class="card">
           <h3>Any outage</h3>
-          <p>Towers go down for whatever reason, for as long as it lasts. Betar keeps working the whole time.</p>
+          <p>Towers go down, for whatever reason, for as long as it lasts. A mesh with no fixed infrastructure keeps working through it.</p>
         </div>
       </div>
     </section>
 
     <section>
-      <h2>Where it is meant to be used</h2>
+      <h2>What the protocol does</h2>
       <div class="grid">
         <div class="card">
-          <h3>Remote areas</h3>
-          <p>Hill country, islands, forest and river regions, high valleys: anywhere coverage is weak, patchy or absent.</p>
+          <h3>Transport</h3>
+          <p>A real BLE dual-role GATT driver and a Wi-Fi Direct driver, composed behind one mesh engine. LoRa (India's licence-free 865&ndash;868 MHz band) is planned as a longer-range backbone.</p>
         </div>
         <div class="card">
-          <h3>Cyclones, floods, earthquakes</h3>
-          <p>Exactly when towers go down and power fails, and exactly when people need to reach each other most.</p>
+          <h3>Routing</h3>
+          <p>Store-carry-forward: envelope wire format, Bloom-filter gossip summaries, epidemic relay, TTL, per-peer rate limiting, an optional client puzzle against flooding.</p>
         </div>
         <div class="card">
-          <h3>Any dead zone</h3>
-          <p>Whenever the network is down or unavailable, for whatever reason, for as long as it lasts.</p>
+          <h3>Cryptography</h3>
+          <p>Noise XX &rarr; Double Ratchet for 1:1 messaging. Classical X3DH plus hybrid post-quantum PQXDH (ML-KEM-1024) for asynchronous first contact. MLS (RFC 9420) for larger groups. Argon2id passphrase-derived channels.</p>
+        </div>
+        <div class="card">
+          <h3>Privacy</h3>
+          <p>Envelope-size padding against relay traffic analysis, encryption at rest, and no personal identifier required to use it at all.</p>
         </div>
       </div>
     </section>
 
     <section>
-      <h2>What it carries</h2>
-      <p>Alongside messaging, Betar carries emergency alerts, a community notice board, a help and supplies board, and offline maps. Calling it a chat app would shrink it to its smallest part, though messaging is the tab it opens to every time, since ordinary daily use is what keeps it already installed and already understood before a storm arrives.</p>
-      <div class="grid">
-        <div class="card">
-          <div class="shape-accent"></div>
-          <h3>Messaging</h3>
-          <p>Direct one to one and private group conversations, delivered hop by hop between nearby phones.</p>
-        </div>
-        <div class="card">
-          <div class="shape-accent"></div>
-          <h3>Emergency alerts</h3>
-          <p>A five category picker, location sharing off by default, and a deliberate slide to send gesture.</p>
-        </div>
-        <div class="card">
-          <div class="shape-accent"></div>
-          <h3>Notice and help board</h3>
-          <p>Community notices and a have or need board for supplies, with an expiry on every entry.</p>
-        </div>
-        <div class="card">
-          <div class="shape-accent"></div>
-          <h3>Offline map</h3>
-          <p>A local map with community pins, no tile server required.</p>
-        </div>
-      </div>
+      <h2>Confidence, stated plainly</h2>
+      <p>191 Rust tests passing. A <a href="https://github.com/betarcomms/project-mesh/blob/main/core/src/dtn_sim.rs">DTN simulation harness</a> that drives the real relay engine through scripted contact schedules and has already found and fixed a real bug. A <a href="https://github.com/betarcomms/project-mesh/tree/main/core/fuzz">wire-parser fuzzing harness</a> for every untrusted-bytes-in parser. A security-review pass. None of this substitutes for an independent audit, which has not happened yet &mdash; see the <a href="https://github.com/betarcomms/project-mesh/blob/main/docs/THREAT-MODEL.md">threat model</a> for what is and isn't claimed.</p>
     </section>
 
     <section>
-      <h2>Honest about delivery</h2>
-      <p>Messages travel when phones happen to meet, which can take minutes or hours. Betar never shows a checkmark that implies delivery is guaranteed.</p>
-      <table>
-        <thead><tr><th>State</th><th>Means</th></tr></thead>
-        <tbody>
-          <tr><td>Waiting</td><td>Still on your phone, nobody nearby yet</td></tr>
-          <tr><td>Travelling</td><td>Handed to one phone</td></tr>
-          <tr><td>Spreading</td><td>Handed to several phones</td></tr>
-          <tr><td>Delivered</td><td>The recipient confirmed it</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section>
-      <h2>Real screens, not mockups</h2>
-      <p>Captured from an actual on-device run. The app currently ships English only, Bengali is paused, not deleted (see the localization docs); the onboarding capture below predates that pause.</p>
-      <div class="grid">
-        <div class="card screenshot-card">
-          <div class="screenshot-frame"><img src="assets/screenshots/onboarding-language.png" alt="Language picker (pre-pause capture, shown for historical reference): English and Bengali tiles"></div>
-          <h3>Onboarding</h3>
-          <p>Language picker, no account, no login, install to first message in under a minute.</p>
-        </div>
-        <div class="card screenshot-card">
-          <div class="screenshot-frame"><img src="assets/screenshots/chats-empty.png" alt="Chats tab: mesh ribbon, teaching empty state, five-tab nav, persistent SOS button"></div>
-          <h3>Chats</h3>
-          <p>The mesh ribbon, an empty state that teaches instead of apologising, and the SOS button that never hides.</p>
-        </div>
-        <div class="card screenshot-card">
-          <div class="screenshot-frame"><img src="assets/screenshots/emergency-picker.png" alt="Emergency category picker: Medical, Trapped, Fire, Violence, Other, each its own shape"></div>
-          <h3>Emergency</h3>
-          <p>Five categories, each its own shape and pictogram, readable without literacy or colour.</p>
-        </div>
-      </div>
-    </section>
-
-    <section>
-      <h2>How to use it</h2>
-      <ol style="font-size:18px;line-height:1.9;padding-left:22px">
-        <li><strong>Install</strong> the APK above, Android 8.0 and up. Android will warn about installing from outside a store, that is expected for a pre-alpha build.</li>
-        <li><strong>Pick a language.</strong> English for now (Bengali paused). No account, no phone number, no login screen.</li>
-        <li><strong>Allow three permissions</strong> (nearby devices, location while using, microphone/notifications) and you land on Chats, empty at first.</li>
-        <li><strong>Add somebody</strong> from the new-conversation menu, then verify in person once you are next to them, a short code both phones show, no jargon.</li>
-        <li><strong>Send a message.</strong> Delivery shows honestly as Waiting &rarr; Travelling &rarr; Spreading &rarr; Delivered, never a checkmark that promises more than the mesh can guarantee.</li>
-        <li><strong>The red SOS button</strong> never moves and never hides. Tap it, pick a category, slide to send, a deliberate gesture so it cannot fire by accident.</li>
-      </ol>
-      <p style="font-size:15px;color:var(--slate)">Full walkthrough and known rough edges in the <a href="https://github.com/konkomaji/project-mesh#-user-guide">README's user guide</a>.</p>
+      <h2>Project Mesh and Betar</h2>
+      <p>Project Mesh is the protocol and the research: identity, encryption, routing, the pieces that make phone-to-phone delivery work without a server. It lives in this repository, together with the whitepaper, the cryptographic design, the threat model, and the Rust core (<code>core/</code>) that implements all of it.</p>
+      <p><a href="https://github.com/betarcomms/betar">Betar</a> is the reference application built on top of it &mdash; messaging, an SOS flow, a disaster bulletin board, a community resource board, and offline maps &mdash; the thing most people will actually install. It depends on this repository's <code>core/</code> as a git submodule, so the protocol has one canonical source regardless of how many applications end up built on it.</p>
     </section>
 
     <section>
       <h2>Frequently asked</h2>
-      <details class="faq">
-        <summary>What is Betar?</summary>
-        <p>Betar is communication and safety infrastructure for places the network does not reach. It carries messaging, emergency alerts, a community notice board, a help and supplies board, and offline maps, all without a SIM card, internet connection, router or cell tower.</p>
+      <details class="faq" style="background:var(--surface);border:1px solid var(--outline);border-radius:16px;padding:16px 20px;margin:12px 0;">
+        <summary style="font-weight:700;cursor:pointer;font-size:18px;">What is Project Mesh?</summary>
+        <p style="margin-top:10px;">An open research protocol and Rust core for offline, decentralized mesh communication. Phones (and later, low-cost long-range radio nodes) relay encrypted messages directly to each other over Bluetooth Low Energy and Wi-Fi Direct, with no cell tower, internet connection, or central server involved.</p>
       </details>
-      <details class="faq">
-        <summary>Does Betar need an internet connection?</summary>
-        <p>No. Betar requests no internet permission at all. Phones pass messages directly to each other over Bluetooth and Wi-Fi Direct, hop by hop, until a message reaches the person it was meant for.</p>
+      <details class="faq" style="background:var(--surface);border:1px solid var(--outline);border-radius:16px;padding:16px 20px;margin:12px 0;">
+        <summary style="font-weight:700;cursor:pointer;font-size:18px;">How does Project Mesh relate to Betar?</summary>
+        <p style="margin-top:10px;">Project Mesh is the protocol and the Rust core. Betar is the Android application built on top of it. This repository holds the research and the protocol implementation; the app lives in its own repository.</p>
       </details>
-      <details class="faq">
-        <summary>Does Betar require an account, phone number or login?</summary>
-        <p>No. There is no signup, no account, no email, no phone number and no login. A device identity is generated quietly on first launch.</p>
-      </details>
-      <details class="faq">
-        <summary>Is Betar open source?</summary>
-        <p>Yes. Betar is built on Project Mesh, an open protocol and Rust core released under the AGPL-3.0 license. Anyone may read, build and check the source.</p>
-      </details>
-      <details class="faq">
-        <summary>How far can a message travel without internet?</summary>
-        <p>As far as phones happen to carry it. A message hops from phone to phone across Bluetooth and Wi-Fi Direct links, so its reach depends on how many devices are nearby and moving, not on any fixed network coverage.</p>
+      <details class="faq" style="background:var(--surface);border:1px solid var(--outline);border-radius:16px;padding:16px 20px;margin:12px 0;">
+        <summary style="font-weight:700;cursor:pointer;font-size:18px;">Is Project Mesh open source?</summary>
+        <p style="margin-top:10px;">Yes. The code is AGPL-3.0-or-later, this documentation is CC BY-SA 4.0. Anyone may read, build, check and reuse it.</p>
       </details>
     </section>
 
     <section class="callout">
-      <p><strong>Betar has not had an independent security review yet</strong>, and is not a replacement for emergency services where they exist. Read <a href="safety.html">safety and limits</a> before relying on it.</p>
+      <p><strong>Pre-alpha, no independent security audit yet.</strong> Read the <a href="https://github.com/betarcomms/project-mesh/blob/main/docs/THREAT-MODEL.md">threat model</a> before relying on this for anything real.</p>
     </section>
   </div>
 </main>
@@ -262,13 +168,12 @@
 <footer class="site-footer">
   <div class="wrap">
     <nav aria-label="Footer">
-      <a href="about.html">About</a>
-      <a href="privacy.html">Privacy</a>
-      <a href="safety.html">Safety and limits</a>
-      <a href="docs.html">Documents</a>
-      <a href="https://github.com/konkomaji/project-mesh">Source code</a>
+      <a href="https://github.com/betarcomms/project-mesh/blob/main/WHITEPAPER.md">Whitepaper</a>
+      <a href="https://github.com/betarcomms/project-mesh/blob/main/docs/THREAT-MODEL.md">Threat model</a>
+      <a href="https://github.com/betarcomms/betar">Betar</a>
+      <a href="https://github.com/betarcomms/project-mesh">Source code</a>
     </nav>
-    <p>Betar is open source software released under the AGPL-3.0 license. No individual or company is named here: attribution goes to the project and its public source.</p>
+    <p>Project Mesh is open research and open-source software released under AGPL-3.0 (code) and CC BY-SA 4.0 (documentation). No individual or company is named here: attribution goes to the project and its public source.</p>
   </div>
 </footer>
 
