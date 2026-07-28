@@ -16,10 +16,13 @@ run). Part 5's package-id rename is done in code; icons are not.
 | App name | **Betar** (বেতার), Bengali for wireless, literally *be-* (without) *tar* (wire) |
 | Protocol name | **Project Mesh** stays as the name of the protocol and the Rust core |
 | GitHub org | **betarcomms** (renamed from `Betar-Communication` 2026-07-29, manually via GitHub web settings — org login rename isn't exposed via the REST API, confirmed by a failed API attempt first). konkomaji is admin. |
-| Repo structure | Three repos, see Part 3: `project-mesh` (protocol core), `betar` (full app, releases, website — created, empty, private), `betarchat` (chat-only variant, separate maintained fork of `betar`'s code — created, empty, private. App display name is **Betar Chat**, two words, but the repo slug is one word, no hyphen) |
+| Repo structure | Three repos, see Part 3: `project-mesh` (protocol core, research site), `betar` (full app, code moved in, 4 releases moved in, showcase site live), `betarchat` (chat-only variant, separate maintained fork of `betar`'s code — repo exists, honest placeholder site live, **no app code yet**, blocked on its own logo/design brief. App display name is **Betar Chat**, two words, repo slug is one word, no hyphen) |
 | `project-mesh` URL | `https://github.com/betarcomms/project-mesh` (transferred 2026-07-29, old `konkomaji/project-mesh` URL redirects) |
-| `betar` URL | `https://github.com/betarcomms/betar` (created, empty — code not moved in, see Part 3) |
-| `betarchat` URL | `https://github.com/betarcomms/betarchat` (created, empty — no code exists yet, see Part 3) |
+| `betar` URL | `https://github.com/betarcomms/betar` (public, app code + releases + site live) |
+| `betarchat` URL | `https://github.com/betarcomms/betarchat` (public, placeholder site only, no app code yet) |
+| `betar` website | `https://betarcomms.github.io/betar/` — live, Betar's app showcase site, moved here from `project-mesh` |
+| `betarchat` website | `https://betarcomms.github.io/betarchat/` — live, honest single-page placeholder, no logo/design exists yet |
+| `project-mesh` website | `https://betarcomms.github.io/project-mesh/` — live, rewritten as a research/protocol site, no longer the app showcase |
 | Repo visibility | Going public |
 | Betar package id | `app.betar.comm`, replacing `india.projectmesh.app`. Renamed in code. See Part 5 |
 | Betar Chat package id | `app.betar.chat`. Not yet a real app, id reserved. See Part 5 |
@@ -97,10 +100,33 @@ deliberately never commits the compiled `.so` (gitignored, regenerated every bui
 Submodule keeps one source of truth, pins `betar` to a reproducible commit, and F-Droid
 natively supports it (`submodules: true` in the build recipe).
 
-**Not yet done:** actually adding the submodule, and updating the prebuild path (from
-`../core` to wherever the submodule lands inside `betar`) in both `build.gradle.kts` and
-the eventual `betar`-repo F-Droid metadata. That's real execution work for whenever code
-actually moves into `betar`, not done as part of deciding the strategy.
+**Done 2026-07-29, same session as the decision.** Code actually moved:
+
+- `android/` split out of this mono-repo into `betar` via `git subtree split --prefix=android`
+  (preserves the 75 commits of history that touched `android/`), pushed as `betar`'s `main`.
+- `core/` added to `betar` as a git submodule pointing at `betarcomms/project-mesh`.
+- `build.gradle.kts`'s `rootProject.name` and the jniLibs `README.md`'s `cargo ndk` command
+  updated for the new layout (`cd core && cargo ndk -o ../app/src/main/jniLibs...`, no more
+  `../core`).
+- `.gitignore` added to `betar` — the mono-repo's root `.gitignore` covered `android/`'s
+  build artifacts and secrets but lived outside the `android/` prefix, so the subtree split
+  didn't carry it. Without this, `local.properties`/`.gradle/`/`build/`/keystore files had
+  no protection against accidental commit. Fixed before anything got committed on top.
+- `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE` added — plain human-written docs,
+  per the policy decided above.
+- Verified with a **fresh standalone clone** (not just the working tree that did the split):
+  `git clone` + `git submodule update --init` + `./gradlew :app:compileDebugKotlin` →
+  BUILD SUCCESSFUL. This is the real proof the split works, not just that the split
+  commands ran without erroring.
+- `betar` scanned with `gitleaks` before going public (same discipline as `project-mesh`):
+  one hit, the same known false positive (`joined_passphrases_wrapped_b64`, a
+  SharedPreferences key name, not a secret). Filename check for keystore/local.properties/
+  `.so` binaries clean. Made public.
+- The 4 existing GitHub releases (`v0.1.0`–`v0.1.3-prealpha`, APKs included) moved from
+  `project-mesh` to `betar`: same tag names, same release notes (links fixed to point at
+  whichever repo the linked doc actually lives in), same APK assets, retagged at the
+  commit in `betar`'s subtree-split history matching the original release commit's message.
+  Deleted from `project-mesh` after confirming they were live on `betar`.
 
 `project-mesh` already exists on `betarcomms/project-mesh` (transferred, see below) and
 is the repo the steps below apply to. `betar` and `betarchat` repos are **created on
@@ -292,6 +318,37 @@ Package id decided and renamed in code. Icons are not done.
       first, guessing letterforms is how logos end up looking wrong), feature graphic,
       store screenshots, the category pictogram set. All Betar-specific; Betar Chat needs
       its own equivalent set once its own logo/brief exist.
+
+### 6.1 Websites
+
+Each of the three repos now has a live GitHub Pages site (`docs/` folder on `main`),
+per-repo, done 2026-07-29:
+
+- [x] **Betar** — `https://betarcomms.github.io/betar/`. Moved as-is from `project-mesh`
+      (where it was built during the mono-repo era): home, about, safety, privacy,
+      documents. Material 3 Expressive motion/shape language transcribed from the app's
+      own design system, Betar's brand palette (`#4BA3E0` etc.), SEO/AEO metadata
+      (JSON-LD `SoftwareApplication` + `FAQPage`, sitemap, `llms.txt`, OpenGraph).
+- [x] **Project Mesh** — `https://betarcomms.github.io/project-mesh/`. Rewritten from
+      scratch, framed as the research/protocol repo rather than the app: transport/
+      routing/cryptography overview, whitepaper and threat-model links, FAQ, matching
+      SEO/AEO metadata. **Deliberately not using Betar's brand blue or the old tricolor
+      mesh glyph** (`docs/assets/logo.svg` — predates the Betar rebrand, is the exact
+      file the README checklist below already flags for removal, reusing it here would
+      have contradicted that). Ships with a clean wordmark and a distinct neutral
+      graphite palette instead — same motion/shape system as Betar's site for family
+      resemblance, but **Project Mesh does not have its own locked visual mark**, this
+      is a real open gap, not a finished identity.
+- [x] **Betar Chat** — `https://betarcomms.github.io/betarchat/`. Single honest
+      placeholder page, neutral/unbranded styling, states plainly that there's no app
+      code and no logo yet rather than implying a finished product. Not a "full
+      redesign" in any real sense — there is nothing to redesign until the logo (see
+      above) and a design brief exist.
+
+**Open gap, stated plainly:** Project Mesh's own visual identity (an actual mark, not
+just a wordmark) doesn't exist. The only asset that ever existed for this name
+(`docs/assets/logo.svg`) is the pre-rebrand tricolor glyph already being retired.
+Designing one is separate work from Betar Chat's logo gap above, not done here.
 
 ## Part 7. Distribution
 
